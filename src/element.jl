@@ -159,9 +159,15 @@ function Base.setproperty!(ele::LineElement, key::Symbol, value)
   end
 end
 
+# Default implementation - must be overridden 
+# if a property is only settable and not gettable
+# And should be overrridden if the property is an 
+# abstract type (but not necessary)
+propertytype(p::AbstractParams, key::Symbol) = typeof(getproperty(p, key))
+
 function _setproperty!(pdict::ParamDict, p::AbstractParams, key::Symbol, value)
   if hasproperty(p, key) # Check if we can put this value in current struct
-    T = typeof(getproperty(p, key))
+    T = propertytype(p, key)
     if promote_type(typeof(value), T) == T
       return setproperty!(p, key, value)
     end
