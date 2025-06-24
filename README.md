@@ -210,7 +210,7 @@ function get_variable(r::RectangleParams, key::Symbol)
   elseif key == :perimeter
     return 2*r.x + 2*r.y
   else # Fall back to getting the field of the parameter group
-    return r.key
+    return getfield(r, key)
   end
 end
 
@@ -229,7 +229,7 @@ a = get_variable(rect, :area)
 p = get_variable(rect, :perimeter)
 ```
 
-Both of these methods will work fine, and for many applications. However, at least for `Beamlines.jl`, there is a better way. 
+Both of these methods will work fine, and for many applications. The first is generally the most recommended approach. However, for `Beamlines.jl`, there is a third way which is used throughout the package.
 
 It turns out that writing 
 ```julia
@@ -294,7 +294,7 @@ For good practice, we should also add a conditional in `Base.getproperty` checki
 Now we have a struct which has the fields `x` and `y`, two gettable-only properties `area` and `perimeter`, and a settable-only property `square`. For full consistency with both Julia and with `Beamlines.jl`, we will need to override `Base.propertynames` to include these properties:
 
 ```julia
-Base.propertynames(::RectangleParams) = (:x, :y, :area, :perimeter, :square)
+Base.propertynames(::RectangleParams) = (:x, :y, :area, :perimeter)
 ```
 
 In `Beamlines.jl`, the `LineElement` struct has only a dictionary of `AbstractParams` as a field. Both `Base.getproperty` and `Base.setproperty!` are overridden to call `Base.getproperty` and/or `Base.setproperty!` for a given parameter group and its properties, which can also be overridden by each parameter group. It is basically a tree of overridden  `Base.getproperty` and `Base.setproperty!`. 
