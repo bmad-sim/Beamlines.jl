@@ -4,20 +4,40 @@
 
   # Beamlines can be very long, so realistically only 
   # Base.Vector should be allowed.
-  function Beamline(line::Vector{LineElement}; Brho_ref::Number=NaN)
+  function Beamline(line::Vector{LineElement}; Brho_ref::Number=NaN, unique_name_suffix::Union{Nothing,String}="_")
+    duplicates = Dict{String, Int32}()
+    originals = []
     bl = new(line, Brho_ref)
     for i in eachindex(line)
       if haskey(line[i].pdict, BeamlineParams)
         if line[i].beamline != bl
           error("Element is already in a beamline")
         else
-          # This can be changed later...
-          error("Duplicate elements not currently allowed in a beamline")
-          #line[i] = deepcopy_no_beamline(line[line[i].beamline_index])
+          if isnothing(unique_name_suffix)
+            error("Duplicate elements found in beamline, but unique_name_suffix = nothing")
+          else
+            name = line[i].name
+            duplicates[name] = get(duplicates, name, 1) + 1
+            if duplicates[name] == 2
+              push!(originals, Core.eval(Main, :($(Symbol(name)).beamline_index)))
+            end
+            newname = string(name, unique_name_suffix, duplicates[name])
+            line[i] = deepcopy_no_beamline(line[i])
+            Core.eval(Main, :(@eles $(Symbol(newname)) = $(line[i])))
+          end
         end
       end
       
       line[i].BeamlineParams = BeamlineParams(bl, i)
+    end
+
+    if !isnothing(unique_name_suffix)
+      for i in originals
+              newname = string(line[i].name, unique_name_suffix, 1)
+              Core.eval(Main, :($(Symbol(newname)) = $(getfield(Main, Symbol(line[i].name)))))
+              Core.eval(Main, :($(Symbol(line[i].name)) = $(nothing)))
+              Core.eval(Main, :($(Symbol(newname)).name = $(newname)))
+      end
     end
     
     return bl
@@ -83,3 +103,14 @@ end
 # We could overload getproperty to disallow accessing line
 # directly so elements cannot be removed, but I will deal 
 # with that later.
+
+function register_duplicate_element_global!(ele::LineElement, newname::AbstractString)
+    sym = Symbol(newname)
+    ele_named = deepcopy_no_beamline(ele)
+    setproperty!(ele_named, :name, newname)
+
+    # Register in global scope
+    Core.eval(Main, :(@eles $(sym) = $ele_named))
+
+    return ele_named
+end

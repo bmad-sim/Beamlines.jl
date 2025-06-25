@@ -482,7 +482,42 @@ using Test
     @test typeof(ele.dz_rot) == ComplexF64
     @test !(ele.PatchParams === pp)
 
-    # @eles
+
+    # Test @eles macros
+    @eles tester = LineElement(class="SBend", L=3.0, g=0.1)
+    @eles quaddy = Quadrupole(L=0.20, K1=0.11)
+    @eval @eles quaddy2 = $(deepcopy_no_beamline(quaddy))
+    @test tester.name  == "tester"
+    @test quaddy.name  == "quaddy"
+    @test quaddy2.name == "quaddy2"
+
+    global drift1, drift2, solenoid, quadrupole
+    @eles begin
+      drift1 = Drift(L=0.5)
+      drift2 = Drift(L=0.75)
+      solenoid = Solenoid(L=0.25, Ks=0.1)
+      quadrupole = Quadrupole(L=0.15, K1=0.2)
+    end
+    @test drift1.name == "drift1"
+    @test drift2.name == "drift2"
+    @test solenoid.name == "solenoid"
+    @test quadrupole.name == "quadrupole"
+
+
+    # Test duplicate removal in Beamline
+    bl = Beamline([drift1, drift2, solenoid, drift1, 
+                   drift1, drift2, solenoid, quadrupole], Brho_ref=60.0, unique_name_suffix="_")
+    @test bl.line[1].name == "drift1_1"    && drift1_1    === bl.line[1]
+    @test bl.line[4].name == "drift1_2"    && drift1_2    === bl.line[4]
+    @test bl.line[5].name == "drift1_3"    && drift1_3    === bl.line[5]
+    @test bl.line[2].name == "drift2_1"    && drift2_1    === bl.line[2]
+    @test bl.line[6].name == "drift2_2"    && drift2_2    === bl.line[6]
+    @test bl.line[3].name == "solenoid_1"  && solenoid_1  === bl.line[3]
+    @test bl.line[7].name == "solenoid_2"  && solenoid_2  === bl.line[7]
+    @test bl.line[8].name == "quadrupole"  && quadrupole  === bl.line[8]
+
+
+  # @eles
     @eles qf = Quadrupole(K1=0.36)
     @test qf.name == "qf"
     @eles d = Drift()
