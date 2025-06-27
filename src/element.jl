@@ -114,32 +114,46 @@ end
 replace(p::AbstractParams, key::Symbol, value) = set(p, opcompose(PropertyLens(key)), value)
 
 function Base.getproperty(ele::LineElement, key::Symbol)
+  ret = nothing
   if key == :pdict 
     ret = getfield(ele, :pdict)
-  elseif haskey(PARAMS_MAP, key) # To get parameters struct
-    if haskey(ele.pdict, PARAMS_MAP[key])
-      ret = getindex(ele.pdict, PARAMS_MAP[key])
-    else
-      ret = nothing
-    end
+  elseif haskey(PARAMS_MAP, key) && haskey(ele.pdict, PARAMS_MAP[key]) # To get parameters struct
+    ret = getindex(ele.pdict, PARAMS_MAP[key])
   elseif haskey(VIRTUAL_GETTER_MAP, key) # Virtual properties override regular properties
-      ret = VIRTUAL_GETTER_MAP[key](ele, key)
-  elseif haskey(PROPERTIES_MAP, key)  # To get a property in a parameter struct
-    if haskey(ele.pdict, PROPERTIES_MAP[key])
-      ret = getproperty(getindex(ele.pdict, PROPERTIES_MAP[key]), key)
-    else
-      ret = nothing
-    end
-  else
-    if haskey(VIRTUAL_SETTER_MAP, key)
+    ret = VIRTUAL_GETTER_MAP[key](ele, key)
+  elseif haskey(PROPERTIES_MAP, key) && haskey(ele.pdict, PROPERTIES_MAP[key])  # To get a property in a parameter struct
+    ret = getproperty(getindex(ele.pdict, PROPERTIES_MAP[key]), key)
+  end
+  if isnothing(ret) 
+    if haskey(ele.pdict, InheritParams)
+      return getproperty(ele.pdict[InheritParams].parent, key)
+    elseif haskey(VIRTUAL_SETTER_MAP, key)
       error("LineElement property $key is write-only")
     else
-      ret = nothing
+      error("Type LineElement has no property $key")
     end
+  elseif ret isa DefExpr
+    return ret.f()
+  else
+    return ret
   end
-  return ret
 end
+#=
+qf = Quadrupole(K1=0.36, L=0.5)
+bl = Beamline([qf, qf])
 
+qf.K1 = 0.3 # sets both
+qf.K2 = 0.4 # both should get a K2 honestly
+qf.BMultipoleParams = ... # Both should get it too
+qf.BMultipoleParams = nothing # remove both
+
+qf2 = bl.line[2]
+qf2.K1 = 0.2 # sets both?
+qf2.UniversalParams = .... # should set both
+
+# So basically really only set your own if you have it already in there
+
+=#
 function Base.setproperty!(ele::LineElement, key::Symbol, value)
   if haskey(PARAMS_MAP, key) # Setting whole parameter struct
     if isnothing(value) # setting parameter struct to nothing removes it
