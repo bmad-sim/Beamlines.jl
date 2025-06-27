@@ -23,6 +23,9 @@ end
 
 function _get_BM_strength(ele, b, key)
   order, normalized, integrated = BMULTIPOLE_STRENGTH_MAP[key]
+  if isnothing(b) || !haskey(b.bdict, order)
+    return nothing
+  end
   bm = b.bdict[order]
   strength = bm.strength
   # Yes there is a simpler way to write the below but this 
@@ -211,7 +214,7 @@ end
 
 function _get_BM_independent(b)
   if isnothing(b)
-    return Vector{Symbol}(undef, 0)
+    return nothing
   end
   v = Vector{Symbol}(undef, length(b.bdict))
   i = 1
@@ -289,6 +292,9 @@ function get_field_master(ele::LineElement, ::Symbol)
 end
 
 function _get_field_master(b)
+  if isnothing(b)
+    return nothing
+  end
   bms = values(b.bdict)
   check = first(bms).normalized
   if !all(t->t.normalized==check, bms)
@@ -303,6 +309,9 @@ function get_integrated_master(ele::LineElement, ::Symbol)
 end
 
 function _get_integrated_master(b)
+  if isnothing(b)
+    return nothing
+  end
   bms = values(b.bdict)
   check = first(bms).integrated
   if !all(t->t.integrated==check, bms)
