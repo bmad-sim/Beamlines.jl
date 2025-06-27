@@ -105,30 +105,39 @@ function Base.isapprox(a::UniversalParams, b::UniversalParams)
          #a.name            
 end
 
+mutable struct InheritParams <: AbstractParams
+  parent::LineElement
+end
+
 # Use Accessors here for default bc super convenient for replacing entire (even mutable) type
 # For more complex params (e.g. BMultipoleParams) we will need custom override
 replace(p::AbstractParams, key::Symbol, value) = set(p, opcompose(PropertyLens(key)), value)
 
 function Base.getproperty(ele::LineElement, key::Symbol)
   if key == :pdict 
-    return getfield(ele, :pdict)
+    ret = getfield(ele, :pdict)
   elseif haskey(PARAMS_MAP, key) # To get parameters struct
     if haskey(ele.pdict, PARAMS_MAP[key])
-      return getindex(ele.pdict, PARAMS_MAP[key])
+      ret = getindex(ele.pdict, PARAMS_MAP[key])
     else
-      return nothing
+      ret = nothing
     end
   elseif haskey(VIRTUAL_GETTER_MAP, key) # Virtual properties override regular properties
-      return VIRTUAL_GETTER_MAP[key](ele, key)
+      ret = VIRTUAL_GETTER_MAP[key](ele, key)
   elseif haskey(PROPERTIES_MAP, key)  # To get a property in a parameter struct
-    return getproperty(getindex(ele.pdict, PROPERTIES_MAP[key]), key)
+    if haskey(ele.pdict, PROPERTIES_MAP[key])
+      ret = getproperty(getindex(ele.pdict, PROPERTIES_MAP[key]), key)
+    else
+      ret = nothing
+    end
   else
     if haskey(VIRTUAL_SETTER_MAP, key)
       error("LineElement property $key is write-only")
     else
-      error("Type LineElement has no property $key")
+      ret = nothing
     end
   end
+  return ret
 end
 
 function Base.setproperty!(ele::LineElement, key::Symbol, value)
