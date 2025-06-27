@@ -130,7 +130,11 @@ function Base.getproperty(ele::LineElement, key::Symbol)
     elseif haskey(VIRTUAL_SETTER_MAP, key)
       error("LineElement property $key is write-only")
     else
-      error("Type LineElement has no property $key")
+      if haskey(PARAMS_MAP, key) || haskey(VIRTUAL_GETTER_MAP, key) || haskey(PROPERTIES_MAP, key)
+        return nothing
+      else
+        error("Type LineElement has no property $key")
+      end
     end
   elseif ret isa DefExpr
     return ret.f()
