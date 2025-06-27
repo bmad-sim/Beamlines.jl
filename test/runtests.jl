@@ -514,4 +514,43 @@ using Test
     @test d.name == "d"
     @test d.L == 1+0.36
     @test a == 1+0.36
+
+    # RFParams tests
+    @test_throws ErrorException qf.rf_frequency
+
+    # Basic RF frequency mode
+    cav = RFCavity(frequency=352e6, voltage=1e6, harmon_master=false)
+    @test cav.rf_frequency == 352e6 && cav.harmon_master == false
+    @test_throws ErrorException cav.harmonic_number
+    cav.rf_frequency = 500e6 + 1e3im
+    @test eltype(cav.RFParams) == ComplexF64
+    @test eltype(typeof(cav.RFParams)) == ComplexF64
+    cav.RFParams.rf_frequency = 210.1e6
+    @test_throws ErrorException cav.RFParams.dx_rot
+    @test_throws ErrorException cav.RFParams.dx_rot = 1.0
+
+    # Harmonic number mode and mode switching
+    cav2 = RFCavity(rf_frequency=352e6)
+    cav2.voltage = 200e6
+    @test cav2.RFParams.rf_frequency == 352e6 && cav2.harmon_master == false
+    @test_throws ErrorException cav2.harmonic_number
+    cav2.harmonic_number = 1159
+    cav2.harmonic_number = 1160
+    @test cav2.harmonic_number == 1160 && cav2.harmon_master == true
+  
+
+    # Type promotion via replace function
+    cp_new = Beamlines.replace(RFParams(frequency=352f6, voltage = 200f6, harmon_master=false), :harmonic_number, 1160e0)
+    @test cp_new.harmon_master == true && eltype(cp_new) == Float64
+    @test cp_new ≈ cav2.RFParams
+    @test_throws ErrorException cp_new.harmon_master = false
+    @test_throws ErrorException cp_new.rf_frequency = 210.1e6 
+
+
+    # Direct property access and RFParams struct operations
+    cp = RFParams(frequency=352e6, harmon_master=false)
+    @test hasproperty(cp, :rf_frequency) && !hasproperty(cp, :harmonic_number)
+    @test_throws ErrorException cp.harmonic_number
+    cav2.RFParams = cp
+    @test cav2.RFParams === cp
 end

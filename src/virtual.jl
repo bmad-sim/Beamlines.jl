@@ -311,6 +311,56 @@ function _get_integrated_master(b)
   return check
 end
 
+function get_cavity_frequency(ele::LineElement, key::Symbol)
+  c = ele.RFParams
+  if isnothing(c)
+    error("Unable to get $key of LineElement $(ele.name): No RFParams present")
+  end
+  return @noinline _get_cavity_frequency(c, key)
+end
+
+function _get_cavity_frequency(c, key)
+  harmon_master = CAVITY_FREQUENCY_MAP[key]
+  if c.harmon_master == harmon_master
+    return c.frequency
+  else
+    correctkey = CAVITY_FREQUENCY_INVERSE_MAP[c.harmon_master]
+    error("Cannot calculate $key of RFParams since particle species is unknown at Beamlines level and harmon_master=$(c.harmon_master)")
+  end
+end
+
+function set_cavity_frequency!(ele::LineElement, key::Symbol, value)
+  if !haskey(ele.pdict, RFParams)
+    harmon_master = CAVITY_FREQUENCY_MAP[key]
+    setindex!(ele.pdict, RFParams(harmon_master=harmon_master), RFParams)
+  end
+
+  c = ele.RFParams
+  @noinline _set_cavity_frequency!(ele, c, key, value)
+  return value
+end
+
+function _set_cavity_frequency!(ele, c1::RFParams{S}, key, value) where {S}
+  harmon_master = CAVITY_FREQUENCY_MAP[key]
+  
+  T = promote_type(S, typeof(value))
+  if T != S || c1.harmon_master != harmon_master
+    # Create new RFParams with updated type and/or harmon_master
+    c = RFParams(
+      harmon_master = harmon_master,
+      frequency     = T(value),
+      voltage       = T(c1.voltage),
+      phi0          = T(c1.phi0)
+    )
+    ele.pdict[RFParams] = c
+  else
+    # Can modify in place
+    c1.frequency = T(value)
+  end
+  
+  return
+end
+
 const VIRTUAL_GETTER_MAP = Dict{Symbol,Function}(
   :Bs   => get_BM_strength,
   :B0   => get_BM_strength,
@@ -408,6 +458,9 @@ const VIRTUAL_GETTER_MAP = Dict{Symbol,Function}(
   :BM_independent => get_BM_independent,
   :field_master => get_field_master,
   :integrated_master => get_integrated_master,
+
+  :rf_frequency => get_cavity_frequency,
+  :harmonic_number => get_cavity_frequency,
 )
 
 const VIRTUAL_SETTER_MAP = Dict{Symbol,Function}(
@@ -509,4 +562,7 @@ const VIRTUAL_SETTER_MAP = Dict{Symbol,Function}(
   :BM_independent => set_BM_independent!,
   :field_master => set_field_master!,
   :integrated_master => set_integrated_master!,
+
+  :rf_frequency => set_cavity_frequency!,
+  :harmonic_number => set_cavity_frequency!,
 )

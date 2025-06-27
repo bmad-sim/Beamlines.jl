@@ -1,4 +1,3 @@
-
 abstract type AbstractParams end
 isactive(::AbstractParams) = true
 isactive(::Nothing) = false

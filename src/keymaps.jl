@@ -53,6 +53,11 @@ const PROPERTIES_MAP = Dict{Symbol,Type{<:AbstractParams}}(
   :dx_rot => PatchParams,
   :dy_rot => PatchParams,
   :dz_rot => PatchParams,
+
+  :frequency => RFParams,
+  :voltage => RFParams,
+  :phi0 => RFParams,
+  :harmon_master => RFParams,
 )
 
 const PARAMS_MAP = Dict{Symbol,Type{<:AbstractParams}}(
@@ -62,6 +67,7 @@ const PARAMS_MAP = Dict{Symbol,Type{<:AbstractParams}}(
   :BendParams => BendParams,
   :AlignmentParams => AlignmentParams,
   :PatchParams => PatchParams,
+  :RFParams => RFParams,
 )
 
 

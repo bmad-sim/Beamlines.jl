@@ -10,6 +10,7 @@ export MattStandard,
        AlignmentParams,
        PatchParams,
        BendParams,
+       RFParams,
        BMultipole,
        Drift,
        Solenoid,
@@ -61,6 +62,7 @@ import GTPSA: sincu, sinhcu
 include("element.jl")
 include("beamline.jl")
 include("multipole.jl")
+include("cavity.jl")
 include("virtual.jl")
 include("bend.jl")
 include("control.jl")
