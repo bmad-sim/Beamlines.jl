@@ -95,7 +95,40 @@ bl.Brho_ref += ΔBrho_ref
 # Now e.g. unnormalized field strengths will be TPSA:
 qd.B1
 
-# We can also define control elements to control LineElements
+# We can control elements together using the deferred expression 
+# type DefExpr. DefExpr uses closures to evaluate a parameter, 
+# and is always evaluated when *pulling* a value from a Beamline.
+# Let's use DefExpr to set the K1 of qf and qd together
+
+K1 = 0.36
+qf.K1 = DefExpr(()->K1)
+qd.K1 = DefExpr(()->-qf.K1)
+
+# The quadrupole strength values are set to anonymous functions 
+# which "stores"/"encloses" the value of K1 in the evaluated scope.
+
+# When getting a parameter which is a DefExpr from a LineElement or 
+# Beamline, it is evaluated right before returning:
+qf.K1 == 0.36 # true
+qd.K1 == -0.36 # true
+
+K1 = 0.3 # update local variable
+qf.K1 == 0.3 # true: closure evaluated upon *get*
+qd.K1 == -0.3 # true: closure evaluated upon *get*
+
+# If we get it from the parameter group, then it is NOT evaluated.
+(qd.BMultipoleParams.bdict[2].strength isa DefExpr) # true
+
+# This may change in the future.
+
+# Deferred expressions provide a "pull" way of controlling multiple 
+# elements together: in the above example, the DefExpr stored in 
+# qf.K1 is evaluated *at the time of getting*.
+
+# An alternative way of controlling multiple elements together 
+# is with a "push" scheme, where when setting the control parameter, 
+# all dependent values are updated. Beamline.jl's Controller type 
+# provides a way to "push" values LineElements, or other Controllers.
 # Let's create a controller which sets the B1 of qf and qd:
 c1 = Controller(
   (qf, :K1) => (ele; x) ->  x,
