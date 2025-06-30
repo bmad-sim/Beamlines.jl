@@ -162,7 +162,7 @@ function Base.getproperty(ele::LineElement, key::Symbol)
       error("Type LineElement has no property $key")
     end
   elseif ret isa DefExpr
-    return ret.f()
+    return ret()
   else
     return ret
   end

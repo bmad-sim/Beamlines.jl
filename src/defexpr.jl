@@ -4,6 +4,7 @@ end
 (d::DefExpr)() = d.f()
 
 DefExpr(a::Number) = DefExpr(()->a)
+DefExpr(a::DefExpr) = a
 
 Base.:+(da::DefExpr, b::Number)   = DefExpr(()-> da() + b   )
 Base.:+(a::Number,   db::DefExpr) = DefExpr(()-> a    + db())
