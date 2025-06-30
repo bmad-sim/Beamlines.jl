@@ -158,4 +158,22 @@ sizeof(bbl)
 # Convert back:
 bl2 = Beamline(bbl)
 all(bl.line .≈ bl2.line) # true
+
+
+# Duplicate elements are allowed. In this case, the first element 
+# instance is used as the "parent", and all duplicates parameters 
+# are pulled directly from the parent
+qf = Quadrupole(K1=0.36, L=0.5)
+d = Drift(L=1)
+qd = Quadrupole(K1=-0.36, L=0.5)
+
+fodo = Beamline([qf, d, qd, d, qf, d, qd, d])
+bl.line[1] === qf # egality with first instance
+
+# reset parent
+qf.K1 = 0.1
+
+# second instance
+qf2 = fodo.line[5]
+qf2.K1 == 0.1 # true
 ```
