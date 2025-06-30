@@ -9,7 +9,7 @@
 
     # Check if any are in a Beamline already
     for i in eachindex(line)
-      if haskey(line[i].pdict, BeamlineParams)
+      if haskey(getfield(line[i], :pdict), BeamlineParams)
         if line[i].beamline != bl # Different Beamline - need to error
           error("Cannot construct Beamline: element $i with name $(ele.name) is already in a Beamline")
         else # Duplicate element
@@ -17,7 +17,7 @@
         end
       end
       # HARD put in because may need to override InheritParams
-      line[i].pdict[BeamlineParams] = BeamlineParams(bl, i)
+      getfield(line[i], :pdict)[BeamlineParams] = BeamlineParams(bl, i)
     end
 
     return bl

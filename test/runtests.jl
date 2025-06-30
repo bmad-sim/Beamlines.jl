@@ -6,7 +6,7 @@ using Test
     L = 5.0f0
     ele = LineElement(class="Test", name="Test123", L=L)
 
-    @test ele.pdict[UniversalParams] === ele.UniversalParams
+    @test getfield(ele, :pdict)[UniversalParams] === ele.UniversalParams
 
     up = ele.UniversalParams
     @test isactive(up)
@@ -37,10 +37,10 @@ using Test
     e2 = 0.456
 
     # Check if pdict remains valid:
-    @test_throws ErrorException ele.pdict[BendParams] = up_new
-    @test_throws ErrorException ele.pdict[1] = 10.0
-    @test_throws ErrorException ele.pdict[1] = up_new
-    @test_throws ErrorException ele.pdict[UniversalParams] = 10.0
+    @test_throws ErrorException getfield(ele, :pdict)[BendParams] = up_new
+    @test_throws ErrorException getfield(ele, :pdict)[1] = 10.0
+    @test_throws ErrorException getfield(ele, :pdict)[1] = up_new
+    @test_throws ErrorException getfield(ele, :pdict)[UniversalParams] = 10.0
 
     @test !isactive(ele.BendParams)
     ele.g = g
@@ -514,4 +514,11 @@ using Test
     @test d.name == "d"
     @test d.L == 1+0.36
     @test a == 1+0.36
+
+    # Duplicat elements
+    qf = Quadrupole(K1=0.36, L=0.5)
+    d = Drift(L=1)
+    qd = Quadrupole(K1=-0.36, L=0.5)
+
+    fodo = Beamline([qf, d, qd, d, qf, d, qd, d], Brho_ref=60)
 end

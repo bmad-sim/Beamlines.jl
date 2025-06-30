@@ -19,7 +19,6 @@ This is because of InheritParams. E.g., for an element containing
 InheritParams, the following gets are NOT equal:
 
 ele.BMultipoleParams        # Goes to InheritParams to get parent
-ele.pdict[BMultipoleParams] # Overrides the above behavior (DONT DO THIS!)
 
 =#
 
