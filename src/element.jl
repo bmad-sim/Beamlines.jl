@@ -126,15 +126,13 @@ function Base.getproperty(ele::LineElement, key::Symbol)
   end
   if isnothing(ret) 
     if haskey(ele.pdict, InheritParams)
-      return getproperty(ele.pdict[InheritParams].parent, key)
+      return getproperty((ele.pdict[InheritParams]::InheritParams).parent::LineElement, key)
+    elseif haskey(PARAMS_MAP, key) || haskey(VIRTUAL_GETTER_MAP, key) || haskey(PROPERTIES_MAP, key)
+        return nothing
     elseif haskey(VIRTUAL_SETTER_MAP, key)
       error("LineElement property $key is write-only")
     else
-      if haskey(PARAMS_MAP, key) || haskey(VIRTUAL_GETTER_MAP, key) || haskey(PROPERTIES_MAP, key)
-        return nothing
-      else
-        error("Type LineElement has no property $key")
-      end
+      error("Type LineElement has no property $key")
     end
   elseif ret isa DefExpr
     return ret.f()
@@ -152,23 +150,28 @@ qf.BMultipoleParams = ... # Both should get it too
 qf.BMultipoleParams = nothing # remove both
 
 qf2 = bl.line[2]
-qf2.K1 = 0.2 # sets both?
-qf2.UniversalParams = .... # should set both
-
-# So basically really only set your own if you have it already in there
+qf2.K1 = 0.2 # set both?
+qf2.UniversalParams = .... # set both
 
 =#
 function Base.setproperty!(ele::LineElement, key::Symbol, value)
   if haskey(PARAMS_MAP, key) # Setting whole parameter struct
-    if isnothing(value) # setting parameter struct to nothing removes it
-      delete!(ele.pdict, PARAMS_MAP[key])
+    if haskey(ele.pdict, InheritParams) && !haskey(ele.pdict, PARAMS_MAP[key])
+      setproperty!((ele.pdict[InheritParams]::InheritParams).parent::LineElement, key, value)
     else
-      setindex!(ele.pdict, value, PARAMS_MAP[key])
+      if isnothing(value) # setting parameter struct to nothing removes it
+        delete!(ele.pdict, PARAMS_MAP[key])
+      else
+        setindex!(ele.pdict, value, PARAMS_MAP[key])
+      end
     end
   elseif haskey(VIRTUAL_SETTER_MAP, key) # Virtual properties override regular properties
     return VIRTUAL_SETTER_MAP[key](ele, key, value)
   elseif haskey(PROPERTIES_MAP, key)
     if !haskey(ele.pdict, PROPERTIES_MAP[key])
+      if haskey(ele.pdict, InheritParams)
+        return setproperty!((ele.pdict[InheritParams]::InheritParams).parent::LineElement, key, value)
+      end
       # If the parameter struct associated with this symbol does not exist, create it
       # This could be optimized in the future with a `place` function
       # That is similar to `replace` but just has the type

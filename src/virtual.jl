@@ -14,6 +14,13 @@ Nonetheless the performance difference is not significant so
 functional virtual getters/setters can be used if speed is 
 less of a concern.
 
+Virtual getters/setters MUST NOT go to the pdict to get/set values.
+This is because of InheritParams. E.g., for an element containing 
+InheritParams, the following gets are NOT equal:
+
+ele.BMultipoleParams        # Goes to InheritParams to get parent
+ele.pdict[BMultipoleParams] # Overrides the above behavior (DONT DO THIS!)
+
 =#
 
 function get_BM_strength(ele::LineElement, key::Symbol)
@@ -89,8 +96,8 @@ function _get_BM_strength(ele, b, key)
 end
 
 function set_BM_strength!(ele::LineElement, key::Symbol, value)
-  if !haskey(ele.pdict, BMultipoleParams)
-    setindex!(ele.pdict, BMultipoleParams(), BMultipoleParams)
+  if isnothing(ele.BMultipoleParams)
+    ele.BMultipoleParams = BMultipoleParams() 
   end
 
   # Setting is painful, because we do not know what the type of
@@ -176,7 +183,7 @@ function _set_BM_strength!(ele, b1::BMultipoleParams{S}, key, strength) where {S
   T = promote_type(S,typeof(strength))
   if T != S
     b = BMultipoleParams{T}(b1)
-    ele.pdict[BMultipoleParams] = b
+    ele.BMultipoleParams = b
   else
     b = b1
   end
@@ -256,7 +263,7 @@ function set_BM_independent!(ele::LineElement, ::Symbol, value)
       T = promote_type(typeof(oldstrength),typeof(strength))
       if T != typeof(oldstrength)
         b = BMultipoleParams{T}(b)
-        ele.pdict[BMultipoleParams] = b
+        ele.BMultipoleParams = b
       end
       newbm = BMultipole{T}(strength,oldbm.tilt,order,normalized,integrated)
       b.bdict[order] = newbm
