@@ -14,6 +14,12 @@ Nonetheless the performance difference is not significant so
 functional virtual getters/setters can be used if speed is 
 less of a concern.
 
+Virtual getters/setters MUST NOT go to the pdict to get/set values.
+This is because of InheritParams. E.g., for an element containing 
+InheritParams, the following gets are NOT equal:
+
+ele.BMultipoleParams        # Goes to InheritParams to get parent
+
 =#
 
 function get_BM_strength(ele::LineElement, key::Symbol)
@@ -23,6 +29,9 @@ end
 
 function _get_BM_strength(ele, b, key)
   order, normalized, integrated = BMULTIPOLE_STRENGTH_MAP[key]
+  if isnothing(b) || !haskey(b.bdict, order)
+    return nothing
+  end
   bm = b.bdict[order]
   strength = bm.strength
   # Yes there is a simpler way to write the below but this 
@@ -86,8 +95,8 @@ function _get_BM_strength(ele, b, key)
 end
 
 function set_BM_strength!(ele::LineElement, key::Symbol, value)
-  if !haskey(ele.pdict, BMultipoleParams)
-    setindex!(ele.pdict, BMultipoleParams(), BMultipoleParams)
+  if isnothing(ele.BMultipoleParams)
+    ele.BMultipoleParams = BMultipoleParams() 
   end
 
   # Setting is painful, because we do not know what the type of
@@ -173,7 +182,7 @@ function _set_BM_strength!(ele, b1::BMultipoleParams{S}, key, strength) where {S
   T = promote_type(S,typeof(strength))
   if T != S
     b = BMultipoleParams{T}(b1)
-    ele.pdict[BMultipoleParams] = b
+    ele.BMultipoleParams = b
   else
     b = b1
   end
@@ -211,7 +220,7 @@ end
 
 function _get_BM_independent(b)
   if isnothing(b)
-    return Vector{Symbol}(undef, 0)
+    return nothing
   end
   v = Vector{Symbol}(undef, length(b.bdict))
   i = 1
@@ -253,7 +262,7 @@ function set_BM_independent!(ele::LineElement, ::Symbol, value)
       T = promote_type(typeof(oldstrength),typeof(strength))
       if T != typeof(oldstrength)
         b = BMultipoleParams{T}(b)
-        ele.pdict[BMultipoleParams] = b
+        ele.BMultipoleParams = b
       end
       newbm = BMultipole{T}(strength,oldbm.tilt,order,normalized,integrated)
       b.bdict[order] = newbm
@@ -289,6 +298,9 @@ function get_field_master(ele::LineElement, ::Symbol)
 end
 
 function _get_field_master(b)
+  if isnothing(b)
+    return nothing
+  end
   bms = values(b.bdict)
   check = first(bms).normalized
   if !all(t->t.normalized==check, bms)
@@ -303,6 +315,9 @@ function get_integrated_master(ele::LineElement, ::Symbol)
 end
 
 function _get_integrated_master(b)
+  if isnothing(b)
+    return nothing
+  end
   bms = values(b.bdict)
   check = first(bms).integrated
   if !all(t->t.integrated==check, bms)

@@ -6,7 +6,7 @@ using Test
     L = 5.0f0
     ele = LineElement(class="Test", name="Test123", L=L)
 
-    @test ele.pdict[UniversalParams] === ele.UniversalParams
+    @test getfield(ele, :pdict)[UniversalParams] === ele.UniversalParams
 
     up = ele.UniversalParams
     @test isactive(up)
@@ -37,10 +37,10 @@ using Test
     e2 = 0.456
 
     # Check if pdict remains valid:
-    @test_throws ErrorException ele.pdict[BendParams] = up_new
-    @test_throws ErrorException ele.pdict[1] = 10.0
-    @test_throws ErrorException ele.pdict[1] = up_new
-    @test_throws ErrorException ele.pdict[UniversalParams] = 10.0
+    @test_throws ErrorException getfield(ele, :pdict)[BendParams] = up_new
+    @test_throws ErrorException getfield(ele, :pdict)[1] = 10.0
+    @test_throws ErrorException getfield(ele, :pdict)[1] = up_new
+    @test_throws ErrorException getfield(ele, :pdict)[UniversalParams] = 10.0
 
     @test !isactive(ele.BendParams)
     ele.g = g
@@ -514,4 +514,161 @@ using Test
     @test d.name == "d"
     @test d.L == 1+0.36
     @test a == 1+0.36
+
+    # Duplicate elements
+    qf = Quadrupole(K1=0.36, L=0.5)
+    d = Drift(L=1)
+    qd = Quadrupole(K1=-0.36, L=0.5)
+
+    fodo = Beamline([qf, d, qd, d, qf, d, qd, d], Brho_ref=60)
+    @test qf === fodo.line[1]
+    @test d === fodo.line[2]
+    @test qd === fodo.line[3]
+    @test !(d === fodo.line[4] )
+    @test !(qf === fodo.line[5])
+    @test !(qd === fodo.line[7])
+
+    @test qf ≈ fodo.line[5]
+    @test d ≈ fodo.line[4]
+    @test qd ≈ fodo.line[7]
+
+    qf2 = fodo.line[5]
+    qf2.L = 2
+    @test qf.L == 2
+    @test qf2.L == 2
+    @test qf2 ≈ qf
+    qf.L = 0.5
+    @test qf.L == 0.5
+    @test qf2.L == 0.5
+    @test qf2 ≈ qf
+    qf.K1 = 0.1
+    @test qf.K1 == 0.1
+    @test qf2.K1 == 0.1
+    
+    qf2.K2 = 1.23
+    @test qf.K2 == 1.23
+    @test qf2.K2 == 1.23
+    
+    # Promote through child
+    qf2.K2L = 1.23*im
+
+    @test typeof(qf.K2L) == ComplexF64
+    @test qf.K2L == 1.23*im
+    @test typeof(qf2.K2L) == ComplexF64
+    @test qf2.K2L == 1.23*im
+    @test qf ≈ qf2 
+
+    @test qf2.BMultipoleParams === qf.BMultipoleParams
+
+    # Add new group through child
+    qf2.x_rot = 0f0
+    @test qf.AlignmentParams === qf2.AlignmentParams
+    @test qf ≈ qf2
+
+    qf2.AlignmentParams = AlignmentParams(1,2,3,4,5,6)
+    @test qf.AlignmentParams === qf2.AlignmentParams
+    @test qf ≈ qf2
+
+    # s-position
+    @test qf.s == 0
+    @test qf.s_downstream == 0.5
+    @test qf2.s == 3
+    @test qf2.s_downstream == 3.5
+    @test fodo.line[end].s_downstream == 6
+
+    # Manual override 
+    getfield(qf2, :pdict)[UniversalParams] = UniversalParams(L=1)
+    @test qf2.BMultipoleParams === qf.BMultipoleParams
+    @test !(qf.UniversalParams === qf2.UniversalParams)
+    @test qf.L == 0.5
+    @test qf2.L == 1
+    @test qf.s == 0
+    @test qf.s_downstream == 0.5
+    @test qf2.s == 3
+    @test qf2.s_downstream == 4
+    @test fodo.line[end].s_downstream == 6.5
+    @test qf2.K2L == qf2.K2*qf2.L
+    @test qf2.K2 == qf.K2
+    
+    qf.K3L = 1
+    @test qf2.K3L == 1
+    @test qf2.K3L == qf2.K3*qf2.L
+    @test qf2.K3*qf2.L == qf.K3*qf.L
+
+    # Deferred Expressions
+    a = 0.36
+    da = DefExpr(()->a)
+    @test da() == a
+    a = 0.1
+    @test da() == a
+    b = 0.2
+    db = DefExpr(()->b)
+    dc = da+db
+    @test dc() ≈ 0.3
+
+    a = 0.2
+    @test dc() ≈ 0.4
+    b = 0.3
+    @test dc() ≈ 0.5
+
+    Brho_ref = 60.
+    K1 = 0.36
+    L = 0.5
+    qf = Quadrupole(K1=DefExpr(()->K1), L=DefExpr(()->L))
+    d = Drift(L=1)
+    qd = Quadrupole(K1=DefExpr(()->-qf.K1), L=DefExpr(()->L))
+
+    fodo = Beamline([qf, d, qd, d], Brho_ref=DefExpr(()->Brho_ref))
+
+    @test fodo.Brho_ref == Brho_ref
+    @test qf.Brho_ref == Brho_ref
+
+    Brho_ref = 40.
+    @test fodo.Brho_ref == Brho_ref
+    @test qf.Brho_ref == Brho_ref
+
+    @test qf.K1L ≈ K1*L
+    @test qd.K1L ≈ -K1*L
+    @test qf.B1L ≈ K1*Brho_ref*L
+    @test qd.B1L ≈ -K1*Brho_ref*L
+    @test qf.B1 ≈ K1*Brho_ref
+    @test qd.B1 ≈ -K1*Brho_ref
+    @test qf.L ≈ L
+    @test qd.L ≈ L
+    @test fodo.line[end].s_downstream ≈ 3
+    L = 1
+    @test qf.L == 1
+    @test qd.L == 1
+    @test fodo.line[end].s_downstream ≈ 4
+    
+    @test qf.K1L ≈ K1*L
+    @test qd.K1L ≈ -K1*L
+    @test qf.B1L ≈ K1*Brho_ref*L
+    @test qd.B1L ≈ -K1*Brho_ref*L
+    @test qf.B1 ≈ K1*Brho_ref
+    @test qd.B1 ≈ -K1*Brho_ref
+ 
+    K1 = 0.2
+    @test qf.K1L ≈ K1*L
+    @test qd.K1L ≈ -K1*L
+    @test qf.B1L ≈ K1*Brho_ref*L
+    @test qd.B1L ≈ -K1*Brho_ref*L
+    @test qf.B1 ≈ K1*Brho_ref
+    @test qd.B1 ≈ -K1*Brho_ref
+
+    Brho_ref = 3*im
+    @test qf.K1L ≈ K1*L
+    @test qd.K1L ≈ -K1*L
+    @test qf.B1L ≈ K1*Brho_ref*L
+    @test qd.B1L ≈ -K1*Brho_ref*L
+    @test qf.B1 ≈ K1*Brho_ref
+    @test qd.B1 ≈ -K1*Brho_ref
+
+    K1 = 4*im
+    @test qf.K1L ≈ K1*L
+    @test qd.K1L ≈ -K1*L
+    @test qf.B1L ≈ K1*Brho_ref*L
+    @test qd.B1L ≈ -K1*Brho_ref*L
+    @test qf.B1 ≈ K1*Brho_ref
+    @test qd.B1 ≈ -K1*Brho_ref
 end

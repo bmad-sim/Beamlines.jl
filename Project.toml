@@ -1,7 +1,7 @@
 name = "Beamlines"
 uuid = "5bb90b03-0719-46b8-8ce4-1ef3afd3cd4b"
 authors = ["Matt Signorelli <mgs255@cornell.edu> and contributors"]
-version = "0.2.2"
+version = "0.3.0"
 
 [deps]
 Accessors = "7d9f7c33-5ae7-4f3b-8dc6-eff91059b697"
@@ -13,7 +13,7 @@ StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 
 [compat]
 Accessors = "0.1.42"
-GTPSA = "1.4.3"
+GTPSA = "1.4"
 MacroTools = "0.5.16"
 OrderedCollections = "1.8.1"
 StaticArrays = "1.9.13"

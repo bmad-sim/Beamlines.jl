@@ -6,32 +6,36 @@
   # Base.Vector should be allowed.
   function Beamline(line::Vector{LineElement}; Brho_ref::Number=NaN)
     bl = new(line, Brho_ref)
+
+    # Check if any are in a Beamline already
     for i in eachindex(line)
-      if haskey(line[i].pdict, BeamlineParams)
-        if line[i].beamline != bl
-          error("Element is already in a beamline")
-        else
-          # This can be changed later...
-          error("Duplicate elements not currently allowed in a beamline")
-          #line[i] = deepcopy_no_beamline(line[line[i].beamline_index])
+      if haskey(getfield(line[i], :pdict), BeamlineParams)
+        if line[i].beamline != bl # Different Beamline - need to error
+          error("Cannot construct Beamline: element $i with name $(line[i].name) is already in a Beamline")
+        else # Duplicate element
+          line[i] = LineElement(ParamDict(InheritParams=>InheritParams(line[i])))
         end
       end
-      
-      line[i].BeamlineParams = BeamlineParams(bl, i)
+      # HARD put in because may need to override InheritParams
+      getfield(line[i], :pdict)[BeamlineParams] = BeamlineParams(bl, i)
     end
-    
+
     return bl
   end
 end
 
 
 function Base.getproperty(b::Beamline, key::Symbol)
-  field = getfield(b, key)
+  field = getfield(b, key) 
   if key == :Brho_ref && isnan(field)
     #@warn "Brho_ref has not been set: using default value of NaN"
     error("Unable to get magnetic rigidity: Brho_ref of the Beamline has not been set")
   end
-  return field
+  if field isa DefExpr
+    return field()
+  else
+    return field
+  end
 end
 
 struct BeamlineParams <: AbstractParams
