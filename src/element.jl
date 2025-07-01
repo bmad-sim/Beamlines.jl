@@ -134,6 +134,10 @@ end
 
 @inline get_parent(pdict::ParamDict) = (pdict[InheritParams]::InheritParams).parent::LineElement
 
+struct StickyParams <: AbstractParams
+  stuck::Vector{Symbol}
+end
+
 # Use Accessors here for default bc super convenient for replacing entire (even mutable) type
 # For more complex params (e.g. BMultipoleParams) we will need custom override
 replace(p::AbstractParams, key::Symbol, value) = set(p, opcompose(PropertyLens(key)), value)
@@ -183,6 +187,14 @@ qf2.UniversalParams = .... # set both
 =#
 function Base.setproperty!(ele::LineElement, key::Symbol, value)
   pdict = getfield(ele, :pdict)
+  # First check if sticky
+  if haskey(pdict, StickyParams)
+    stuck = (pdict[StickyParams]::StickyParams).stuck
+    if key in stuck && !isnothing(getproperty(ele, key))
+      error("Property $key cannot be updated: listed in StickyParams")
+    end
+  end
+  
   if haskey(PARAMS_MAP, key) # Setting whole parameter struct
     if haskey(pdict, InheritParams) && !haskey(pdict, PARAMS_MAP[key])
       setproperty!(get_parent(pdict), key, value)
