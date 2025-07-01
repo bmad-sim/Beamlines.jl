@@ -3,6 +3,9 @@ struct DefExpr <: Number
 end
 (d::DefExpr)() = d.f()
 
+deval(d::DefExpr) = d()
+deval(d) = d
+
 DefExpr(a::Number) = DefExpr(()->a)
 DefExpr(a::DefExpr) = a
 

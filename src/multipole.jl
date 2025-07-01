@@ -37,17 +37,17 @@ end
 
 function Base.getproperty(bm::BMultipole, key::Symbol)
   if key in fieldnames(BMultipole)
-    return getfield(bm, key)
+    return deval(getfield(bm, key))
   elseif haskey(BMULTIPOLE_STRENGTH_MAP, key)
     order, normalized, integrated = BMULTIPOLE_STRENGTH_MAP[key]
     if order == bm.order  && normalized == bm.normalized && integrated == bm.integrated
-      return bm.strength
+      return deval(bm.strength)
     else
       correctkey = BMULTIPOLE_STRENGTH_INVERSE_MAP[(bm.order,bm.normalized,bm.integrated)]
       error("BMultipole does not have property $key: did you mean $correctkey?")
     end
   elseif haskey(BMULTIPOLE_TILT_MAP, key)
-    return bm.tilt
+    return deval(bm.tilt)
   end
   error("BMultipole $bm does not have property $key")
 end

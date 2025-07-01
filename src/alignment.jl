@@ -21,3 +21,5 @@ function Base.isapprox(a::AlignmentParams, b::AlignmentParams)
          a.y_rot    ≈ b.y_rot &&
          a.tilt     ≈ b.tilt
 end
+
+Base.getproperty(a::AlignmentParams, key::Symbol) = deval(getfield(a, key))

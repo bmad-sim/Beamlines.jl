@@ -65,19 +65,19 @@ end
 
 function Base.getproperty(bp::BeamlineParams, key::Symbol)
   if key == :Brho_ref
-    return getproperty(bp.beamline, key) 
+    return deval(getproperty(bp.beamline, key))
   elseif key in (:s, :s_downstream)
     if key == :s
       n = bp.beamline_index - 1
       if n == 0
-        return 0.0
+        return 0
       end
     else
       n = bp.beamline_index
     end
     # s is the sum of the lengths of all preceding elements
     line = bp.beamline.line
-    return sum(line[i].L for i in 1:n)
+    return deval(sum(line[i].L for i in 1:n))
   else
     return getfield(bp, key)
   end

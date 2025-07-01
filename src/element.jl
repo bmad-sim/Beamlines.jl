@@ -120,6 +120,8 @@ struct SciBmadStandard end
   name::String    = ""
 end
 
+Base.getproperty(a::UniversalParams, key::Symbol) = deval(getfield(a, key))
+
 function Base.isapprox(a::UniversalParams, b::UniversalParams)
   return a.tracking_method == b.tracking_method &&
          a.L               ≈  b.L
@@ -161,8 +163,6 @@ function Base.getproperty(ele::LineElement, key::Symbol)
     else
       error("Type LineElement has no property $key")
     end
-  elseif ret isa DefExpr
-    return ret()
   else
     return ret
   end
