@@ -1,5 +1,6 @@
 struct DefExpr{T}
   f::FunctionWrapper{T,Tuple{}}
+  DefExpr{T}(f::FunctionWrapper{T,Tuple{}}) where {T} = new{T}(f)
 end
 
 # Calling DefExpr
