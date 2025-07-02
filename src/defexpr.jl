@@ -1,4 +1,8 @@
-# Maybe on PowerPC and arch systems we just use Function wrappers instead
+# If on arch or powerpc use Function only
+# Ensure fully static
+macro CCOMPAT()
+  return :(@static(!occursin("arch", String(Sys.ARCH)) && !occursin("ppc", String(Sys.ARCH))))
+end
 
 struct DefExpr{F<:Union{Function,Base.CFunction},T}
   f::F
@@ -16,7 +20,9 @@ end
 
 # Constructor for Function -> DefExpr{CFunction}
 @generated function DefExpr{Base.CFunction,T}(f::Function) where {T}
-  if !isconcretetype(T)
+  if @CCOMPAT
+    return :(error("cfunction closures are not yet supported on your platform ($(Sys.ARCH))"))
+  elseif !isconcretetype(T)
     return :(error("Cannot create a DefExpr{$(($F))} for non-concrete type $($T)"))
   end
   cfun = :($(Expr(:cfunction, Base.CFunction, :f, :($T), :(Core.svec()), :(:ccall))))
@@ -31,12 +37,7 @@ DefExpr{F,T}(a::DefExpr{F}) where {F,T} = DefExpr{F,T}(()->convert(T,a()))
 DefExpr{Function,T}(a::DefExpr{Base.CFunction}) where {T} = DefExpr{Function,T}(()->convert(T,a.f.f))
 
 # DefExpr{Function} -> DefExpr{CFunction}
-function DefExpr{Base.CFunction,T}(a::DefExpr{Function,U}) where {T,U}
-  if !isconcretetype(U)
-    error("Unable to convert $a to $(DefExpr{Base.CFunction,T})")
-  end
-  return DefExpr{Base.CFunction,T}(()->convert(T,a))
-end
+DefExpr{Base.CFunction,T}(a::DefExpr{Function,U}) where {T,U} = DefExpr{Base.CFunction,T}(()->convert(T,a))
 
 # Make these apply via convert
 Base.convert(::Type{D}, a) where {D<:DefExpr} = D(a)
@@ -44,8 +45,10 @@ Base.convert(::Type{D}, a) where {D<:DefExpr} = D(a)
 # Now simple constructor for convenience
 function DefExpr(f::Function)
   T = Base.promote_op(f)
-  if isconcretetype(T)
-    return DefExpr{Base.CFunction,T}(f)
+  if @CCOMPAT
+    if isconcretetype(T)
+      return DefExpr{Base.CFunction,T}(f)
+    end
   else
     return DefExpr{Function,T}(f)
   end
