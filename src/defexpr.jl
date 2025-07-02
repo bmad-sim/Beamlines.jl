@@ -2,13 +2,14 @@
 # Ensure fully static
 const CCOMPAT = @static(!occursin("arch", String(Sys.ARCH)) && !occursin("ppc", String(Sys.ARCH)))
 
-struct DefExpr{F<:Union{Function,Base.CFunction},T}
+struct DefExpr{F<:Union{Function,Base.CFunction,FunctionWrapper},T}
   f::F
   DefExpr{F,T}(f::F) where {F<:Union{Function,Base.CFunction},T} = new{F,T}(f)
+  DefExpr{F,T}(f::F) where {T,F<:FunctionWrapper{T,Tuple{}}} = new{F,T}(f)
 end
 
 # Calling DefExpr
-(d::DefExpr{Function,T})() where {T} = d.f()::T
+(d::DefExpr{<:Union{Function,FunctionWrapper},T})() where {T} = d.f()::T
 # ccall doesn't like typevar so we use generated functions
 @generated function (d::DefExpr{Base.CFunction,T})() where {T}
   return :( GC.@preserve d begin
@@ -27,15 +28,20 @@ end
   return :(DefExpr{Base.CFunction, $T}($cfun))
 end
 
+# Construct for Function -> DefExpr{FunctionWrapper}
+function DefExpr{FunctionWrapper{T,Tuple{}},T}(f::Function) where {T}
+  return DefExpr{FunctionWrapper{T,Tuple{}},T}(FunctionWrapper{T,Tuple{}}(f))
+end
+
 # Conversion of types to DefExpr
 DefExpr{F,T}(a) where {F,T} = DefExpr{F,T}(()->convert(T,a))
 DefExpr{F,T}(a::DefExpr{F}) where {F,T} = DefExpr{F,T}(()->convert(T,a()))
 
-# DefExpr{CFunction} -> DefExpr{Function}
-DefExpr{Function,T}(a::DefExpr{Base.CFunction}) where {T} = DefExpr{Function,T}(()->convert(T,a.f.f))
+# DefExpr{CFunction} -> DefExpr{<:Union{FunctionWrapper{T,Tuple{}},Function}}
+DefExpr{F,T}(a::DefExpr{Base.CFunction}) where {T,F<:Union{FunctionWrapper{T,Tuple{}},Function}} = DefExpr{F,T}(()->convert(T,a.f.f))
 
 # DefExpr{Function} -> DefExpr{CFunction}
-DefExpr{Base.CFunction,T}(a::DefExpr{Function,U}) where {T,U} = DefExpr{Base.CFunction,T}(()->convert(T,a))
+DefExpr{Base.CFunction,T}(a::DefExpr{F,U}) where {T,U,F<:Union{FunctionWrapper{T,Tuple{}},Function}} = DefExpr{Base.CFunction,T}(()->convert(T,a))
 
 # Make these apply via convert
 Base.convert(::Type{D}, a) where {D<:DefExpr} = D(a)
@@ -43,10 +49,15 @@ Base.convert(::Type{D}, a) where {D<:DefExpr} = D(a)
 # Now simple constructor for convenience
 function DefExpr(f::Function)
   T = Base.promote_op(f)
-  if CCOMPAT && isconcretetype(T)
+  if isconcretetype(T)
+    if CCOMPAT
       return DefExpr{Base.CFunction,T}(f)
+    else
+      return DefExpr{FunctionWrapper{T,Tuple{}},T}(f)
+    end
   else
-    return DefExpr{Function,T}(f)
+    return DefExpr{FunctionWrapper{T,Tuple{}},T}(f)
+    #return DefExpr{Function,T}(f)
   end
 end
 
@@ -90,5 +101,10 @@ end
 
 Base.promote_rule(::Type{DefExpr{F,T}}, ::Type{U}) where {F,T,U} = DefExpr{F,promote_type(T,U)}
 Base.promote_rule(::Type{DefExpr{Function,T}}, ::Type{DefExpr{Base.CFunction,U}}) where {T,U} = DefExpr{Function,promote_type(T,U)}
+Base.promote_rule(::Type{DefExpr{Function,T}}, ::Type{DefExpr{<:FunctionWrapper,U}}) where {T,U} = DefExpr{Function,promote_type(T,U)}
+function Base.promote_rule(::Type{DefExpr{<:FunctionWrapper,T}}, ::Type{DefExpr{Base.CFunction,U}}) where {T,U}
+  V = promote_type(T,U)
+  return DefExpr{FunctionWrapper{V,Tuple{}},V}
+end
 
 Base.broadcastable(o::DefExpr) = Ref(o)
