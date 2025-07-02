@@ -1,4 +1,4 @@
-@kwdef mutable struct PatchParams{T<:Number} <: AbstractParams
+@kwdef mutable struct PatchParams{T} <: AbstractParams
   dt::T        = Float32(0.0)             # Time offset
   dx::T        = Float32(0.0)             # Local x coord offset
   dy::T        = Float32(0.0)             # Local y coord offset

@@ -611,6 +611,21 @@ using Test
     b = 0.3
     @test dc() ≈ 0.5
 
+    ac::Float64 = 0.36
+    dac = DefExpr(()->ac)
+    @test dac() == ac
+    ac = 0.1
+    @test dac() == ac
+    bc::Float64 = 0.2
+    dbc = DefExpr(()->bc)
+    dcc = dac+dbc
+    @test dcc() ≈ 0.3
+
+    ac = 0.2
+    @test dcc() ≈ 0.4
+    bc = 0.3
+    @test dcc() ≈ 0.5
+
     Brho_ref = 60.
     K1 = 0.36
     L = 0.5

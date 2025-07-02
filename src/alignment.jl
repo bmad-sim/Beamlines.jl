@@ -1,4 +1,4 @@
-@kwdef mutable struct AlignmentParams{T<:Number} <: AbstractParams
+@kwdef mutable struct AlignmentParams{T} <: AbstractParams
   x_offset::T = Float32(0.0)
   y_offset::T = Float32(0.0)
   z_offset::T = Float32(0.0)

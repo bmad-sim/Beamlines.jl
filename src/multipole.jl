@@ -1,4 +1,4 @@
-mutable struct BMultipole{T<:Number}
+mutable struct BMultipole{T}
   strength::T # field strength in T/m^order, normalized by Brho_ref if normalized == true
   tilt::T # direction (in xy plane) of directional-derivative defining strength
   const order::Int # Cyclic group order=0 solenoid, order=1 dipole, order=2 Quadrupole, ... 
@@ -198,7 +198,7 @@ const BMULTIPOLE_TILT_MAP = Dict{Symbol,Int}(
 
 # Key == order
 # Note we require all multipoles to have same number type
-const BMultipoleDict{T} = Dict{Int, BMultipole{T}} where {T<:Number}
+const BMultipoleDict{T} = Dict{Int, BMultipole{T}} where {T}
 
 # Note the repetitive code - this means we can likely coalesce ParamDict and BMultipoleDict 
 # Into some single new restricted Dict type.
@@ -235,7 +235,7 @@ function Base.isapprox(l::BMultipoleDict, r::BMultipoleDict)
   return anymissing ? missing : true
 end
 
-@kwdef struct BMultipoleParams{T<:Number} <: AbstractParams
+@kwdef struct BMultipoleParams{T} <: AbstractParams
   bdict::BMultipoleDict{T} = BMultipoleDict{Float32}() # multipole coefficients
   BMultipoleParams(bdict::BMultipoleDict{T}) where {T} = new{T}(bdict)
   function BMultipoleParams{T}(b::BMultipoleParams) where {T} 

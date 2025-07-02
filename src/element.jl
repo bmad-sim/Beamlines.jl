@@ -115,9 +115,9 @@ struct SciBmadStandard end
 
 @kwdef mutable struct UniversalParams <: AbstractParams
   tracking_method = SciBmadStandard()
-  L::Number       = Float32(0.0)
-  class::String   = ""
-  name::String    = ""
+  L               = Float32(0.0)
+  class           = ""
+  name            = ""
 end
 
 Base.getproperty(a::UniversalParams, key::Symbol) = deval(getfield(a, key))
