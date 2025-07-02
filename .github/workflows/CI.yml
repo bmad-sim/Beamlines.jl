@@ -31,8 +31,8 @@ jobs:
           - x64
         include:
           - os: ubuntu-24.04-arm
-            julia-version: ['1.11']
-            julia-arch: aarch64
+            version: ['1.11']
+            arch: aarch64
     steps:
       - uses: actions/checkout@v4
       - uses: julia-actions/setup-julia@v2
