@@ -596,79 +596,169 @@ using Test
     @test qf2.K3*qf2.L == qf.K3*qf.L
 
     # Deferred Expressions
-    a = 0.36
-    da = DefExpr(()->a)
-    @test da() == a
-    a = 0.1
-    @test da() == a
-    b = 0.2
-    db = DefExpr(()->b)
-    dc = da+db
-    @test dc() ≈ 0.3
+    # Function
+    let 
+      local a = 0.36
+      da = DefExpr(()->a)
+      @test da() == a
+      a = 0.1
+      @test da() == a
+      local b = 0.2
+      db = DefExpr(()->b)
+      dc = da+db
+      @test dc() ≈ 0.3
+      dd = DefExpr{ComplexF64}(dc)
+      @test dd() ≈ 0.3 && typeof(dd()) == ComplexF64
 
-    a = 0.2
-    @test dc() ≈ 0.4
-    b = 0.3
-    @test dc() ≈ 0.5
+      a = 0.2
+      @test dc() ≈ 0.4
+      @test dd() ≈ 0.4 && typeof(dd()) == ComplexF64
+      b = 0.3
+      @test dc() ≈ 0.5
+      @test dd() ≈ 0.5 && typeof(dd()) == ComplexF64
 
-    Brho_ref = 60.
-    K1 = 0.36
-    L = 0.5
-    qf = Quadrupole(K1=DefExpr(()->K1), L=DefExpr(()->L))
-    d = Drift(L=1)
-    qd = Quadrupole(K1=DefExpr(()->-qf.K1), L=DefExpr(()->L))
+      local Brho_ref = 60.
+      local K1 = 0.36
+      local L = 0.5
+      qf = Quadrupole(K1=DefExpr(()->K1), L=DefExpr(()->L))
+      d = Drift(L=1)
+      qd = Quadrupole(K1=DefExpr(()->-qf.K1), L=DefExpr(()->L))
 
-    fodo = Beamline([qf, d, qd, d], Brho_ref=DefExpr(()->Brho_ref))
+      fodo = Beamline([qf, d, qd, d], Brho_ref=DefExpr(()->Brho_ref))
 
-    @test fodo.Brho_ref == Brho_ref
-    @test qf.Brho_ref == Brho_ref
+      @test fodo.Brho_ref == Brho_ref
+      @test qf.Brho_ref == Brho_ref
 
-    Brho_ref = 40.
-    @test fodo.Brho_ref == Brho_ref
-    @test qf.Brho_ref == Brho_ref
+      Brho_ref = 40.
+      @test fodo.Brho_ref == Brho_ref
+      @test qf.Brho_ref == Brho_ref
 
-    @test qf.K1L ≈ K1*L
-    @test qd.K1L ≈ -K1*L
-    @test qf.B1L ≈ K1*Brho_ref*L
-    @test qd.B1L ≈ -K1*Brho_ref*L
-    @test qf.B1 ≈ K1*Brho_ref
-    @test qd.B1 ≈ -K1*Brho_ref
-    @test qf.L ≈ L
-    @test qd.L ≈ L
-    @test fodo.line[end].s_downstream ≈ 3
-    L = 1
-    @test qf.L == 1
-    @test qd.L == 1
-    @test fodo.line[end].s_downstream ≈ 4
-    
-    @test qf.K1L ≈ K1*L
-    @test qd.K1L ≈ -K1*L
-    @test qf.B1L ≈ K1*Brho_ref*L
-    @test qd.B1L ≈ -K1*Brho_ref*L
-    @test qf.B1 ≈ K1*Brho_ref
-    @test qd.B1 ≈ -K1*Brho_ref
- 
-    K1 = 0.2
-    @test qf.K1L ≈ K1*L
-    @test qd.K1L ≈ -K1*L
-    @test qf.B1L ≈ K1*Brho_ref*L
-    @test qd.B1L ≈ -K1*Brho_ref*L
-    @test qf.B1 ≈ K1*Brho_ref
-    @test qd.B1 ≈ -K1*Brho_ref
+      @test qf.K1L ≈ K1*L
+      @test qd.K1L ≈ -K1*L
+      @test qf.B1L ≈ K1*Brho_ref*L
+      @test qd.B1L ≈ -K1*Brho_ref*L
+      @test qf.B1 ≈ K1*Brho_ref
+      @test qd.B1 ≈ -K1*Brho_ref
+      @test qf.L ≈ L
+      @test qd.L ≈ L
+      @test fodo.line[end].s_downstream ≈ 3
+      L = 1
+      @test qf.L == 1
+      @test qd.L == 1
+      @test fodo.line[end].s_downstream ≈ 4
+      
+      @test qf.K1L ≈ K1*L
+      @test qd.K1L ≈ -K1*L
+      @test qf.B1L ≈ K1*Brho_ref*L
+      @test qd.B1L ≈ -K1*Brho_ref*L
+      @test qf.B1 ≈ K1*Brho_ref
+      @test qd.B1 ≈ -K1*Brho_ref
+  
+      K1 = 0.2
+      @test qf.K1L ≈ K1*L
+      @test qd.K1L ≈ -K1*L
+      @test qf.B1L ≈ K1*Brho_ref*L
+      @test qd.B1L ≈ -K1*Brho_ref*L
+      @test qf.B1 ≈ K1*Brho_ref
+      @test qd.B1 ≈ -K1*Brho_ref
 
-    Brho_ref = 3*im
-    @test qf.K1L ≈ K1*L
-    @test qd.K1L ≈ -K1*L
-    @test qf.B1L ≈ K1*Brho_ref*L
-    @test qd.B1L ≈ -K1*Brho_ref*L
-    @test qf.B1 ≈ K1*Brho_ref
-    @test qd.B1 ≈ -K1*Brho_ref
+      Brho_ref = 3*im
+      @test qf.K1L ≈ K1*L
+      @test qd.K1L ≈ -K1*L
+      @test qf.B1L ≈ K1*Brho_ref*L
+      @test qd.B1L ≈ -K1*Brho_ref*L
+      @test qf.B1 ≈ K1*Brho_ref
+      @test qd.B1 ≈ -K1*Brho_ref
 
-    K1 = 4*im
-    @test qf.K1L ≈ K1*L
-    @test qd.K1L ≈ -K1*L
-    @test qf.B1L ≈ K1*Brho_ref*L
-    @test qd.B1L ≈ -K1*Brho_ref*L
-    @test qf.B1 ≈ K1*Brho_ref
-    @test qd.B1 ≈ -K1*Brho_ref
+      K1 = 4*im
+      @test qf.K1L ≈ K1*L
+      @test qd.K1L ≈ -K1*L
+      @test qf.B1L ≈ K1*Brho_ref*L
+      @test qd.B1L ≈ -K1*Brho_ref*L
+      @test qf.B1 ≈ K1*Brho_ref
+      @test qd.B1 ≈ -K1*Brho_ref
+    end
+
+    # CFunction
+    let 
+      local a::Float64 = 0.36
+      da = DefExpr(()->a)
+      @test da() == a
+      a = 0.1
+      @test da() == a
+      local b::Float64 = 0.2
+      db = DefExpr(()->b)
+      dc = da+db
+      @test dc() ≈ 0.3
+      dd = DefExpr{ComplexF64}(dc)
+      @test dd() ≈ 0.3 && typeof(dd()) == ComplexF64
+
+      a = 0.2
+      @test dc() ≈ 0.4
+      @test dd() ≈ 0.4 && typeof(dd()) == ComplexF64
+      b = 0.3
+      @test dc() ≈ 0.5
+      @test dd() ≈ 0.5 && typeof(dd()) == ComplexF64
+      
+      local Brho_ref::Float64 = 60.
+      local K1::Float64 = 0.36
+      local L::Float64 = 0.5
+      qf = Quadrupole(K1=DefExpr(()->K1), L=DefExpr(()->L))
+      d = Drift(L=1)
+      qd = Quadrupole(K1=DefExpr(()->-qf.K1), L=DefExpr(()->L))
+
+      fodo = Beamline([qf, d, qd, d], Brho_ref=DefExpr(()->Brho_ref))
+
+      @test fodo.Brho_ref == Brho_ref
+      @test qf.Brho_ref == Brho_ref
+
+      Brho_ref = 40.
+      @test fodo.Brho_ref == Brho_ref
+      @test qf.Brho_ref == Brho_ref
+
+      @test qf.K1L ≈ K1*L
+      @test qd.K1L ≈ -K1*L
+      @test qf.B1L ≈ K1*Brho_ref*L
+      @test qd.B1L ≈ -K1*Brho_ref*L
+      @test qf.B1 ≈ K1*Brho_ref
+      @test qd.B1 ≈ -K1*Brho_ref
+      @test qf.L ≈ L
+      @test qd.L ≈ L
+      @test fodo.line[end].s_downstream ≈ 3
+      L = 1.
+      @test qf.L == 1.
+      @test qd.L == 1.
+      @test fodo.line[end].s_downstream ≈ 4
+      
+      @test qf.K1L ≈ K1*L
+      @test qd.K1L ≈ -K1*L
+      @test qf.B1L ≈ K1*Brho_ref*L
+      @test qd.B1L ≈ -K1*Brho_ref*L
+      @test qf.B1 ≈ K1*Brho_ref
+      @test qd.B1 ≈ -K1*Brho_ref
+  
+      K1 = 0.2
+      @test qf.K1L ≈ K1*L
+      @test qd.K1L ≈ -K1*L
+      @test qf.B1L ≈ K1*Brho_ref*L
+      @test qd.B1L ≈ -K1*Brho_ref*L
+      @test qf.B1 ≈ K1*Brho_ref
+      @test qd.B1 ≈ -K1*Brho_ref
+
+      Brho_ref = 3.0
+      @test qf.K1L ≈ K1*L
+      @test qd.K1L ≈ -K1*L
+      @test qf.B1L ≈ K1*Brho_ref*L
+      @test qd.B1L ≈ -K1*Brho_ref*L
+      @test qf.B1 ≈ K1*Brho_ref
+      @test qd.B1 ≈ -K1*Brho_ref
+
+      K1 = 4.0
+      @test qf.K1L ≈ K1*L
+      @test qd.K1L ≈ -K1*L
+      @test qf.B1L ≈ K1*Brho_ref*L
+      @test qd.B1L ≈ -K1*Brho_ref*L
+      @test qf.B1 ≈ K1*Brho_ref
+      @test qd.B1 ≈ -K1*Brho_ref
+    end
 end

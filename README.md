@@ -107,8 +107,8 @@ qd.K1 = DefExpr(()->-qf.K1)
 # The quadrupole strength values are set to anonymous functions 
 # which "stores"/"encloses" the value of K1 in the evaluated scope.
 
-# When getting a parameter which is a DefExpr from a LineElement or 
-# Beamline, it is evaluated right before returning:
+# When getting a parameter which is a DefExpr from a LineElement
+# or parameter group, the deferred expression is evaluated:
 qf.K1 == 0.36 # true
 qd.K1 == -0.36 # true
 
@@ -116,10 +116,13 @@ K1 = 0.3 # update local variable
 qf.K1 == 0.3 # true: closure evaluated upon *get*
 qd.K1 == -0.3 # true: closure evaluated upon *get*
 
-# If we get it from the parameter group, then it is NOT evaluated.
-(qd.BMultipoleParams.bdict[2].strength isa DefExpr) # true
+# We can improve the performance of deferred expressions by 
+# by passing type-stable functions:
+g_float::Float64 = g
+b1.g = DefExpr(()->g_float) # Closure has inferrable return type
+g_float = 1.23
+b1.BendParams # any gets from BendParams are now type stable
 
-# This may change in the future.
 
 # Deferred expressions provide a "pull" way of controlling multiple 
 # elements together: in the above example, the DefExpr stored in 

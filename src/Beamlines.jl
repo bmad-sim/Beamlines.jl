@@ -44,6 +44,9 @@ using GTPSA,
       OrderedCollections,
       MacroTools
 
+
+using FunctionWrappers: FunctionWrapper
+
 import GTPSA: sincu, sinhc, sinhcu, asinc, asincu, asinhc, asinhcu
 
 # Note that LineElement and parameter structs have three things:

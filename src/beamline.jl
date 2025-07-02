@@ -1,10 +1,10 @@
 @kwdef mutable struct Beamline
   const line::Vector{LineElement}
-  Brho_ref::Number # Will be NaN if not specified
+  Brho_ref # Will be NaN if not specified
 
   # Beamlines can be very long, so realistically only 
   # Base.Vector should be allowed.
-  function Beamline(line::Vector{LineElement}; Brho_ref::Number=NaN)
+  function Beamline(line::Vector{LineElement}; Brho_ref=NaN)
     bl = new(line, Brho_ref)
 
     # Check if any are in a Beamline already
@@ -26,16 +26,12 @@ end
 
 
 function Base.getproperty(b::Beamline, key::Symbol)
-  field = getfield(b, key) 
+  field = deval(getfield(b, key))
   if key == :Brho_ref && isnan(field)
     #@warn "Brho_ref has not been set: using default value of NaN"
     error("Unable to get magnetic rigidity: Brho_ref of the Beamline has not been set")
   end
-  if field isa DefExpr
-    return field()
-  else
-    return field
-  end
+  return field
 end
 
 struct BeamlineParams <: AbstractParams
@@ -65,19 +61,19 @@ end
 
 function Base.getproperty(bp::BeamlineParams, key::Symbol)
   if key == :Brho_ref
-    return getproperty(bp.beamline, key) 
+    return deval(getproperty(bp.beamline, key))
   elseif key in (:s, :s_downstream)
     if key == :s
       n = bp.beamline_index - 1
       if n == 0
-        return 0.0
+        return 0
       end
     else
       n = bp.beamline_index
     end
     # s is the sum of the lengths of all preceding elements
     line = bp.beamline.line
-    return sum(line[i].L for i in 1:n)
+    return deval(sum(line[i].L for i in 1:n))
   else
     return getfield(bp, key)
   end

@@ -1,4 +1,4 @@
-mutable struct BMultipole{T<:Number}
+mutable struct BMultipole{T}
   strength::T # field strength in T/m^order, normalized by Brho_ref if normalized == true
   tilt::T # direction (in xy plane) of directional-derivative defining strength
   const order::Int # Cyclic group order=0 solenoid, order=1 dipole, order=2 Quadrupole, ... 
@@ -37,17 +37,17 @@ end
 
 function Base.getproperty(bm::BMultipole, key::Symbol)
   if key in fieldnames(BMultipole)
-    return getfield(bm, key)
+    return deval(getfield(bm, key))
   elseif haskey(BMULTIPOLE_STRENGTH_MAP, key)
     order, normalized, integrated = BMULTIPOLE_STRENGTH_MAP[key]
     if order == bm.order  && normalized == bm.normalized && integrated == bm.integrated
-      return bm.strength
+      return deval(bm.strength)
     else
       correctkey = BMULTIPOLE_STRENGTH_INVERSE_MAP[(bm.order,bm.normalized,bm.integrated)]
       error("BMultipole does not have property $key: did you mean $correctkey?")
     end
   elseif haskey(BMULTIPOLE_TILT_MAP, key)
-    return bm.tilt
+    return deval(bm.tilt)
   end
   error("BMultipole $bm does not have property $key")
 end
@@ -198,7 +198,7 @@ const BMULTIPOLE_TILT_MAP = Dict{Symbol,Int}(
 
 # Key == order
 # Note we require all multipoles to have same number type
-const BMultipoleDict{T} = Dict{Int, BMultipole{T}} where {T<:Number}
+const BMultipoleDict{T} = Dict{Int, BMultipole{T}} where {T}
 
 # Note the repetitive code - this means we can likely coalesce ParamDict and BMultipoleDict 
 # Into some single new restricted Dict type.
@@ -235,7 +235,7 @@ function Base.isapprox(l::BMultipoleDict, r::BMultipoleDict)
   return anymissing ? missing : true
 end
 
-@kwdef struct BMultipoleParams{T<:Number} <: AbstractParams
+@kwdef struct BMultipoleParams{T} <: AbstractParams
   bdict::BMultipoleDict{T} = BMultipoleDict{Float32}() # multipole coefficients
   BMultipoleParams(bdict::BMultipoleDict{T}) where {T} = new{T}(bdict)
   function BMultipoleParams{T}(b::BMultipoleParams) where {T} 
