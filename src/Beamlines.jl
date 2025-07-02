@@ -12,7 +12,6 @@ export MattStandard,
        BendParams,
        InheritParams,
        DefExpr,
-       BMultipole,
        Drift,
        Solenoid,
        Quadrupole,
@@ -43,7 +42,6 @@ using GTPSA,
       StaticArrays, 
       OrderedCollections,
       MacroTools
-
 
 using FunctionWrappers: FunctionWrapper
 
