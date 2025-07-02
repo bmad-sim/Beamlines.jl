@@ -423,6 +423,8 @@ const VIRTUAL_GETTER_MAP = Dict{Symbol,Function}(
   :BM_independent => get_BM_independent,
   :field_master => get_field_master,
   :integrated_master => get_integrated_master,
+
+  :voltage => get_voltage,
 )
 
 const VIRTUAL_SETTER_MAP = Dict{Symbol,Function}(
@@ -524,4 +526,6 @@ const VIRTUAL_SETTER_MAP = Dict{Symbol,Function}(
   :BM_independent => set_BM_independent!,
   :field_master => set_field_master!,
   :integrated_master => set_integrated_master!,
+
+  :voltage => set_voltage!
 )

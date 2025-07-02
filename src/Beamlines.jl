@@ -1,46 +1,39 @@
 module Beamlines
-export MattStandard, 
-       AbstractParams, 
-       LineElement, 
-       Bunch, 
-       ParamDict, 
-       UniversalParams, 
-       BMultipoleParams, 
-       BeamlineParams,
-       AlignmentParams,
-       PatchParams,
-       BendParams,
-       InheritParams,
-       DefExpr,
-       BMultipole,
-       Drift,
-       Solenoid,
-       Quadrupole,
-       Sextupole,
-       Octupole,
-       Multipole,
-       Marker,
-       SBend,
-       Kicker,
-       HKicker,
-       VKicker,
-       RFCavity,
-       Beamline,
-       Controller,
-       Patch,
-       set!,
+export MattStandard,
+      AbstractParams,
+      LineElement,
+      Bunch,
+      ParamDict,
+      UniversalParams,
+      BMultipoleParams,
+      BeamlineParams,
+      AlignmentParams,
+      PatchParams,
+      BendParams,
+      InheritParams,
+      DefExpr,
+      BMultipole,
+      Drift,
+      Solenoid,
+      Quadrupole,
+      Sextupole,
+      Octupole,
+      Multipole,
+      Marker,
+      SBend,
+      Kicker,
+      HKicker,
+      VKicker,
+      RFCavity,
+      Beamline,
+      Controller,
+      Patch,
+      Cavity, STANDING_WAVE, TRAVELING_WAVE,
+      set!, deepcopy_no_beamline, BitsBeamline, SciBmadStandard, @eles
 
-       deepcopy_no_beamline,
-       
-       BitsBeamline,
-
-       SciBmadStandard,
-
-       @eles
-
-using GTPSA, 
-      Accessors, 
-      StaticArrays, 
+using GTPSA,
+      Accessors,
+      StaticArrays,
       OrderedCollections,
       MacroTools
 
@@ -64,6 +57,7 @@ include("defexpr.jl")
 include("element.jl")
 include("beamline.jl")
 include("multipole.jl")
+include("rf.jl")
 include("virtual.jl")
 include("bend.jl")
 include("control.jl")

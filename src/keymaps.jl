@@ -1,16 +1,16 @@
 
 const PROPERTIES_MAP = Dict{Symbol,Type{<:AbstractParams}}(
-  :tilts =>  BMultipoleParams,
-  :tilt0 =>  BMultipoleParams,
-  :tilt1 =>  BMultipoleParams,
-  :tilt2 =>  BMultipoleParams,
-  :tilt3 =>  BMultipoleParams,
-  :tilt4 =>  BMultipoleParams,
-  :tilt5 =>  BMultipoleParams,
-  :tilt6 =>  BMultipoleParams,
-  :tilt7 =>  BMultipoleParams,
-  :tilt8 =>  BMultipoleParams,
-  :tilt9 =>  BMultipoleParams,
+  :tilts => BMultipoleParams,
+  :tilt0 => BMultipoleParams,
+  :tilt1 => BMultipoleParams,
+  :tilt2 => BMultipoleParams,
+  :tilt3 => BMultipoleParams,
+  :tilt4 => BMultipoleParams,
+  :tilt5 => BMultipoleParams,
+  :tilt6 => BMultipoleParams,
+  :tilt7 => BMultipoleParams,
+  :tilt8 => BMultipoleParams,
+  :tilt9 => BMultipoleParams,
   :tilt10 => BMultipoleParams,
   :tilt11 => BMultipoleParams,
   :tilt12 => BMultipoleParams,
@@ -23,7 +23,8 @@ const PROPERTIES_MAP = Dict{Symbol,Type{<:AbstractParams}}(
   :tilt19 => BMultipoleParams,
   :tilt20 => BMultipoleParams,
   :tilt21 => BMultipoleParams,
-
+  #----------------------------------------------
+  :tilt22 => BMultipoleParams,
   :L => UniversalParams,
   :tracking_method => UniversalParams,
   :class => UniversalParams,
@@ -31,7 +32,7 @@ const PROPERTIES_MAP = Dict{Symbol,Type{<:AbstractParams}}(
 
   :beamline => BeamlineParams,
   :beamline_index => BeamlineParams,
-  :Brho_ref => BeamlineParams, 
+  :Brho_ref => BeamlineParams,
   :s => BeamlineParams,
   :s_downstream => BeamlineParams,
 
@@ -53,6 +54,11 @@ const PROPERTIES_MAP = Dict{Symbol,Type{<:AbstractParams}}(
   :dx_rot => PatchParams,
   :dy_rot => PatchParams,
   :dz_rot => PatchParams,
+
+  :frequency => RFParams,
+  :gradient => RFParams,
+  :phase => RFParams,
+  :cavity_type => RFParams,
 )
 
 const PARAMS_MAP = Dict{Symbol,Type{<:AbstractParams}}(
@@ -62,6 +68,7 @@ const PARAMS_MAP = Dict{Symbol,Type{<:AbstractParams}}(
   :BendParams => BendParams,
   :AlignmentParams => AlignmentParams,
   :PatchParams => PatchParams,
+  :RFParams => RFParams,
 )
 
 
