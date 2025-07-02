@@ -119,7 +119,7 @@ qd.K1 == -0.3 # true: closure evaluated upon *get*
 # We can improve the performance of deferred expressions by 
 # by passing type-stable functions:
 g_float::Float64 = g
-b1.g = DefExpr(()->g_float) # Closure has inferrable return typeg
+b1.g = DefExpr(()->g_float) # Closure has inferrable return type
 g_float = 1.23
 b1.BendParams # any gets from BendParams are now type stable
 
