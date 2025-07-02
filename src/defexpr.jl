@@ -1,8 +1,6 @@
 # If on arch or powerpc use Function only
 # Ensure fully static
-macro CCOMPAT()
-  return :(@static(!occursin("arch", String(Sys.ARCH)) && !occursin("ppc", String(Sys.ARCH))))
-end
+const CCOMPAT = @static(!occursin("arch", String(Sys.ARCH)) && !occursin("ppc", String(Sys.ARCH)))
 
 struct DefExpr{F<:Union{Function,Base.CFunction},T}
   f::F
@@ -20,7 +18,7 @@ end
 
 # Constructor for Function -> DefExpr{CFunction}
 @generated function DefExpr{Base.CFunction,T}(f::Function) where {T}
-  if !(@CCOMPAT)
+  if !CCOMPAT
     return :(error("cfunction closures are not yet supported on your platform ($(Sys.ARCH))"))
   elseif !isconcretetype(T)
     return :(error("Cannot create a DefExpr{$(($F))} for non-concrete type $($T)"))
@@ -45,10 +43,8 @@ Base.convert(::Type{D}, a) where {D<:DefExpr} = D(a)
 # Now simple constructor for convenience
 function DefExpr(f::Function)
   T = Base.promote_op(f)
-  if @CCOMPAT
-    if isconcretetype(T)
+  if CCOMPAT && isconcretetype(T)
       return DefExpr{Base.CFunction,T}(f)
-    end
   else
     return DefExpr{Function,T}(f)
   end
