@@ -607,11 +607,15 @@ using Test
       db = DefExpr(()->b)
       dc = da+db
       @test dc() ≈ 0.3
+      dd = DefExpr{ComplexF64}(dc)
+      @test dd() ≈ 0.3 && typeof(dd()) == ComplexF64
 
       a = 0.2
       @test dc() ≈ 0.4
+      @test dd() ≈ 0.4 && typeof(dd()) == ComplexF64
       b = 0.3
       @test dc() ≈ 0.5
+      @test dd() ≈ 0.5 && typeof(dd()) == ComplexF64
 
       local Brho_ref = 60.
       local K1 = 0.36
@@ -686,12 +690,16 @@ using Test
       db = DefExpr(()->b)
       dc = da+db
       @test dc() ≈ 0.3
+      dd = DefExpr{ComplexF64}(dc)
+      @test dd() ≈ 0.3 && typeof(dd()) == ComplexF64
 
       a = 0.2
       @test dc() ≈ 0.4
+      @test dd() ≈ 0.4 && typeof(dd()) == ComplexF64
       b = 0.3
       @test dc() ≈ 0.5
-
+      @test dd() ≈ 0.5 && typeof(dd()) == ComplexF64
+      
       local Brho_ref::Float64 = 60.
       local K1::Float64 = 0.36
       local L::Float64 = 0.5
