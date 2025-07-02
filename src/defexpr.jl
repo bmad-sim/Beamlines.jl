@@ -20,7 +20,7 @@ end
 
 # Constructor for Function -> DefExpr{CFunction}
 @generated function DefExpr{Base.CFunction,T}(f::Function) where {T}
-  if @CCOMPAT
+  if !(@CCOMPAT)
     return :(error("cfunction closures are not yet supported on your platform ($(Sys.ARCH))"))
   elseif !isconcretetype(T)
     return :(error("Cannot create a DefExpr{$(($F))} for non-concrete type $($T)"))
