@@ -1,10 +1,10 @@
 @kwdef struct BMultipoleParams{T,N} <: AbstractParams
-  n::SizedVector{N,T}         = SizedVector{0,Float32}()
-  s::SizedVector{N,T}         = SizedVector{0,Float32}()
-  tilt::SizedVector{N,T}      = SizedVector{0,Float32}()
-  order::SVector{N,Int}       = SVector{0,Float32}()
-  normalized::SVector{N,Bool} = SVector{0,Float32}()
-  integrated::SVector{N,Bool} = SVector{0,Float32}()
+  n::SizedVector{N,T,Vector{T}}    = SizedVector{0,Float32,Vector{Float32}}()
+  s::SizedVector{N,T,Vector{T}}    = SizedVector{0,Float32,Vector{Float32}}()
+  tilt::SizedVector{N,T,Vector{T}} = SizedVector{0,Float32,Vector{Float32}}()
+  order::SVector{N,Int}            = SVector{0,Int}()
+  normalized::SVector{N,Bool}      = SVector{0,Bool}()
+  integrated::SVector{N,Bool}      = SVector{0,Bool}()
   function BMultipoleParams(n, s, tilt, order, normalized, integrated)
     if !issorted(order)
       error("Something went very wrong: BMultipoleParams not sorted by order. Please submit an issue to Beamlines.jl")
@@ -127,6 +127,40 @@ function Base.isapprox(a::BMultipoleParams, b::BMultipoleParams)
          a.integrated ≈ b.integrated
 end
 
+# To go from SoA to AoS:
+struct BMultipole{T}
+  n::T
+  s::T
+  tilt::T
+  order::Int
+  normalized::Bool
+  integrated::Bool
+  function BMultipole(n, s, tilt, order, normalized, integrated)
+    return new{promote_type(typeof(n),typeof(s),typeof(tilt))}(n, s, tilt, order, normalized, integrated)
+  end
+end
+
+# Make it easy to get BMultipole by order:
+function Base.getindex(b::BMultipoleParams, order::Integer)
+  i = o2i(b, order)
+  if isnothing(i)
+    error("Order $order BMultipole not found in BMultipoleParams $b")
+  end
+  return BMultipole(b.n[i], b.s[i], b.tilt[i], order, b.normalized[i], b.integrated[i])
+end
+
+# and build iterator
+function Base.iterate(b::BMultipoleParams, state=1)
+  if state > length(b)
+    return nothing
+  else
+    return BMultipole(b.n[state], b.s[state], b.tilt[state], b.order[state], b.normalized[state], b.integrated[state]), state+1
+  end
+end
+
+
+# Setting is weirder/trickier because really only n, s, and tilt can be updated
+# on BMultipoles already existing in the structure. For now just don't implement
 
 # Solenoid only stores strength in n
 # First bool is if normal (true) or skew (false)
