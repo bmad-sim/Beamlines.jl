@@ -11,6 +11,7 @@ export MattStandard,
        PatchParams,
        BendParams,
        InheritParams,
+       BMultipole,
        DefExpr,
        Drift,
        Solenoid,
@@ -31,7 +32,7 @@ export MattStandard,
 
        deepcopy_no_beamline,
        
-       #BitsBeamline, temporary 
+       BitsBeamline, 
 
        SciBmadStandard,
 

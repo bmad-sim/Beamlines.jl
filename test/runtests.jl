@@ -103,6 +103,8 @@ using Test
     @test !ele.BMultipoleParams.integrated[1]
     @test ele.BMultipoleParams.normalized[1]
     @test ele.BMultipoleParams.order[1] == 2
+    @test ele.BMultipoleParams[2] == BMultipole(0.36,0.,0.,2,true,false)
+    @test_throws ErrorException ele.BMultipoleParams[3]
     
     ele.L = 2.0
     @test ele.Kn1 == 0.36
@@ -118,6 +120,19 @@ using Test
     @test ele.BMultipoleParams.n[2] == 0.50
     @test ele.BMultipoleParams.integrated[2]
     @test !ele.BMultipoleParams.normalized[2]
+    @test ele.BMultipoleParams[3] == BMultipole(0.50,0.,0.,3,false,true)
+    
+    # Test iteration over BMultipoles
+    i = 1
+    for bm in ele.BMultipoleParams
+      if i == 1
+        @test bm == BMultipole(0.36,0.,0.,2,true,false)
+      else
+        @test bm == BMultipole(0.50,0.,0.,3,false,true)
+      end
+       i += 1
+    end
+    @test i == 3
 
     @test eltype(ele.BMultipoleParams) == Float64
     ele.Bn2 = 1.2
@@ -340,7 +355,7 @@ using Test
     @test ele.Kn3L == 4.0
     @test ele.Kn4 == 5.0
 
-#=
+
     # BitsBeamline
     foreach(t->t.integrated_master=true, bl.line)
     foreach(t->t.field_master=true, bl.line)
@@ -389,7 +404,7 @@ using Test
     bbl = BitsBeamline(bl, store_normalized=true)
     bl2 = Beamline(bbl)
     @test all(bl.line .≈ bl2.line)
-    =#
+    
 
     # Controllers
     c = Controller(

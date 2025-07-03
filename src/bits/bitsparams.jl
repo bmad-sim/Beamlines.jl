@@ -18,19 +18,20 @@ BitsUniversalParams{T}() where {T} = BitsUniversalParams{T}(T(NaN))
 
 # BMultipoleParams
 struct BitsBMultipole{T<:Number,normalized}
-  strength::T      
+  n::T
+  s::T      
   tilt::T          
   order::Int       
   # normalized::Bool # normalization stored in type
   # integrated::Bool # tobits conversion always gives integrated
-  function BitsBMultipole{T,normalized}(strength, tilt, order) where {T,normalized}
+  function BitsBMultipole{T,normalized}(n, s, tilt, order) where {T,normalized}
     normalized isa Bool || error("Second type parameter must be a Bool specifying if this multipole is normalized or not. Received $normalized")
-    return new{T,normalized}(T(strength),T(tilt),order)
+    return new{T,normalized}(T(n),T(s),T(tilt),order)
   end
 end
 
 function BMultipole(bbm::BitsBMultipole{T,normalized}) where {T,normalized}
-  return BMultipole(bbm.strength, bbm.tilt, bbm.order, normalized, true)
+  return BMultipole(bbm.n, bbm.s, bbm.tilt, bbm.order, normalized, true)
 end
 
 function Base.getproperty(bm::BitsBMultipole{T,normalized}, key::Symbol) where {T,normalized}
@@ -48,13 +49,36 @@ Base.eltype(::Type{BitsBMultipole{T,normalized}}) where {T,normalized} = T
 
 # Default:
 function BitsBMultipole{T,normalized}() where {T <: Number,normalized}
-  return BitsBMultipole{T,normalized}(T(NaN), T(NaN), -1)
+  return BitsBMultipole{T,normalized}(T(NaN), T(NaN), T(NaN), -1)
 end
 
-const BitsBMultipoleDict{T,N,normalized} = LittleDict{Int8, BitsBMultipole{T,normalized}, SVector{N,Int8}, SVector{N, BitsBMultipole{T,normalized}}} where {T,N,normalized}
-
 struct BitsBMultipoleParams{T,N,normalized} <: AbstractBitsParams
-  bdict::BitsBMultipoleDict{T,N,normalized}
+  n::SVector{N,T}    
+  s::SVector{N,T}    
+  tilt::SVector{N,T} 
+  order::SVector{N,Int}            
+  normalized::SVector{N,Bool}      
+  integrated::SVector{N,Bool}      
+end
+
+o2i(b::BitsBMultipoleParams, ord::Int) = findfirst(t->t==ord, b.order)
+
+# Make it easy to get BMultipole by order:
+function Base.getindex(b::BitsBMultipoleParams{T,N,normalized}, order::Integer) where {T,N,normalized}
+  i = o2i(b, order)
+  if isnothing(i)
+    error("Order $order BMultipole not found in BitsBMultipoleParams $b")
+  end
+  return BitsBMultipole{T,normalized}(b.n[i], b.s[i], b.tilt[i], order) 
+end
+
+# and build iterator
+function Base.iterate(b::BitsBMultipoleParams, state=1)
+  if state > length(b) || b.order[state] == -1
+    return nothing
+  else
+    return BMultipole(b.n[state], b.s[state], b.tilt[state], b.order[state], b.normalized[state], b.integrated[state]), state+1
+  end
 end
 
 Base.eltype(::BitsBMultipoleParams{T,N}) where {T,N} = T
@@ -66,13 +90,23 @@ Base.length(::Type{<:BitsBMultipoleParams{T,N}}) where {T,N} = N
 isnormalized(::BitsBMultipoleParams{T,N,normalized}) where {T,N,normalized} = normalized
 isnormalized(::Type{<:BitsBMultipoleParams{T,N,normalized}}) where {T,N,normalized} = normalized
 
-isactive(bbm::BitsBMultipoleParams) = !(all(bbm.bdict.keys .== -1))
+isactive(bbm::BitsBMultipoleParams) = !(all(bbm.order .== -1))
 
 # Default:
 function BitsBMultipoleParams{T,N,normalized}() where {T,N,normalized}
-  k = StaticArrays.sacollect(SVector{N,Int8}, -1 for i in 1:N)
-  v = StaticArrays.sacollect(SVector{N, BitsBMultipole{T,normalized}}, BitsBMultipole{T,normalized}() for i in 1:N)
-  return BitsBMultipoleParams{T,N,normalized}(BitsBMultipoleDict{T,N,normalized}(k,v))
+  n = StaticArrays.sacollect(SVector{N,T}, T(NaN) for i in 1:N)
+  s = StaticArrays.sacollect(SVector{N,T}, T(NaN) for i in 1:N)
+  tilt = StaticArrays.sacollect(SVector{N,T}, T(NaN) for i in 1:N)
+  order = StaticArrays.sacollect(SVector{N,Int}, -1 for i in 1:N)
+  nrm = StaticArrays.sacollect(SVector{N,Bool}, normalized for i in 1:N)
+  intg = StaticArrays.sacollect(SVector{N,Bool}, true for i in 1:N)
+  return BitsBMultipoleParams{T,N,normalized}(n, s, tilt, order, nrm, intg)
+end
+
+function BitsBMultipoleParams{T,N,normalized}(n, s, tilt, order) where {T,N,normalized}
+  nrm = StaticArrays.sacollect(SVector{N,Bool}, normalized for i in 1:N)
+  intg = StaticArrays.sacollect(SVector{N,Bool}, true for i in 1:N)
+  return BitsBMultipoleParams{T,N,normalized}(n, s, tilt, order, nrm, intg)
 end
 
 # To regular:
@@ -80,13 +114,19 @@ function BMultipoleParams(bbm::Union{Nothing,BitsBMultipoleParams{T}}) where {T}
   if !isactive(bbm)
     return nothing
   end
-  bdict = BMultipoleDict{T}()
-  for (order, bm) in bbm.bdict
-    if order != -1
-      bdict[order] = BMultipole(bm)
-    end
+  N = findfirst(t->t==-1, bbm.order)
+  if isnothing(N)
+    N = length(bbm)
+  else
+    N -= 1
   end
-  return BMultipoleParams(bdict)
+  n = SizedVector{N,T,Vector{T}}(bbm.n[1:N])
+  s = SizedVector{N,T,Vector{T}}(bbm.s[1:N])
+  tilt = SizedVector{N,T,Vector{T}}(bbm.tilt[1:N])
+  order = SVector{N,Int}(bbm.order[1:N])
+  normalized = SVector{N,Bool}(bbm.normalized[1:N])
+  integrated = SVector{N,Bool}(bbm.integrated[1:N])
+  return BMultipoleParams(n, s, tilt, order, normalized, integrated)
 end
 
 # BendParams
