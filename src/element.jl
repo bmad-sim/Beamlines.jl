@@ -101,10 +101,10 @@ Patch(; kwargs...)      = LineElement(; class="Patch", kwargs...)
 
 # The SBend is special:
 function SBend(; kwargs...)
-  if :K0 in keys(kwargs) && !(:g in keys(kwargs))
-    return LineElement(; class="SBend", g=kwargs[:K0], kwargs...)
-  elseif !(:K0 in keys(kwargs)) && (:g in keys(kwargs))
-    return LineElement(; class="SBend", K0=kwargs[:g], kwargs...)
+  if :Kn0 in keys(kwargs) && !(:g in keys(kwargs))
+    return LineElement(; class="SBend", g=kwargs[:Kn0], kwargs...)
+  elseif !(:Kn0 in keys(kwargs)) && (:g in keys(kwargs))
+    return LineElement(; class="SBend", Kn0=kwargs[:g], kwargs...)
   else
     return LineElement(; class="SBend", kwargs...)
   end
@@ -141,30 +141,35 @@ end
 replace(p::AbstractParams, key::Symbol, value) = set(p, opcompose(PropertyLens(key)), value)
 
 function Base.getproperty(ele::LineElement, key::Symbol)
-  ret = nothing
   pdict = getfield(ele, :pdict)
   if key == :pdict 
     error("Reading/writing directly to an element's parameter dictionary is not allowed. To get/set a parameter group use the syntax `<ele>.<parameter group name> = <parameter group>`. E.g. `ele.BMultipoleParams = BMultipoleParams()`")
     #ret = getfield(ele, :pdict)
-  elseif haskey(PARAMS_MAP, key) && haskey(pdict, PARAMS_MAP[key]) # To get parameters struct
-    ret = getindex(pdict, PARAMS_MAP[key])
-  elseif haskey(VIRTUAL_GETTER_MAP, key) # Virtual properties override regular properties
-    ret = VIRTUAL_GETTER_MAP[key](ele, key)
-  elseif haskey(PROPERTIES_MAP, key) && haskey(pdict, PROPERTIES_MAP[key])  # To get a property in a parameter struct
-    ret = getproperty(getindex(pdict, PROPERTIES_MAP[key]), key)
-  end
-  if isnothing(ret) 
-    if haskey(pdict, InheritParams)
+  elseif haskey(PARAMS_MAP, key)
+    if haskey(pdict, PARAMS_MAP[key]) # To get parameters struct
+      return getindex(pdict, PARAMS_MAP[key])
+    elseif haskey(pdict, InheritParams)
       return getproperty(get_parent(pdict), key)
-    elseif haskey(PARAMS_MAP, key) || haskey(VIRTUAL_GETTER_MAP, key) || haskey(PROPERTIES_MAP, key)
-      return nothing
-    elseif haskey(VIRTUAL_SETTER_MAP, key)
-      error("LineElement property $key is write-only")
     else
-      error("Type LineElement has no property $key")
+      return nothing
     end
+  elseif haskey(VIRTUAL_GETTER_MAP, key) # Virtual properties override regular properties
+    # Virtual properties access the element by properties or parameter structs, so this should
+    # also not worry about InheritParams
+    return VIRTUAL_GETTER_MAP[key](ele, key)
+  elseif haskey(PROPERTIES_MAP, key)
+    if haskey(pdict, PROPERTIES_MAP[key])  # To get a property in a parameter struct
+      # If there is the parameter group, then the property 100% exists, don't worry about InheritParams
+      return getproperty(getindex(pdict, PROPERTIES_MAP[key]), key)
+    elseif haskey(pdict, InheritParams)
+        return getproperty(get_parent(pdict), key)
+    end
+  end
+
+  if haskey(VIRTUAL_SETTER_MAP, key)
+    error("LineElement property $key is write-only")
   else
-    return ret
+    error("Type LineElement has no property $key")
   end
 end
 #=

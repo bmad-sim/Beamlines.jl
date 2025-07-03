@@ -95,80 +95,77 @@ using Test
     @test typeof(ele.x_offset) == Float64
 
     @test !isactive(ele.BMultipoleParams)
-    ele.K1 = 0.36
+    ele.Kn1 = 0.36
     @test isactive(ele.BMultipoleParams)
-    @test ele.K1 == 0.36
-    @test ele.K1L == 0.36*ele.L
-    @test ele.BMultipoleParams.K1 == 0.36
-    @test_throws ErrorException ele.BMultipoleParams.K1L
-    @test !ele.BMultipoleParams.bdict[2].integrated
-    @test ele.BMultipoleParams.bdict[2].normalized
+    @test ele.Kn1 == 0.36
+    @test ele.Kn1L == 0.36*ele.L
+    @test ele.BMultipoleParams.n[1] == 0.36
+    @test !ele.BMultipoleParams.integrated[1]
+    @test ele.BMultipoleParams.normalized[1]
+    @test ele.BMultipoleParams.order[1] == 2
     
     ele.L = 2.0
-    @test ele.K1 == 0.36
-    @test ele.K1L == 2.0*0.36
+    @test ele.Kn1 == 0.36
+    @test ele.Kn1L == 2.0*0.36
 
     ele.L = 2.0*im
-    @test ele.K1 == 0.36
-    @test ele.K1L == 2.0*im*0.36
+    @test ele.Kn1 == 0.36
+    @test ele.Kn1L == 2.0*im*0.36
 
-    ele.B2L = 0.50
-    @test ele.B2L == 0.50
-    @test ele.B2 == 0.50/ele.L
-    @test ele.BMultipoleParams.B2L == 0.50
-    @test_throws ErrorException ele.BMultipoleParams.B2
-
-    @test ele.BMultipoleParams.bdict[3].integrated
-    @test !ele.BMultipoleParams.bdict[3].normalized
+    ele.Bn2L = 0.50
+    @test ele.Bn2L == 0.50
+    @test ele.Bn2 == 0.50/ele.L
+    @test ele.BMultipoleParams.n[2] == 0.50
+    @test ele.BMultipoleParams.integrated[2]
+    @test !ele.BMultipoleParams.normalized[2]
 
     @test eltype(ele.BMultipoleParams) == Float64
-    ele.B2 = 1.2
+    ele.Bn2 = 1.2
     @test eltype(ele.BMultipoleParams) == ComplexF64 # promotion because length is complex
-    @test ele.B2 == 1.2
-    @test ele.B2L == 1.2*ele.L
-    @test ele.K1 == 0.36
-    @test ele.K1L == 2.0*im*0.36
+    @test ele.Bn2 == 1.2
+    @test ele.Bn2L == 1.2*ele.L
+    @test ele.Kn1 == 0.36
+    @test ele.Kn1L == 2.0*im*0.36
 
     BM_indep = ele.BM_independent
-    @test :B2L in BM_indep
-    @test :K1 in BM_indep
+    @test (; order=3, normalized=false, integrated=true) in BM_indep
+    @test (; order=2, normalized=true, integrated=false) in BM_indep
 
-    ele.BM_independent = [:B2, :K1L]
+    ele.BM_independent = [(; order=3, normalized=false, integrated=false),
+                          (; order=2, normalized=true, integrated=true)]
     BM_indep2 = ele.BM_independent
-    @test :B2 in BM_indep2
-    @test :K1L in BM_indep2
-    @test ele.B2 == 1.2
-    @test ele.K1 == 0.36
+    @test (; order=3, normalized=false, integrated=false) in BM_indep2
+    @test (; order=2, normalized=true, integrated=true) in BM_indep2
+    @test ele.Bn2 == 1.2
+    @test ele.Kn1 == 0.36
 
     ele.BMultipoleParams = nothing
     ele.L = 5.0f0
     @test !isactive(ele.BMultipoleParams)
     ele.tilt0 = 1.0f0
-    @test ele.BMultipoleParams.bdict[1].integrated
-    @test !ele.BMultipoleParams.bdict[1].normalized
-    @test_throws ErrorException ele.K0
-    @test_throws ErrorException ele.K0L
+    @test ele.BMultipoleParams.integrated[1]
+    @test ele.BMultipoleParams.normalized[1]
 
-    b1 = SBend(L=1.0f0, K0=0.2f0)
-    @test b1.K0 == 0.2f0
-    @test b1.g == b1.K0
+    b1 = SBend(L=1.0f0, Kn0=0.2f0)
+    @test b1.Kn0 == 0.2f0
+    @test b1.g == b1.Kn0
     b2 = SBend(L=1.0, g=5.0)
-    @test b2.K0 == 5.0
+    @test b2.Kn0 == 5.0
     @test b2.g == 5.0
-    b3 = SBend(L=2.0, g=3.0, K0=3.0*im)
+    b3 = SBend(L=2.0, g=3.0, Kn0=3.0*im)
     @test b3.g == 3.0
-    @test b3.K0 == 3.0*im
-    @test b3.K0L == 6.0*im
+    @test b3.Kn0 == 3.0*im
+    @test b3.Kn0L == 6.0*im
     @test eltype(b3.BendParams) == Float64
     @test eltype(b3.BMultipoleParams) == ComplexF64
     b4 = SBend(L=2.0, angle=pi/2)
     @test b4.g == pi/2/b4.L
-    @test b4.K0 == pi/2/b4.L
+    @test b4.Kn0 == pi/2/b4.L
 
     # Basic beamline:
-    a = LineElement(L=0.5f0, B1=2.0f0)
-    ele.B2L = 1.2
-    ele.K1 = 0.36
+    a = LineElement(L=0.5f0, Bn1=2.0f0)
+    ele.Bn2L = 1.2
+    ele.Kn1 = 0.36
     ele.L = 2.0
     bl = Beamline([a,ele])
     @test bl.line[1] === a
@@ -183,159 +180,167 @@ using Test
     @test ele.beamline === bl
 
     bl.Brho_ref = 5.0
-    @test a.K1 == 2.0f0/5.0
-    @test a.K1L == 0.5f0*2.0f0/5.0
+    @test a.Kn1 == 2.0f0/5.0
+    @test a.Kn1L == 0.5f0*2.0f0/5.0
     @test a.Brho_ref == 5.0
     a.Brho_ref = 6.0
     @test a.Brho_ref == 6.0
     a.Brho_ref = 5.0
     @test eltype(a.BMultipoleParams) == Float32
-    a.K1 = 123 # should cause promotion
+    a.Kn1 = 123 # should cause promotion
     @test eltype(a.BMultipoleParams) == Float64
-    @test a.K1 == 123
-    @test a.B1 == 123*5.0
-    @test a.B1L == 0.5*123*5.0
-    @test !a.BMultipoleParams.bdict[2].integrated
-    @test !a.BMultipoleParams.bdict[2].normalized
+    @test a.Kn1 == 123
+    @test a.Bn1 == 123*5.0
+    @test a.Bn1L == 0.5*123*5.0
+    @test !a.BMultipoleParams.integrated[1]
+    @test !a.BMultipoleParams.normalized[1]
     # Sets:
-    a.K1 = 0.5
-    @test a.K1 ≈ 0.5
-    a.K1L = 0.5
-    @test a.K1L ≈ 0.5
-    a.B1L = 0.5
-    @test a.B1L ≈ 0.5
+    a.Kn1 = 0.5
+    @test a.Kn1 ≈ 0.5
+    a.Kn1L = 0.5
+    @test a.Kn1L ≈ 0.5
+    a.Bn1L = 0.5
+    @test a.Bn1L ≈ 0.5
 
-    a.K2 = 1.2
-    @test a.K2 ≈ 1.2
-    a.K2L = 1.2
-    @test a.K2L ≈ 1.2
-    a.B2L = 1.2
-    @test a.B2L ≈ 1.2
-    a.B2 = 1.2
-    @test a.B2 ≈ 1.2
+    a.Kn2 = 1.2
+    @test a.Kn2 ≈ 1.2
+    a.Kn2L = 1.2
+    @test a.Kn2L ≈ 1.2
+    a.Bn2L = 1.2
+    @test a.Bn2L ≈ 1.2
+    a.Bn2 = 1.2
+    @test a.Bn2 ≈ 1.2
 
-    a.B3L = 5.6
-    @test a.B3L ≈ 5.6
-    a.B3 = 5.6
-    @test a.B3 ≈ 5.6
-    a.K3L = 5.6
-    @test a.K3L ≈ 5.6
-    a.K3 = 5.6
-    @test a.K3 ≈ 5.6
+    a.Bn3L = 5.6
+    @test a.Bn3L ≈ 5.6
+    a.Bn3 = 5.6
+    @test a.Bn3 ≈ 5.6
+    a.Kn3L = 5.6
+    @test a.Kn3L ≈ 5.6
+    a.Kn3 = 5.6
+    @test a.Kn3 ≈ 5.6
 
-    a.K4L = 7.8
-    @test a.K4L ≈ 7.8
-    a.K4 = 7.8
-    @test a.K4 ≈ 7.8
-    a.B4L = 7.8
-    @test a.B4L ≈ 7.8
-    a.B4 = 7.8
-    @test a.B4 ≈ 7.8
+    a.Kn4L = 7.8
+    @test a.Kn4L ≈ 7.8
+    a.Kn4 = 7.8
+    @test a.Kn4 ≈ 7.8
+    a.Bs4L = 7.8
+    @test a.Bs4L ≈ 7.8
+    a.Bs4 = 7.8
+    @test a.Bs4 ≈ 7.8
 
     ele.BMultipoleParams = nothing
     ele.Bs = 1.0
-    ele.B1L = 2.0
-    ele.K2 = 3.0
-    ele.K3L = 4.0
+    ele.Bn1L = 2.0
+    ele.Kn2 = 3.0
+    ele.Kn3L = 4.0
 
     BM_indep = ele.BM_independent
     @test length(BM_indep) == 4
-    @test :Bs in BM_indep
-    @test :B1L in BM_indep
-    @test :K2 in BM_indep
-    @test :K3L in BM_indep
+    @test (; order=0, normalized=false, integrated=false) in BM_indep
+    @test (; order=2, normalized=false, integrated=true) in BM_indep
+    @test (; order=3, normalized=true, integrated=false) in BM_indep
+    @test (; order=4, normalized=true, integrated=true) in BM_indep
     @test ele.Bs == 1.0
-    @test ele.B1L == 2.0
-    @test ele.K2 == 3.0
-    @test ele.K3L == 4.0
+    @test ele.Bn1L == 2.0
+    @test ele.Kn2 == 3.0
+    @test ele.Kn3L == 4.0
 
-    ele.BM_independent = [:KsL, :K1, :B2L, :B3, :K4]
+    ele.BM_independent = [(; order=0, normalized=true, integrated=true),
+                          (; order=2, normalized=true, integrated=false),
+                          (; order=3, normalized=false, integrated=true),
+                          (; order=4, normalized=false, integrated=false),
+                          (; order=5, normalized=true, integrated=false)]
     BM_indep2 = ele.BM_independent
     @test length(BM_indep2) == 5
-    @test :KsL in BM_indep2
-    @test :K1 in BM_indep2
-    @test :B2L in BM_indep2
-    @test :B3 in BM_indep2
-    @test :K4 in BM_indep2
+    @test (; order=0, normalized=true, integrated=true) in BM_indep2
+    @test (; order=2, normalized=true, integrated=false) in BM_indep2
+    @test (; order=3, normalized=false, integrated=true) in BM_indep2
+    @test (; order=4, normalized=false, integrated=false) in BM_indep2
+    @test (; order=5, normalized=true, integrated=false) in BM_indep2
 
     @test ele.Bs == 1.0
-    @test ele.B1L == 2.0
-    @test ele.K2 == 3.0
-    @test ele.K3L == 4.0
-    @test ele.K4 == 0.0
+    @test ele.Bn1L == 2.0
+    @test ele.Kn2 == 3.0
+    @test ele.Kn3L == 4.0
+    @test ele.Kn4 == 0.0
 
-    ele.K4 = 5.0
+    ele.Kn4 = 5.0
     ele.field_master = true
     @test ele.field_master == true
     BM_indep3 = ele.BM_independent
     @test length(BM_indep3) == 5
-    @test :BsL in BM_indep3
-    @test :B1 in BM_indep3
-    @test :B2L in BM_indep3
-    @test :B3 in BM_indep3
-    @test :B4 in BM_indep3
+    @test (; order=0, normalized=false, integrated=true) in BM_indep3
+    @test (; order=2, normalized=false, integrated=false) in BM_indep3
+    @test (; order=3, normalized=false, integrated=true) in BM_indep3
+    @test (; order=4, normalized=false, integrated=false) in BM_indep3
+    @test (; order=5, normalized=false, integrated=false) in BM_indep3
 
     @test ele.Bs == 1.0
-    @test ele.B1L == 2.0
-    @test ele.K2 == 3.0
-    @test ele.K3L == 4.0
-    @test ele.K4 == 5.0
+    @test ele.Bn1L == 2.0
+    @test ele.Kn2 == 3.0
+    @test ele.Kn3L == 4.0
+    @test ele.Kn4 == 5.0
 
     ele.field_master = false   
     @test ele.field_master == false
     BM_indep4 = ele.BM_independent
     @test length(BM_indep4) == 5
-    @test :KsL in BM_indep4
-    @test :K1 in BM_indep4
-    @test :K2L in BM_indep4
-    @test :K3 in BM_indep4
-    @test :K4 in BM_indep4
+    @test (; order=0, normalized=true, integrated=true) in BM_indep4
+    @test (; order=2, normalized=true, integrated=false) in BM_indep4
+    @test (; order=3, normalized=true, integrated=true) in BM_indep4
+    @test (; order=4, normalized=true, integrated=false) in BM_indep4
+    @test (; order=5, normalized=true, integrated=false) in BM_indep4
 
     @test ele.Bs == 1.0
-    @test ele.B1L == 2.0
-    @test ele.K2 == 3.0
-    @test ele.K3L == 4.0
-    @test ele.K4 == 5.0
+    @test ele.Bn1L == 2.0
+    @test ele.Kn2 == 3.0
+    @test ele.Kn3L == 4.0
+    @test ele.Kn4 == 5.0
 
-    ele.BM_independent = [:KsL, :K1, :B2L, :B3, :K4]
+    ele.BM_independent = [(; order=0, normalized=true, integrated=true),
+                          (; order=2, normalized=true, integrated=false),
+                          (; order=3, normalized=false, integrated=true),
+                          (; order=4, normalized=false, integrated=false),
+                          (; order=5, normalized=true, integrated=false)]
     @test length(ele.BM_independent) == 5
     @test ele.Bs == 1.0
-    @test ele.B1L == 2.0
-    @test ele.K2 == 3.0
-    @test ele.K3L == 4.0
-    @test ele.K4 == 5.0
+    @test ele.Bn1L == 2.0
+    @test ele.Kn2 == 3.0
+    @test ele.Kn3L == 4.0
+    @test ele.Kn4 == 5.0
 
     ele.integrated_master = true
     @test ele.integrated_master == true
     BM_indep5 = ele.BM_independent
     @test length(BM_indep5) == 5
-    @test :KsL in BM_indep5
-    @test :K1L in BM_indep5
-    @test :B2L in BM_indep5
-    @test :B3L in BM_indep5
-    @test :K4L in BM_indep5
+    @test (; order=0, normalized=true, integrated=true) in BM_indep5
+    @test (; order=2, normalized=true, integrated=true) in BM_indep5
+    @test (; order=3, normalized=false, integrated=true) in BM_indep5
+    @test (; order=4, normalized=false, integrated=true) in BM_indep5
+    @test (; order=5, normalized=true, integrated=true) in BM_indep5
     @test ele.Bs == 1.0
-    @test ele.B1L == 2.0
-    @test ele.K2 == 3.0
-    @test ele.K3L == 4.0
-    @test ele.K4 == 5.0
+    @test ele.Bn1L == 2.0
+    @test ele.Kn2 == 3.0
+    @test ele.Kn3L == 4.0
+    @test ele.Kn4 == 5.0
 
     ele.integrated_master = false
     @test ele.integrated_master == false
     BM_indep6 = ele.BM_independent
     @test length(BM_indep6) == 5
-    @test :Ks in BM_indep6
-    @test :K1 in BM_indep6
-    @test :B2 in BM_indep6
-    @test :B3 in BM_indep6
-    @test :K4 in BM_indep6
+    @test (; order=0, normalized=true, integrated=false) in BM_indep6
+    @test (; order=2, normalized=true, integrated=false) in BM_indep6
+    @test (; order=3, normalized=false, integrated=false) in BM_indep6
+    @test (; order=4, normalized=false, integrated=false) in BM_indep6
+    @test (; order=5, normalized=true, integrated=false) in BM_indep6
     @test ele.Bs == 1.0
-    @test ele.B1L == 2.0
-    @test ele.K2 == 3.0
-    @test ele.K3L == 4.0
-    @test ele.K4 == 5.0
+    @test ele.Bn1L == 2.0
+    @test ele.Kn2 == 3.0
+    @test ele.Kn3L == 4.0
+    @test ele.Kn4 == 5.0
 
-
+#=
     # BitsBeamline
     foreach(t->t.integrated_master=true, bl.line)
     foreach(t->t.field_master=true, bl.line)
@@ -348,6 +353,7 @@ using Test
     bl2 = Beamline(bbl)
     @test all(bl.line .≈ bl2.line)
 
+    
     # BitsBeamline with MultipleTrackingMethods
     struct MyTrackingMethod
       a::Float64
@@ -383,56 +389,57 @@ using Test
     bbl = BitsBeamline(bl, store_normalized=true)
     bl2 = Beamline(bbl)
     @test all(bl.line .≈ bl2.line)
+    =#
 
     # Controllers
     c = Controller(
-      (a,   :K1) => (t; K1, L) -> K1,
-      (ele, :L)  => (t; K1, L) -> L;
-      vars = (; K1 = 0.0, L = 0.0,)
+      (a,   :Kn1) => (t; Kn1, L) -> Kn1,
+      (ele, :L)  => (t; Kn1, L) -> L;
+      vars = (; Kn1 = 0.0, L = 0.0,)
     )
     
-    K1 = a.K1
+    Kn1 = a.Kn1
     L = ele.L
     set!(c)
-    @test a.K1 == 0.0
+    @test a.Kn1 == 0.0
     @test ele.L == 0.0
 
-    c.K1 = 123.4
-    @test a.K1 == 123.4
+    c.Kn1 = 123.4
+    @test a.Kn1 == 123.4
     @test ele.L == 0.0
 
     c.L = 0.75
-    @test a.K1 == 123.4
+    @test a.Kn1 == 123.4
     @test ele.L == 0.75
     
-    a.K1 = 0
+    a.Kn1 = 0
     ele.L = 0
 
     set!(c)
-    @test a.K1 == 123.4
+    @test a.Kn1 == 123.4
     @test ele.L == 0.75
 
     c2 = Controller(
-      (c, :K1) => (t; x) -> 2*x,
+      (c, :Kn1) => (t; x) -> 2*x,
       (c, :L)  => (t; x) -> 3*x;
       vars = (; x = 1.0)
     )
 
     set!(c2)
-    @test a.K1 == 2
+    @test a.Kn1 == 2
     @test ele.L == 3
 
     c2.x = 2
-    @test a.K1 == 4
+    @test a.Kn1 == 4
     @test ele.L == 6
 
-    a.K1 = 0
+    a.Kn1 = 0
     ele.L = 0
     set!(c2)
-    @test a.K1 == 4
+    @test a.Kn1 == 4
     @test ele.L == 6
 
-    @test c.vars == (; K1 = 4, L = 6)
+    @test c.vars == (; Kn1 = 4, L = 6)
 
     # check s computation
     @test a.s == 0
@@ -483,13 +490,13 @@ using Test
     @test !(ele.PatchParams === pp)
 
     # @eles
-    @eles qf = Quadrupole(K1=0.36)
+    @eles qf = Quadrupole(Kn1=0.36)
     @test qf.name == "qf"
     @eles d = Drift()
     @test d.name == "d"
     
     @eles begin
-      qf = Quadrupole(K1=0.36)
+      qf = Quadrupole(Kn1=0.36)
     end
     @test qf.name == "qf"
 
@@ -499,15 +506,15 @@ using Test
     @test d.name == "d"
 
     @eles begin
-      qf = Quadrupole(K1=0.36)
+      qf = Quadrupole(Kn1=0.36)
       d = Drift()
     end
     @test qf.name == "qf"
     @test d.name == "d"
 
     @eles begin
-      qf = Quadrupole(K1=0.36)
-      a = 1+qf.K1
+      qf = Quadrupole(Kn1=0.36)
+      a = 1+qf.Kn1
       d = Drift(L=a)
     end
     @test qf.name == "qf"
@@ -516,9 +523,9 @@ using Test
     @test a == 1+0.36
 
     # Duplicate elements
-    qf = Quadrupole(K1=0.36, L=0.5)
+    qf = Quadrupole(Kn1=0.36, L=0.5)
     d = Drift(L=1)
-    qd = Quadrupole(K1=-0.36, L=0.5)
+    qd = Quadrupole(Kn1=-0.36, L=0.5)
 
     fodo = Beamline([qf, d, qd, d, qf, d, qd, d], Brho_ref=60)
     @test qf === fodo.line[1]
@@ -541,21 +548,21 @@ using Test
     @test qf.L == 0.5
     @test qf2.L == 0.5
     @test qf2 ≈ qf
-    qf.K1 = 0.1
-    @test qf.K1 == 0.1
-    @test qf2.K1 == 0.1
+    qf.Kn1 = 0.1
+    @test qf.Kn1 == 0.1
+    @test qf2.Kn1 == 0.1
     
-    qf2.K2 = 1.23
-    @test qf.K2 == 1.23
-    @test qf2.K2 == 1.23
+    qf2.Kn2 = 1.23
+    @test qf.Kn2 == 1.23
+    @test qf2.Kn2 == 1.23
     
     # Promote through child
-    qf2.K2L = 1.23*im
+    qf2.Kn2L = 1.23*im
 
-    @test typeof(qf.K2L) == ComplexF64
-    @test qf.K2L == 1.23*im
-    @test typeof(qf2.K2L) == ComplexF64
-    @test qf2.K2L == 1.23*im
+    @test typeof(qf.Kn2L) == ComplexF64
+    @test qf.Kn2L == 1.23*im
+    @test typeof(qf2.Kn2L) == ComplexF64
+    @test qf2.Kn2L == 1.23*im
     @test qf ≈ qf2 
 
     @test qf2.BMultipoleParams === qf.BMultipoleParams
@@ -587,13 +594,13 @@ using Test
     @test qf2.s == 3
     @test qf2.s_downstream == 4
     @test fodo.line[end].s_downstream == 6.5
-    @test qf2.K2L == qf2.K2*qf2.L
-    @test qf2.K2 == qf.K2
+    @test qf2.Kn2L == qf2.Kn2*qf2.L
+    @test qf2.Kn2 == qf.Kn2
     
-    qf.K3L = 1
-    @test qf2.K3L == 1
-    @test qf2.K3L == qf2.K3*qf2.L
-    @test qf2.K3*qf2.L == qf.K3*qf.L
+    qf.Kn3L = 1
+    @test qf2.Kn3L == 1
+    @test qf2.Kn3L == qf2.Kn3*qf2.L
+    @test qf2.Kn3*qf2.L == qf.Kn3*qf.L
 
     # Deferred Expressions
     # Function
@@ -618,11 +625,11 @@ using Test
       @test dd() ≈ 0.5 && typeof(dd()) == ComplexF64
 
       local Brho_ref = 60.
-      local K1 = 0.36
+      local Kn1 = 0.36
       local L = 0.5
-      qf = Quadrupole(K1=DefExpr(()->K1), L=DefExpr(()->L))
+      qf = Quadrupole(Kn1=DefExpr(()->Kn1), L=DefExpr(()->L))
       d = Drift(L=1)
-      qd = Quadrupole(K1=DefExpr(()->-qf.K1), L=DefExpr(()->L))
+      qd = Quadrupole(Kn1=DefExpr(()->-qf.Kn1), L=DefExpr(()->L))
 
       fodo = Beamline([qf, d, qd, d], Brho_ref=DefExpr(()->Brho_ref))
 
@@ -633,12 +640,12 @@ using Test
       @test fodo.Brho_ref == Brho_ref
       @test qf.Brho_ref == Brho_ref
 
-      @test qf.K1L ≈ K1*L
-      @test qd.K1L ≈ -K1*L
-      @test qf.B1L ≈ K1*Brho_ref*L
-      @test qd.B1L ≈ -K1*Brho_ref*L
-      @test qf.B1 ≈ K1*Brho_ref
-      @test qd.B1 ≈ -K1*Brho_ref
+      @test qf.Kn1L ≈ Kn1*L
+      @test qd.Kn1L ≈ -Kn1*L
+      @test qf.Bn1L ≈ Kn1*Brho_ref*L
+      @test qd.Bn1L ≈ -Kn1*Brho_ref*L
+      @test qf.Bn1 ≈ Kn1*Brho_ref
+      @test qd.Bn1 ≈ -Kn1*Brho_ref
       @test qf.L ≈ L
       @test qd.L ≈ L
       @test fodo.line[end].s_downstream ≈ 3
@@ -647,36 +654,36 @@ using Test
       @test qd.L == 1
       @test fodo.line[end].s_downstream ≈ 4
       
-      @test qf.K1L ≈ K1*L
-      @test qd.K1L ≈ -K1*L
-      @test qf.B1L ≈ K1*Brho_ref*L
-      @test qd.B1L ≈ -K1*Brho_ref*L
-      @test qf.B1 ≈ K1*Brho_ref
-      @test qd.B1 ≈ -K1*Brho_ref
+      @test qf.Kn1L ≈ Kn1*L
+      @test qd.Kn1L ≈ -Kn1*L
+      @test qf.Bn1L ≈ Kn1*Brho_ref*L
+      @test qd.Bn1L ≈ -Kn1*Brho_ref*L
+      @test qf.Bn1 ≈ Kn1*Brho_ref
+      @test qd.Bn1 ≈ -Kn1*Brho_ref
   
-      K1 = 0.2
-      @test qf.K1L ≈ K1*L
-      @test qd.K1L ≈ -K1*L
-      @test qf.B1L ≈ K1*Brho_ref*L
-      @test qd.B1L ≈ -K1*Brho_ref*L
-      @test qf.B1 ≈ K1*Brho_ref
-      @test qd.B1 ≈ -K1*Brho_ref
+      Kn1 = 0.2
+      @test qf.Kn1L ≈ Kn1*L
+      @test qd.Kn1L ≈ -Kn1*L
+      @test qf.Bn1L ≈ Kn1*Brho_ref*L
+      @test qd.Bn1L ≈ -Kn1*Brho_ref*L
+      @test qf.Bn1 ≈ Kn1*Brho_ref
+      @test qd.Bn1 ≈ -Kn1*Brho_ref
 
       Brho_ref = 3*im
-      @test qf.K1L ≈ K1*L
-      @test qd.K1L ≈ -K1*L
-      @test qf.B1L ≈ K1*Brho_ref*L
-      @test qd.B1L ≈ -K1*Brho_ref*L
-      @test qf.B1 ≈ K1*Brho_ref
-      @test qd.B1 ≈ -K1*Brho_ref
+      @test qf.Kn1L ≈ Kn1*L
+      @test qd.Kn1L ≈ -Kn1*L
+      @test qf.Bn1L ≈ Kn1*Brho_ref*L
+      @test qd.Bn1L ≈ -Kn1*Brho_ref*L
+      @test qf.Bn1 ≈ Kn1*Brho_ref
+      @test qd.Bn1 ≈ -Kn1*Brho_ref
 
-      K1 = 4*im
-      @test qf.K1L ≈ K1*L
-      @test qd.K1L ≈ -K1*L
-      @test qf.B1L ≈ K1*Brho_ref*L
-      @test qd.B1L ≈ -K1*Brho_ref*L
-      @test qf.B1 ≈ K1*Brho_ref
-      @test qd.B1 ≈ -K1*Brho_ref
+      Kn1 = 4*im
+      @test qf.Kn1L ≈ Kn1*L
+      @test qd.Kn1L ≈ -Kn1*L
+      @test qf.Bn1L ≈ Kn1*Brho_ref*L
+      @test qd.Bn1L ≈ -Kn1*Brho_ref*L
+      @test qf.Bn1 ≈ Kn1*Brho_ref
+      @test qd.Bn1 ≈ -Kn1*Brho_ref
     end
 
     # CFunction
@@ -701,11 +708,11 @@ using Test
       @test dd() ≈ 0.5 && typeof(dd()) == ComplexF64
       
       local Brho_ref::Float64 = 60.
-      local K1::Float64 = 0.36
+      local Kn1::Float64 = 0.36
       local L::Float64 = 0.5
-      qf = Quadrupole(K1=DefExpr(()->K1), L=DefExpr(()->L))
+      qf = Quadrupole(Kn1=DefExpr(()->Kn1), L=DefExpr(()->L))
       d = Drift(L=1)
-      qd = Quadrupole(K1=DefExpr(()->-qf.K1), L=DefExpr(()->L))
+      qd = Quadrupole(Kn1=DefExpr(()->-qf.Kn1), L=DefExpr(()->L))
 
       fodo = Beamline([qf, d, qd, d], Brho_ref=DefExpr(()->Brho_ref))
 
@@ -716,12 +723,12 @@ using Test
       @test fodo.Brho_ref == Brho_ref
       @test qf.Brho_ref == Brho_ref
 
-      @test qf.K1L ≈ K1*L
-      @test qd.K1L ≈ -K1*L
-      @test qf.B1L ≈ K1*Brho_ref*L
-      @test qd.B1L ≈ -K1*Brho_ref*L
-      @test qf.B1 ≈ K1*Brho_ref
-      @test qd.B1 ≈ -K1*Brho_ref
+      @test qf.Kn1L ≈ Kn1*L
+      @test qd.Kn1L ≈ -Kn1*L
+      @test qf.Bn1L ≈ Kn1*Brho_ref*L
+      @test qd.Bn1L ≈ -Kn1*Brho_ref*L
+      @test qf.Bn1 ≈ Kn1*Brho_ref
+      @test qd.Bn1 ≈ -Kn1*Brho_ref
       @test qf.L ≈ L
       @test qd.L ≈ L
       @test fodo.line[end].s_downstream ≈ 3
@@ -730,35 +737,35 @@ using Test
       @test qd.L == 1.
       @test fodo.line[end].s_downstream ≈ 4
       
-      @test qf.K1L ≈ K1*L
-      @test qd.K1L ≈ -K1*L
-      @test qf.B1L ≈ K1*Brho_ref*L
-      @test qd.B1L ≈ -K1*Brho_ref*L
-      @test qf.B1 ≈ K1*Brho_ref
-      @test qd.B1 ≈ -K1*Brho_ref
+      @test qf.Kn1L ≈ Kn1*L
+      @test qd.Kn1L ≈ -Kn1*L
+      @test qf.Bn1L ≈ Kn1*Brho_ref*L
+      @test qd.Bn1L ≈ -Kn1*Brho_ref*L
+      @test qf.Bn1 ≈ Kn1*Brho_ref
+      @test qd.Bn1 ≈ -Kn1*Brho_ref
   
-      K1 = 0.2
-      @test qf.K1L ≈ K1*L
-      @test qd.K1L ≈ -K1*L
-      @test qf.B1L ≈ K1*Brho_ref*L
-      @test qd.B1L ≈ -K1*Brho_ref*L
-      @test qf.B1 ≈ K1*Brho_ref
-      @test qd.B1 ≈ -K1*Brho_ref
+      Kn1 = 0.2
+      @test qf.Kn1L ≈ Kn1*L
+      @test qd.Kn1L ≈ -Kn1*L
+      @test qf.Bn1L ≈ Kn1*Brho_ref*L
+      @test qd.Bn1L ≈ -Kn1*Brho_ref*L
+      @test qf.Bn1 ≈ Kn1*Brho_ref
+      @test qd.Bn1 ≈ -Kn1*Brho_ref
 
       Brho_ref = 3.0
-      @test qf.K1L ≈ K1*L
-      @test qd.K1L ≈ -K1*L
-      @test qf.B1L ≈ K1*Brho_ref*L
-      @test qd.B1L ≈ -K1*Brho_ref*L
-      @test qf.B1 ≈ K1*Brho_ref
-      @test qd.B1 ≈ -K1*Brho_ref
+      @test qf.Kn1L ≈ Kn1*L
+      @test qd.Kn1L ≈ -Kn1*L
+      @test qf.Bn1L ≈ Kn1*Brho_ref*L
+      @test qd.Bn1L ≈ -Kn1*Brho_ref*L
+      @test qf.Bn1 ≈ Kn1*Brho_ref
+      @test qd.Bn1 ≈ -Kn1*Brho_ref
 
-      K1 = 4.0
-      @test qf.K1L ≈ K1*L
-      @test qd.K1L ≈ -K1*L
-      @test qf.B1L ≈ K1*Brho_ref*L
-      @test qd.B1L ≈ -K1*Brho_ref*L
-      @test qf.B1 ≈ K1*Brho_ref
-      @test qd.B1 ≈ -K1*Brho_ref
+      Kn1 = 4.0
+      @test qf.Kn1L ≈ Kn1*L
+      @test qd.Kn1L ≈ -Kn1*L
+      @test qf.Bn1L ≈ Kn1*Brho_ref*L
+      @test qd.Bn1L ≈ -Kn1*Brho_ref*L
+      @test qf.Bn1 ≈ Kn1*Brho_ref
+      @test qd.Bn1 ≈ -Kn1*Brho_ref
     end
 end

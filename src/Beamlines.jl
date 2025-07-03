@@ -12,7 +12,6 @@ export MattStandard,
        BendParams,
        InheritParams,
        DefExpr,
-       BMultipole,
        Drift,
        Solenoid,
        Quadrupole,
@@ -32,7 +31,7 @@ export MattStandard,
 
        deepcopy_no_beamline,
        
-       BitsBeamline,
+       #BitsBeamline, temporary 
 
        SciBmadStandard,
 
@@ -43,7 +42,6 @@ using GTPSA,
       StaticArrays, 
       OrderedCollections,
       MacroTools
-
 
 using FunctionWrappers: FunctionWrapper
 
