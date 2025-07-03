@@ -215,9 +215,9 @@ function _set_bend_angle!(ele, L, value)
   if L == 0
     error("Cannot set angle of LineElement with L = 0 (did you specify `angle` before specifying `L`?)")
   end
-  K0 = value/L
-  setproperty!(ele, :K0, K0)
-  setproperty!(ele, :g, K0)
+  Kn0 = value/L
+  setproperty!(ele, :Kn0, Kn0)
+  setproperty!(ele, :g, Kn0)
   return value
 end
 
@@ -228,54 +228,65 @@ end
 
 function _get_BM_independent(b)
   if isnothing(b)
-    return nothing
+    return SVector{0,@NamedTuple{order::Int, normalized::Bool, integrated::Bool}}[]
   end
-  v = Vector{Symbol}(undef, length(b.bdict))
-  i = 1
-  for (order, bm) in b.bdict  
-    v[i] = BMULTIPOLE_STRENGTH_INVERSE_MAP[(order, bm.normalized, bm.integrated)]
-    i += 1
-  end
+  v = StaticArrays.sacollect(SVector{length(b),@NamedTuple{order::Int, normalized::Bool, integrated::Bool}}, begin 
+    (; order=b.order[i], normalized=b.normalized[i], integrated=b.integrated[i])
+  end for i in 1:length(b))
   return v
 end
 
 function set_BM_independent!(ele::LineElement, ::Symbol, value)
-  eltype(value) == Symbol || error("Please provide a list/array/tuple of the multipole properties you want to set as independent variables.")
+  eltype(value) == @NamedTuple{order::Int, normalized::Bool, integrated::Bool}  || error("Please provide a list/array/tuple with eltype @NamedTuple{order::Int, normalized::Bool, integrated::Bool} to specify the multipole properties you want to set as independent variables.")
   b = ele.BMultipoleParams
   if isnothing(b)
-    return value
+    ele.BMultipoleParams = BMultipoleParams()
   end
-  for sym in value
-    order, normalized, integrated = BMULTIPOLE_STRENGTH_MAP[sym]
-    if haskey(b.bdict, order)
-      oldbm = b.bdict[order]
-      oldstrength = oldbm.strength
-      strength = oldstrength
-      if oldbm.normalized != normalized
-        if oldbm.normalized == true
-          strength *= ele.Brho_ref
+  for bm in value
+    if bm.order in b.order
+      order = bm.order
+      normalized = bm.normalized
+      integrated = bm.integrated
+      i = o2i(b, bm.order)
+      oldn = b.n[i]
+      olds = b.s[i] 
+      old_normalized = b.normalized[i]
+      old_integrated = b.integrated[i]
+      n = oldn
+      s = olds
+      if old_normalized != normalized
+        if old_normalized == true
+          n *= ele.Brho_ref
+          s *= ele.Brho_ref
         else
-          strength /= ele.Brho_ref
+          n /= ele.Brho_ref
+          s /= ele.Brho_ref
         end
       end
 
-      if oldbm.integrated != integrated
-        if oldbm.integrated == true
+      if old_integrated != integrated
+        if old_integrated == true
           ele.L != 0 || error("Unable to set change multipole order $order to have independent variable $sym: element length L = 0")
-          strength /= ele.L
+          n /= ele.L
+          s /= ele.L
         else
-          strength *= ele.L
+          n *= ele.L
+          s *= ele.L
         end
       end
-      T = promote_type(typeof(oldstrength),typeof(strength))
-      if T != typeof(oldstrength)
+      T = promote_type(typeof(n),typeof(oldn))
+      if T != typeof(oldn)
         b = BMultipoleParams{T}(b)
         ele.BMultipoleParams = b
       end
-      newbm = BMultipole{T}(strength,oldbm.tilt,order,normalized,integrated)
-      b.bdict[order] = newbm
-    else
-      b.bdict[order] = BMultipole{eltype(b)}(0,0,order,normalized,integrated)
+      b.n[i] = n
+      b.s[i] = s
+      @reset b.normalized[i] = normalized
+      @reset b.integrated[i] = integrated
+      ele.BMultipoleParams = b
+    else # just add it in , easy
+      b = addord(b, bm.order, bm.normalized, bm.integrated)
+      ele.BMultipoleParams = b
     end
   end
   return value
@@ -286,18 +297,14 @@ end
 # so field_master = !normalized in my BMultipole structure
 function set_field_master!(ele::LineElement, ::Symbol, value::Bool)
   BM_independent = _get_BM_independent(ele.BMultipoleParams)
-  c = map(t->BMULTIPOLE_STRENGTH_MAP[t], BM_independent)
-  newsyms = map(t->BMULTIPOLE_STRENGTH_INVERSE_MAP[(t[1],!value,t[3])], c)
-
-  return set_BM_independent!(ele, :nothing, newsyms)
+  c = map(t->(; order=t.order, normalized=!value, integrated=t.integrated), BM_independent)
+  return set_BM_independent!(ele, :nothing, c)
 end
 
 function set_integrated_master!(ele::LineElement, ::Symbol, value::Bool)
   BM_independent = _get_BM_independent(ele.BMultipoleParams)
-  c = map(t->BMULTIPOLE_STRENGTH_MAP[t], BM_independent)
-  newsyms = map(t->BMULTIPOLE_STRENGTH_INVERSE_MAP[(t[1],t[2],value)], c)
-
-  return set_BM_independent!(ele, :nothing, newsyms)
+  c = map(t->(; order=t.order, normalized=t.normalized, integrated=value), BM_independent)
+  return set_BM_independent!(ele, :nothing, c)
 end
 
 function get_field_master(ele::LineElement, ::Symbol)
@@ -307,11 +314,10 @@ end
 
 function _get_field_master(b)
   if isnothing(b)
-    return nothing
+    error("Unable to get field_master: LineElement does not contain a BMultipoleParams")
   end
-  bms = values(b.bdict)
-  check = first(bms).normalized
-  if !all(t->t.normalized==check, bms)
+  check = first(b.normalized)
+  if !all(t->t==check, b.normalized)
     error("Unable to get field_master: BMultipoleParams contains at least one BMultipole with the normalized strength as the independent variable and at least one other BMultipole with the unnormalized strength as the independent variable")
   end
   return !check
@@ -324,11 +330,10 @@ end
 
 function _get_integrated_master(b)
   if isnothing(b)
-    return nothing
+    error("Unable to get integrated_master: LineElement does not contain a BMultipoleParams")
   end
-  bms = values(b.bdict)
-  check = first(bms).integrated
-  if !all(t->t.integrated==check, bms)
+  check = first(b.integrated)
+  if !all(t->t==check, b.integrated)
     error("Unable to get integrated_master: BMultipoleParams contains at least one BMultipole with the integrated strength as the independent variable and at least one other BMultipole with the non-integrated strength as the independent variable")
   end
   return check

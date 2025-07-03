@@ -1,7 +1,7 @@
 @kwdef struct BMultipoleParams{T,N} <: AbstractParams
-  n::MVector{N,T}             = MVector{0,Float32}()
-  s::MVector{N,T}             = MVector{0,Float32}()
-  tilt::MVector{N,T}          = MVector{0,Float32}()
+  n::SizedVector{N,T}         = SizedVector{0,Float32}()
+  s::SizedVector{N,T}         = SizedVector{0,Float32}()
+  tilt::SizedVector{N,T}      = SizedVector{0,Float32}()
   order::SVector{N,Int}       = SVector{0,Float32}()
   normalized::SVector{N,Bool} = SVector{0,Float32}()
   integrated::SVector{N,Bool} = SVector{0,Float32}()
@@ -120,11 +120,11 @@ end
 
 
 function Base.isapprox(a::BMultipoleParams, b::BMultipoleParams)
-  return a.n          .≈ b.n &&
-         a.s          .≈ b.s &&
-         a.order      .≈ b.order &&
-         a.normalized .≈ b.normalized &&
-         a.integrated .≈ b.integrated
+  return a.n          ≈ b.n &&
+         a.s          ≈ b.s &&
+         a.order      ≈ b.order &&
+         a.normalized ≈ b.normalized &&
+         a.integrated ≈ b.integrated
 end
 
 

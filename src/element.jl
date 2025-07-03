@@ -101,10 +101,10 @@ Patch(; kwargs...)      = LineElement(; class="Patch", kwargs...)
 
 # The SBend is special:
 function SBend(; kwargs...)
-  if :K0 in keys(kwargs) && !(:g in keys(kwargs))
-    return LineElement(; class="SBend", g=kwargs[:K0], kwargs...)
-  elseif !(:K0 in keys(kwargs)) && (:g in keys(kwargs))
-    return LineElement(; class="SBend", K0=kwargs[:g], kwargs...)
+  if :Kn0 in keys(kwargs) && !(:g in keys(kwargs))
+    return LineElement(; class="SBend", g=kwargs[:Kn0], kwargs...)
+  elseif !(:Kn0 in keys(kwargs)) && (:g in keys(kwargs))
+    return LineElement(; class="SBend", Kn0=kwargs[:g], kwargs...)
   else
     return LineElement(; class="SBend", kwargs...)
   end
@@ -149,7 +149,7 @@ function Base.getproperty(ele::LineElement, key::Symbol)
     if haskey(pdict, PARAMS_MAP[key]) # To get parameters struct
       return getindex(pdict, PARAMS_MAP[key])
     elseif haskey(pdict, InheritParams)
-      return getproperty(get_parent(pdict), key)s
+      return getproperty(get_parent(pdict), key)
     else
       return nothing
     end
