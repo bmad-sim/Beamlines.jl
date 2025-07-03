@@ -32,7 +32,7 @@ export MattStandard,
 
        deepcopy_no_beamline,
        
-       #BitsBeamline, temporary 
+       BitsBeamline, 
 
        SciBmadStandard,
 

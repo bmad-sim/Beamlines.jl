@@ -15,7 +15,7 @@ end
 
 o2i(b::BMultipoleParams, ord::Int) = findfirst(t->t==ord, b.order)
 
-function BMultipoleParams{T}(b::BMultipoleParams) where {T}
+function BMultipoleParams{T}(b::BMultipoleParams=BMultipoleParams()) where {T}
   n = T.(b.n)
   s = T.(b.s)
   tilt = T.(b.tilt)

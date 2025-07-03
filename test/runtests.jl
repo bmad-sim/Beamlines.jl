@@ -355,7 +355,7 @@ using Test
     @test ele.Kn3L == 4.0
     @test ele.Kn4 == 5.0
 
-#=
+
     # BitsBeamline
     foreach(t->t.integrated_master=true, bl.line)
     foreach(t->t.field_master=true, bl.line)
@@ -404,7 +404,7 @@ using Test
     bbl = BitsBeamline(bl, store_normalized=true)
     bl2 = Beamline(bbl)
     @test all(bl.line .≈ bl2.line)
-    =#
+    
 
     # Controllers
     c = Controller(
