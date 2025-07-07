@@ -52,6 +52,8 @@ function Base.getproperty(ble::BitsLineElement, key::Symbol)
   end
 end
 
+@inline unsafe_getparams(ele::BitsLineElement, param::Symbol) = getfield(ele, param)
+
 function unpack_type_params(::Type{BitsBeamline{TM,TMI,TME,DS,R,N_ele,N_bytes,BitsLineElement{UP,BM,BP,AP,PP}}}) where {TM,TMI,TME,DS,R,N_ele,N_bytes,UP,BM,BP,AP,PP}
   return TM,TMI,TME,DS,R,N_ele,N_bytes,UP,BM,BP,AP,PP
 end

@@ -136,6 +136,18 @@ end
 
 @inline get_parent(pdict::ParamDict) = (pdict[InheritParams]::InheritParams).parent::LineElement
 
+# For parameter groups, both read and write are not allowed
+# For properties, write is not allowed
+struct ProtectParams <: AbstractParams
+  protected_properties::Vector{Symbol}
+end
+
+@inline function is_protected(pdict::ParamDict, key::Symbol) 
+  return haskey(pdict, ProtectParams) && key in (pdict[ProtectParams]::ProtectParams).protected_properties
+end
+
+@inline unsafe_getparams(ele::LineElement, param::Symbol) = getfield(ele, :pdict)[PARAMS_MAP[param]]
+
 # Use Accessors here for default bc super convenient for replacing entire (even mutable) type
 # For more complex params (e.g. BMultipoleParams) we will need custom override
 replace(p::AbstractParams, key::Symbol, value) = set(p, opcompose(PropertyLens(key)), value)
@@ -146,7 +158,9 @@ function Base.getproperty(ele::LineElement, key::Symbol)
     error("Reading/writing directly to an element's parameter dictionary is not allowed. To get/set a parameter group use the syntax `<ele>.<parameter group name> = <parameter group>`. E.g. `ele.BMultipoleParams = BMultipoleParams()`")
     #ret = getfield(ele, :pdict)
   elseif haskey(PARAMS_MAP, key)
-    if haskey(pdict, PARAMS_MAP[key]) # To get parameters struct
+    if is_protected(pdict, key)
+      error("Cannot get $(PARAMS_MAP[key]): parameter group is protected by ProtectParams. This can be unsafely-overridden using `unsafe_getparams`")
+    elseif haskey(pdict, PARAMS_MAP[key]) # To get parameters struct
       return getindex(pdict, PARAMS_MAP[key])
     elseif haskey(pdict, InheritParams)
       return getproperty(get_parent(pdict), key)
@@ -189,7 +203,9 @@ qf2.UniversalParams = .... # set both
 function Base.setproperty!(ele::LineElement, key::Symbol, value)
   pdict = getfield(ele, :pdict)
   if haskey(PARAMS_MAP, key) # Setting whole parameter struct
-    if haskey(pdict, InheritParams) && !haskey(pdict, PARAMS_MAP[key])
+    if is_protected(pdict, key)
+      error("Cannot set $(PARAMS_MAP[key]): parameter group is protected by ProtectParams. This can be unsafely-overridden using `unsafe_getparams`")
+    elseif haskey(pdict, InheritParams) && !haskey(pdict, PARAMS_MAP[key])
       setproperty!(get_parent(pdict), key, value)
     else
       if isnothing(value) # setting parameter struct to nothing removes it
@@ -198,6 +214,8 @@ function Base.setproperty!(ele::LineElement, key::Symbol, value)
         setindex!(pdict, value, PARAMS_MAP[key])
       end
     end
+  elseif is_protected(pdict, key)
+    error("Cannot set $key: property is protected by ProtectParams")
   elseif haskey(VIRTUAL_SETTER_MAP, key) # Virtual properties override regular properties
     return VIRTUAL_SETTER_MAP[key](ele, key, value)
   elseif haskey(PROPERTIES_MAP, key)
