@@ -166,7 +166,7 @@ end
 # First bool is if normal (true) or skew (false)
 # then order, normalized, integrated
 const BMULTIPOLE_STRENGTH_MAP = Dict{Symbol,Tuple{Bool,Int,Bool,Bool}}(
-  :Bs   => (true, 0,  false, false),
+  :Bsol => (true, 0,  false, false),
   :Bn0  => (true, 1 , false, false),
   :Bn1  => (true, 2 , false, false),
   :Bn2  => (true, 3 , false, false),
@@ -190,7 +190,7 @@ const BMULTIPOLE_STRENGTH_MAP = Dict{Symbol,Tuple{Bool,Int,Bool,Bool}}(
   :Bn20 => (true, 21, false, false),
   :Bn21 => (true, 22, false, false),
 
-  :Ks   => (true, 0,  true, false),
+  :Ksol => (true, 0,  true, false),
   :Kn0  => (true, 1 , true, false),
   :Kn1  => (true, 2 , true, false),
   :Kn2  => (true, 3 , true, false),

@@ -245,7 +245,7 @@ using Test
     @test a.Bs4 ≈ 7.8
 
     ele.BMultipoleParams = nothing
-    ele.Bs = 1.0
+    ele.Bsol = 1.0
     ele.Bn1L = 2.0
     ele.Kn2 = 3.0
     ele.Kn3L = 4.0
@@ -256,7 +256,7 @@ using Test
     @test (; order=2, normalized=false, integrated=true) in BM_indep
     @test (; order=3, normalized=true, integrated=false) in BM_indep
     @test (; order=4, normalized=true, integrated=true) in BM_indep
-    @test ele.Bs == 1.0
+    @test ele.Bsol == 1.0
     @test ele.Bn1L == 2.0
     @test ele.Kn2 == 3.0
     @test ele.Kn3L == 4.0
@@ -274,7 +274,7 @@ using Test
     @test (; order=4, normalized=false, integrated=false) in BM_indep2
     @test (; order=5, normalized=true, integrated=false) in BM_indep2
 
-    @test ele.Bs == 1.0
+    @test ele.Bsol == 1.0
     @test ele.Bn1L == 2.0
     @test ele.Kn2 == 3.0
     @test ele.Kn3L == 4.0
@@ -291,7 +291,7 @@ using Test
     @test (; order=4, normalized=false, integrated=false) in BM_indep3
     @test (; order=5, normalized=false, integrated=false) in BM_indep3
 
-    @test ele.Bs == 1.0
+    @test ele.Bsol == 1.0
     @test ele.Bn1L == 2.0
     @test ele.Kn2 == 3.0
     @test ele.Kn3L == 4.0
@@ -307,7 +307,7 @@ using Test
     @test (; order=4, normalized=true, integrated=false) in BM_indep4
     @test (; order=5, normalized=true, integrated=false) in BM_indep4
 
-    @test ele.Bs == 1.0
+    @test ele.Bsol == 1.0
     @test ele.Bn1L == 2.0
     @test ele.Kn2 == 3.0
     @test ele.Kn3L == 4.0
@@ -319,7 +319,7 @@ using Test
                           (; order=4, normalized=false, integrated=false),
                           (; order=5, normalized=true, integrated=false)]
     @test length(ele.BM_independent) == 5
-    @test ele.Bs == 1.0
+    @test ele.Bsol == 1.0
     @test ele.Bn1L == 2.0
     @test ele.Kn2 == 3.0
     @test ele.Kn3L == 4.0
@@ -334,7 +334,7 @@ using Test
     @test (; order=3, normalized=false, integrated=true) in BM_indep5
     @test (; order=4, normalized=false, integrated=true) in BM_indep5
     @test (; order=5, normalized=true, integrated=true) in BM_indep5
-    @test ele.Bs == 1.0
+    @test ele.Bsol == 1.0
     @test ele.Bn1L == 2.0
     @test ele.Kn2 == 3.0
     @test ele.Kn3L == 4.0
@@ -349,7 +349,7 @@ using Test
     @test (; order=3, normalized=false, integrated=false) in BM_indep6
     @test (; order=4, normalized=false, integrated=false) in BM_indep6
     @test (; order=5, normalized=true, integrated=false) in BM_indep6
-    @test ele.Bs == 1.0
+    @test ele.Bsol == 1.0
     @test ele.Bn1L == 2.0
     @test ele.Kn2 == 3.0
     @test ele.Kn3L == 4.0
@@ -617,6 +617,13 @@ using Test
     @test qf2.Kn3L == 1
     @test qf2.Kn3L == qf2.Kn3*qf2.L
     @test qf2.Kn3*qf2.L == qf.Kn3*qf.L
+
+    # ProtectParams
+    getfield(qf2, :pdict)[Beamlines.ProtectParams] = Beamlines.ProtectParams([:L, :UniversalParams])
+    @test qf2.L == 1 # get property (allowed)
+    @test_throws ErrorException qf2.L = 2 # reset property (not allowed)
+    @test_throws ErrorException qf2.UniversalParams # get parameter group (not allowed)
+    @test_throws ErrorException qf2.UniversalParams = UniversalParams() # reset parameter group (not allowed)
 
     # Deferred Expressions
     # Function

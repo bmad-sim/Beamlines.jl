@@ -25,7 +25,7 @@ d4 = Drift(L=1.0)
 qf.L
 qf.Kn1 # Normalized field strength
 
-sol = Solenoid(Ks=0.12, L=5.3)
+sol = Solenoid(Ksol=0.12, L=5.3)
 
 # Up to 21st order multipoles allowed:
 m21 = Multipole(Kn21=5.0, L=6)
