@@ -54,7 +54,6 @@ const PROPERTIES_MAP = Dict{Symbol,Type{<:AbstractParams}}(
   :dy_rot => PatchParams,
   :dz_rot => PatchParams,
 
-  :frequency => RFParams,
   :voltage => RFParams,
   :phi0 => RFParams,
   :harmon_master => RFParams,
