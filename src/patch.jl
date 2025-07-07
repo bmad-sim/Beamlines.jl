@@ -7,7 +7,7 @@
   dy_rot::T    = Float32(0.0)             # Yaw:   rotation around global vertical
   dz_rot::T    = Float32(0.0)             # Roll:  rotation around longitudinal
   function PatchParams(args...)
-    return new{promote_type(map(x->typeof(x),args)...)}(args...)
+    return new{promote_type(typeof.(args)...)}(args...)
   end
 end
 

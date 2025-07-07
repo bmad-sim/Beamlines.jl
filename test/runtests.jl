@@ -359,6 +359,7 @@ using Test
     # BitsBeamline
     foreach(t->t.integrated_master=true, bl.line)
     foreach(t->t.field_master=true, bl.line)
+    a.dt = 69.; a.dx = 68.; a.dy = 67.; a.dz = 66.; a.dx_rot = 65.; a.dy_rot = 64.; a.dz_rot =63.
     bbl = BitsBeamline(bl)
     bl2 = Beamline(bbl)
     @test all(bl.line .≈ bl2.line)

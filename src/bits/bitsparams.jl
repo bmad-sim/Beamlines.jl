@@ -180,4 +180,31 @@ function AlignmentParams(bap::Union{Nothing,BitsAlignmentParams})
   end
 end
 
+# PatchParams
+struct BitsPatchParams{T<:Number} <: AbstractBitsParams
+  dt::T     
+  dx::T     
+  dy::T     
+  dz::T     
+  dx_rot::T 
+  dy_rot::T 
+  dz_rot::T   
+end
+
+Base.eltype(::BitsPatchParams{T}) where {T} = T
+Base.eltype(::Type{BitsPatchParams{T}}) where {T} = T
+
+isactive(bpp::BitsPatchParams) = !isnan(bpp.dt)
+
+function BitsPatchParams{T}() where T <: Number
+  return BitsPatchParams{T}(T(NaN), T(NaN), T(NaN), T(NaN), T(NaN), T(NaN), T(NaN))
+end
+
+function PatchParams(bpp::Union{Nothing,BitsPatchParams})
+  if !isactive(bpp)
+    return nothing
+  else
+    return PatchParams(bpp.dt, bpp.dx, bpp.dy, bpp.dz, bpp.dx_rot, bpp.dy_rot, bpp.dz_rot)
+  end
+end
 
