@@ -314,7 +314,7 @@ end
 function get_cavity_frequency(ele::LineElement, key::Symbol)
   c = ele.RFParams
   if isnothing(c)
-    error("Unable to get $key of LineElement $(ele.name): No RFParams present")
+    return nothing
   end
   return @noinline _get_cavity_frequency(c, key)
 end
