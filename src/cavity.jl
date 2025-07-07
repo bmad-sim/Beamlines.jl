@@ -14,10 +14,11 @@ Base.eltype(::Type{RFParams{T}}) where {T} = T
 
 
 function Base.isapprox(a::RFParams, b::RFParams) 
-    return  a.frequency     ≈  b.frequency && 
+    return 
+            a.harmon_master == b.harmon_master &&
+            a.frequency     ≈  b.frequency && 
             a.voltage       ≈  b.voltage && 
-            a.phi0          ≈  b.phi0 && 
-            a.harmon_master == b.harmon_master
+            a.phi0          ≈  b.phi0         
 end
 
 # Frequency mapping system analogous to BMULTIPOLE_STRENGTH_MAP
