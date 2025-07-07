@@ -36,11 +36,13 @@ struct BitsLineElement{
   BM<:Union{BitsBMultipoleParams,Nothing},
   BP<:Union{BitsBendParams,Nothing},
   AP<:Union{BitsAlignmentParams,Nothing},
+  PP<:Union{BitsPatchParams,Nothing}
 }
   UniversalParams::UP
   BMultipoleParams::BM
   BendParams::BP
   AlignmentParams::AP
+  PatchParams::PP
 end
 function Base.getproperty(ble::BitsLineElement, key::Symbol)
   if key == :L
@@ -50,11 +52,11 @@ function Base.getproperty(ble::BitsLineElement, key::Symbol)
   end
 end
 
-function unpack_type_params(::Type{BitsBeamline{TM,TMI,TME,DS,R,N_ele,N_bytes,BitsLineElement{UP,BM,BP,AP}}}) where {TM,TMI,TME,DS,R,N_ele,N_bytes,UP,BM,BP,AP}
-  return TM,TMI,TME,DS,R,N_ele,N_bytes,UP,BM,BP,AP
+function unpack_type_params(::Type{BitsBeamline{TM,TMI,TME,DS,R,N_ele,N_bytes,BitsLineElement{UP,BM,BP,AP,PP}}}) where {TM,TMI,TME,DS,R,N_ele,N_bytes,UP,BM,BP,AP,PP}
+  return TM,TMI,TME,DS,R,N_ele,N_bytes,UP,BM,BP,AP,PP
 end
-function unpack_type_params(::BitsBeamline{TM,TMI,TME,DS,R,N_ele,N_bytes,BitsLineElement{UP,BM,BP,AP}}) where {TM,TMI,TME,DS,R,N_ele,N_bytes,UP,BM,BP,AP}
-  return TM,TMI,TME,DS,R,N_ele,N_bytes,UP,BM,BP,AP
+function unpack_type_params(::BitsBeamline{TM,TMI,TME,DS,R,N_ele,N_bytes,BitsLineElement{UP,BM,BP,AP,PP}}) where {TM,TMI,TME,DS,R,N_ele,N_bytes,UP,BM,BP,AP,PP}
+  return TM,TMI,TME,DS,R,N_ele,N_bytes,UP,BM,BP,AP,PP
 end
 
 
@@ -62,7 +64,7 @@ function BitsBeamline(bl::Beamline; store_normalized=false, prep=nothing)
   if isnothing(prep)
     prep = prep_bitsbl(bl, store_normalized)
   end
-  TM,TMI,TME,DS,R,N_ele,N_bytes,UP,BM,BP,AP = unpack_type_params(prep[1])
+  TM,TMI,TME,DS,R,N_ele,N_bytes,UP,BM,BP,AP,PP = unpack_type_params(prep[1])
   rep = prep[2]
 
   if TM == MultipleTrackingMethods
@@ -167,6 +169,16 @@ function BitsBeamline(bl::Beamline; store_normalized=false, prep=nothing)
           end
         end
       end
+
+      # 76 -> 82 inclusive are PatchParams
+      pp = ele.PatchParams
+      if !isnothing(pp)
+        for (k,v) in enumerate((pp.dt, pp.dx, pp.dy, pp.dz, pp.dx_rot, pp.dy_rot, pp.dz_rot))
+          if v != 0 
+            i, cur_byte_arr = setval(i, cur_byte_arr, UInt8(k+75), eltype(PP), v)
+          end
+        end
+      end
       #=if i > N_bytes
         println("here is the maximally filled one!: $bl_idx: $cur_byte_arr")
       end=#
@@ -229,6 +241,7 @@ function prep_bitsbl(bl::Beamline, store_normalized::Bool=false) #, arr::Type{T}
   BM = Nothing
   BP = Nothing
   AP = Nothing
+  PP = Nothing
 
   N_parameters = zeros(Int, N_ele)
   line_w_duplicates = Vector{LineElement}(undef, N_ele)
@@ -340,6 +353,21 @@ function prep_bitsbl(bl::Beamline, store_normalized::Bool=false) #, arr::Type{T}
       end
     end
 
+    
+    pp = ele.PatchParams
+    if !isnothing(pp)
+      if PP == Nothing
+        PP = BitsPatchParams{eltype(pp)}
+      end
+      for v in (pp.dt, pp.dx, pp.dy,  pp.dz, pp.dx_rot, pp.dy_rot, pp.dz_rot)
+        if !(v ≈ 0)
+          N_bytes[i] += sizeof(v)
+          N_parameters[i] += 1
+          PP = BitsPatchParams{promote_type(eltype(PP),typeof(v))}
+        end
+      end
+    end
+
     # Now do the duplicates check
     j = 1   
     ele_to_add = ele
@@ -391,7 +419,7 @@ function prep_bitsbl(bl::Beamline, store_normalized::Bool=false) #, arr::Type{T}
     DS = Dense
   end
 
-  outtype = BitsBeamline{TM,TMI,TME,DS,R,N_ele,bl_N_bytes,BitsLineElement{UP,BM,BP,AP}}
+  outtype = BitsBeamline{TM,TMI,TME,DS,R,N_ele,bl_N_bytes,BitsLineElement{UP,BM,BP,AP,PP}}
   if sizeof(outtype) > 65536
     @warn "This BitsBeamline is size $(sizeof(outtype)), which is greater than the 65536 bytes allowed in constant memory on a CUDA GPU. Consider combining repeated consecutive elements, using Float32/Float16 for LineElement parameters, simplifying the beamline, or splitting it up into one size that fits in constant memory and the rest in global memory."
   end
@@ -491,6 +519,7 @@ function Beamline(bbl::BitsBeamline{TM}; Brho_ref=NaN) where {TM}
       le.BMultipoleParams = BMultipoleParams(ble.BMultipoleParams)
       le.BendParams = BendParams(ble.BendParams)
       le.AlignmentParams = AlignmentParams(ble.AlignmentParams)
+      le.PatchParams = PatchParams(ble.PatchParams)
       bl[i] = le
     end
   else
@@ -519,6 +548,7 @@ function Beamline(bbl::BitsBeamline{TM}; Brho_ref=NaN) where {TM}
           le.BMultipoleParams = BMultipoleParams(ble.BMultipoleParams)
           le.BendParams = BendParams(ble.BendParams)
           le.AlignmentParams = AlignmentParams(ble.AlignmentParams)
+          le.PatchParams = PatchParams(ble.PatchParams)
           push!(bl, le)
 
           i += 1

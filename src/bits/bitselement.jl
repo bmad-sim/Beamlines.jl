@@ -4,11 +4,13 @@ struct BitsLineElement{
   BM<:Union{BitsBMultipoleParams,Nothing},
   BP<:Union{BitsBendParams,Nothing},
   AP<:Union{BitsAlignmentParams,Nothing},
+  PP<:Union{BitsPatchParams,Nothing}
 }
   UniversalParams::UP
   BMultipoleParams::BM
   BendParams::BP
   AlignmentParams::AP
+  PatchParams::PP
 end
 =#
 
@@ -30,7 +32,7 @@ end
 
 
 function BitsLineElement(bbl::BitsBeamline, idx::Integer=1)
-  TM,TMI,TME,DS,R,N_ele,N_bytes,UP,BM,BP,AP = unpack_type_params(bbl)
+  TM,TMI,TME,DS,R,N_ele,N_bytes,UP,BM,BP,AP,PP = unpack_type_params(bbl)
   if DS == Sparse
     error("Sparse BitsBeamline not implemented yet!")
   end
@@ -40,7 +42,9 @@ function BitsLineElement(bbl::BitsBeamline, idx::Integer=1)
   bmp::BM = BM()
   bp::BP  = BP()
   ap::AP = AP()
- 
+  pp::PP = PP()
+
+
   i = 1
   bm_count = 0
   while i <= length(params) && params[i] != 0xff
@@ -184,7 +188,37 @@ function BitsLineElement(bbl::BitsBeamline, idx::Integer=1)
         @reset ap.tilt = v
       end
     end
+
+    if i <= length(params) && params[i] >= UInt8(76)  && params[i] < UInt8(83) # patchparams
+      id = params[i]
+      if isnan(pp.dt)
+        @reset pp.dt = zero(eltype(PP))
+        @reset pp.dx = zero(eltype(PP))
+        @reset pp.dy = zero(eltype(PP))
+        @reset pp.dz = zero(eltype(PP))
+        @reset pp.dx_rot = zero(eltype(PP))
+        @reset pp.dy_rot = zero(eltype(PP))
+        @reset pp.dz_rot = zero(eltype(PP))
+      end
+
+      i, v = readval(i, params, eltype(PP))
+      if id == UInt8(76)
+        @reset pp.dt = v
+      elseif id == UInt8(77)
+        @reset pp.dx = v
+      elseif id == UInt8(78)
+        @reset pp.dy = v
+      elseif id == UInt8(79)
+        @reset pp.dz = v
+      elseif id == UInt8(80)
+        @reset pp.dx_rot = v
+      elseif id == UInt8(81)
+        @reset pp.dy_rot = v
+      else
+        @reset pp.dz_rot = v
+      end
+    end
   end
 
-  return BitsLineElement(up,bmp,bp,ap)
+  return BitsLineElement(up,bmp,bp,ap,pp)
 end
