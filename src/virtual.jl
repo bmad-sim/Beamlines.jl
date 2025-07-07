@@ -330,10 +330,10 @@ function _get_cavity_frequency(c, key)
 end
 
 function set_cavity_frequency!(ele::LineElement, key::Symbol, value)
-  if !haskey(ele.pdict, RFParams)
-    harmon_master = CAVITY_FREQUENCY_MAP[key]
-    setindex!(ele.pdict, RFParams(harmon_master=harmon_master), RFParams)
-  end
+r = ele.RFParams
+if isnothing(r)
+  ele.RFParams = RFParams(harmon_master=key == :harmon ? true : false)
+end
 
   c = ele.RFParams
   @noinline _set_cavity_frequency!(ele, c, key, value)
