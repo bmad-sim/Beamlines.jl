@@ -810,6 +810,8 @@ using Test
     
     ele.x1_limit = 12*im
     @test eltype(ele.ApertureParams) == ComplexF32
+    @test eltype(typeof(ele.ApertureParams)) == ComplexF32
+    @test ele.ApertureParams ≈ ApertureParams(12*im, 456, 789, 012, ApertureShape.Elliptical, ApertureAt.Exit, false)
     @test ele.x1_limit == 12*im
     @test ele.x1_limit == ComplexF32(12*im)
     @test ele.x2_limit == ComplexF32(456)
