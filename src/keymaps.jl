@@ -53,6 +53,14 @@ const PROPERTIES_MAP = Dict{Symbol,Type{<:AbstractParams}}(
   :dx_rot => PatchParams,
   :dy_rot => PatchParams,
   :dz_rot => PatchParams,
+
+  :x1_limit       => ApertureParams,
+  :x2_limit       => ApertureParams,
+  :y1_limit       => ApertureParams,
+  :y2_limit       => ApertureParams,
+  :aperture_shape => ApertureParams,
+  :aperture_at    => ApertureParams,
+  :aperture_shifts_with_body => ApertureParams,
 )
 
 const PARAMS_MAP = Dict{Symbol,Type{<:AbstractParams}}(
@@ -62,6 +70,7 @@ const PARAMS_MAP = Dict{Symbol,Type{<:AbstractParams}}(
   :BendParams => BendParams,
   :AlignmentParams => AlignmentParams,
   :PatchParams => PatchParams,
+  :ApertureParams => ApertureParams,
 )
 
 

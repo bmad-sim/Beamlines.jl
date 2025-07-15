@@ -11,6 +11,9 @@ export MattStandard,
        PatchParams,
        BendParams,
        InheritParams,
+       ApertureParams,
+       ApertureAt,
+       ApertureShape,
        BMultipole,
        DefExpr,
        Drift,
@@ -42,7 +45,8 @@ using GTPSA,
       Accessors, 
       StaticArrays, 
       OrderedCollections,
-      MacroTools
+      MacroTools,
+      EnumX
 
 using FunctionWrappers: FunctionWrapper
 
@@ -71,6 +75,7 @@ include("bend.jl")
 include("control.jl")
 include("alignment.jl")
 include("patch.jl")
+include("aperture.jl")
 include("keymaps.jl")
 include("macros.jl")
 include("bits/bitsparams.jl")
