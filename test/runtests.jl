@@ -809,12 +809,12 @@ using Test
     @test ele.aperture_shifts_with_body == false
     
     ele.x1_limit = 12*im
-    @test eltype(ele.ApertureParams) == ComplexF64
+    @test eltype(ele.ApertureParams) == ComplexF32
     @test ele.x1_limit == 12*im
-    @test ele.x1_limit == ComplexF64(12*im)
-    @test ele.x2_limit == ComplexF64(456)
-    @test ele.y1_limit == ComplexF64(789 )
-    @test ele.y2_limit == ComplexF64(012 )
+    @test ele.x1_limit == ComplexF32(12*im)
+    @test ele.x2_limit == ComplexF32(456)
+    @test ele.y1_limit == ComplexF32(789 )
+    @test ele.y2_limit == ComplexF32(012 )
     @test ele.aperture_shape == ApertureShape.Elliptical
     @test ele.aperture_at == ApertureAt.Exit 
     @test ele.aperture_shifts_with_body == false    
