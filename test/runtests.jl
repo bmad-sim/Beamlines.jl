@@ -811,7 +811,7 @@ using Test
     ele.x1_limit = 12*im
     @test eltype(ele.ApertureParams) == ComplexF64
     @test ele.x1_limit == 12*im
-    @test ele.x1_limit == ComplexF64(123)
+    @test ele.x1_limit == ComplexF64(12*im)
     @test ele.x2_limit == ComplexF64(456)
     @test ele.y1_limit == ComplexF64(789 )
     @test ele.y2_limit == ComplexF64(012 )
