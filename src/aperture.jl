@@ -18,12 +18,12 @@ Base.eltype(::ApertureParams{T}) where {T} = T
 Base.eltype(::Type{ApertureParams{T}}) where {T} = T
 
 function Base.isapprox(a::ApertureParams, b::ApertureParams)
-  return a.x1_limit                  ≈  b.x1_limit      
-         a.x2_limit                  ≈  b.x2_limit      
-         a.y1_limit                  ≈  b.y1_limit      
-         a.y2_limit                  ≈  b.y2_limit      
-         a.aperture_shape            ==  b.aperture_shape
-         a.aperture_at               ==  b.aperture_at   
+  return a.x1_limit                  ≈  b.x1_limit        &&
+         a.x2_limit                  ≈  b.x2_limit        &&
+         a.y1_limit                  ≈  b.y1_limit        &&
+         a.y2_limit                  ≈  b.y2_limit        &&
+         a.aperture_shape            ==  b.aperture_shape &&
+         a.aperture_at               ==  b.aperture_at    &&
          a.aperture_shifts_with_body ==  b.aperture_shifts_with_body
 end
 Base.getproperty(a::ApertureParams, key::Symbol) = deval(getfield(a, key))
