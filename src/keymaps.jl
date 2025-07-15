@@ -1,6 +1,5 @@
 
 const PROPERTIES_MAP = Dict{Symbol,Type{<:AbstractParams}}(
-  :tilts =>  BMultipoleParams,
   :tilt0 =>  BMultipoleParams,
   :tilt1 =>  BMultipoleParams,
   :tilt2 =>  BMultipoleParams,

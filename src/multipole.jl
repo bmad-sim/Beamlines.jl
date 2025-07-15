@@ -22,7 +22,7 @@ function BMultipoleParams{T}(b::BMultipoleParams=BMultipoleParams()) where {T}
   return BMultipoleParams(n,s,tilt,b.order,b.normalized,b.integrated)
 end
 
-# Allow access to tilts, tilt0, etc. at this level. This WILL be used 
+# Allow access to tilt0, etc. at this level. This WILL be used 
 # at the element level!
 # Technically we could allow access to e.g. K1 (if normalized nonintegrated) 
 # at this level, like we did up to v0.3, but that is a pain AND it is not 
@@ -358,7 +358,6 @@ const BMULTIPOLE_STRENGTH_MAP = Dict{Symbol,Tuple{Bool,Int,Bool,Bool}}(
 const BMULTIPOLE_STRENGTH_INVERSE_MAP = Dict(value => key for (key, value) in BMULTIPOLE_STRENGTH_MAP)
 
 const BMULTIPOLE_TILT_MAP = Dict{Symbol,Int}(
-  :tilts =>   0, 
   :tilt0 =>   1,
   :tilt1 =>   2,
   :tilt2 =>   3,
