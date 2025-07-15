@@ -791,4 +791,33 @@ using Test
       @test qf.Bn1 ≈ Kn1*Brho_ref
       @test qd.Bn1 ≈ -Kn1*Brho_ref
     end
+    ele = LineElement(x1_limit=123,
+                      x2_limit=456,
+                      y1_limit=789, 
+                      y2_limit=012, 
+                      aperture_shape=ApertureShape.Elliptical, 
+                      aperture_at=ApertureAt.Exit, 
+                      aperture_shifts_with_body=false)
+    @test isactive(ele.ApertureParams)
+    @test ele.x1_limit == 123
+    @test ele.x1_limit == 123
+    @test ele.x2_limit == 456
+    @test ele.y1_limit == 789 
+    @test ele.y2_limit == 012 
+    @test ele.aperture_shape == ApertureShape.Elliptical
+    @test ele.aperture_at == ApertureAt.Exit 
+    @test ele.aperture_shifts_with_body == false
+    
+    ele.x1_limit = 12*im
+    @test eltype(ele.ApertureParams) == ComplexF32
+    @test eltype(typeof(ele.ApertureParams)) == ComplexF32
+    @test ele.ApertureParams ≈ ApertureParams(12*im, 456, 789, 012, ApertureShape.Elliptical, ApertureAt.Exit, false)
+    @test ele.x1_limit == 12*im
+    @test ele.x1_limit == ComplexF32(12*im)
+    @test ele.x2_limit == ComplexF32(456)
+    @test ele.y1_limit == ComplexF32(789 )
+    @test ele.y2_limit == ComplexF32(012 )
+    @test ele.aperture_shape == ApertureShape.Elliptical
+    @test ele.aperture_at == ApertureAt.Exit 
+    @test ele.aperture_shifts_with_body == false    
 end
