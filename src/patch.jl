@@ -1,4 +1,4 @@
-@kwdef mutable struct PatchParams{T<:Number} <: AbstractParams
+@kwdef mutable struct PatchParams{T} <: AbstractParams
   dt::T        = Float32(0.0)             # Time offset
   dx::T        = Float32(0.0)             # Local x coord offset
   dy::T        = Float32(0.0)             # Local y coord offset
@@ -7,7 +7,7 @@
   dy_rot::T    = Float32(0.0)             # Yaw:   rotation around global vertical
   dz_rot::T    = Float32(0.0)             # Roll:  rotation around longitudinal
   function PatchParams(args...)
-    return new{promote_type(map(x->typeof(x),args)...)}(args...)
+    return new{promote_type(typeof.(args)...)}(args...)
   end
 end
 
@@ -23,8 +23,9 @@ function Base.isapprox(a::PatchParams, b::PatchParams)
          a.dy_rot      ≈ b.dy_rot &&
          a.dz_rot      ≈ b.dz_rot
 end
+Base.getproperty(a::PatchParams, key::Symbol) = deval(getfield(a, key))
 
 # May want to include reference energy changes
-# In the future, would want to include "flexible" patches for global geomtry connections.
+# In the future, would want to include "flexible" patches for global geometry connections.
 #
 # The rotations are expressed as Tait-Bryan angles.

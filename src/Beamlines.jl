@@ -10,8 +10,13 @@ export MattStandard,
        AlignmentParams,
        PatchParams,
        BendParams,
+       InheritParams,
+       ApertureParams,
+       ApertureAt,
+       ApertureShape,
        RFParams,
        BMultipole,
+       DefExpr,
        Drift,
        Solenoid,
        Quadrupole,
@@ -31,7 +36,7 @@ export MattStandard,
 
        deepcopy_no_beamline,
        
-       BitsBeamline,
+       BitsBeamline, 
 
        SciBmadStandard,
 
@@ -41,9 +46,12 @@ using GTPSA,
       Accessors, 
       StaticArrays, 
       OrderedCollections,
-      MacroTools
+      MacroTools,
+      EnumX
 
-import GTPSA: sincu, sinhcu
+using FunctionWrappers: FunctionWrapper
+
+import GTPSA: sincu, sinhc, sinhcu, asinc, asincu, asinhc, asinhcu
 
 # Note that LineElement and parameter structs have three things:
 # 1) Fields: These are actual fields within a struct, e.g. pdict in LineElement
@@ -59,6 +67,7 @@ import GTPSA: sincu, sinhcu
 # For example, the s position of an element can be PROPERTY of the BeamlineParams 
 # struct as one can sum the lengths of each preceding element in the Beamline.
 
+include("defexpr.jl")
 include("element.jl")
 include("beamline.jl")
 include("multipole.jl")
@@ -68,6 +77,7 @@ include("bend.jl")
 include("control.jl")
 include("alignment.jl")
 include("patch.jl")
+include("aperture.jl")
 include("keymaps.jl")
 include("macros.jl")
 include("bits/bitsparams.jl")

@@ -1,4 +1,4 @@
-@kwdef mutable struct AlignmentParams{T<:Number} <: AbstractParams
+@kwdef mutable struct AlignmentParams{T} <: AbstractParams
   x_offset::T = Float32(0.0)
   y_offset::T = Float32(0.0)
   z_offset::T = Float32(0.0)
@@ -21,3 +21,5 @@ function Base.isapprox(a::AlignmentParams, b::AlignmentParams)
          a.y_rot    ≈ b.y_rot &&
          a.tilt     ≈ b.tilt
 end
+
+Base.getproperty(a::AlignmentParams, key::Symbol) = deval(getfield(a, key))

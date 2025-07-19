@@ -36,11 +36,13 @@ struct BitsLineElement{
   BM<:Union{BitsBMultipoleParams,Nothing},
   BP<:Union{BitsBendParams,Nothing},
   AP<:Union{BitsAlignmentParams,Nothing},
+  PP<:Union{BitsPatchParams,Nothing}
 }
   UniversalParams::UP
   BMultipoleParams::BM
   BendParams::BP
   AlignmentParams::AP
+  PatchParams::PP
 end
 function Base.getproperty(ble::BitsLineElement, key::Symbol)
   if key == :L
@@ -50,11 +52,13 @@ function Base.getproperty(ble::BitsLineElement, key::Symbol)
   end
 end
 
-function unpack_type_params(::Type{BitsBeamline{TM,TMI,TME,DS,R,N_ele,N_bytes,BitsLineElement{UP,BM,BP,AP}}}) where {TM,TMI,TME,DS,R,N_ele,N_bytes,UP,BM,BP,AP}
-  return TM,TMI,TME,DS,R,N_ele,N_bytes,UP,BM,BP,AP
+@inline unsafe_getparams(ele::BitsLineElement, param::Symbol) = getfield(ele, param)
+
+function unpack_type_params(::Type{BitsBeamline{TM,TMI,TME,DS,R,N_ele,N_bytes,BitsLineElement{UP,BM,BP,AP,PP}}}) where {TM,TMI,TME,DS,R,N_ele,N_bytes,UP,BM,BP,AP,PP}
+  return TM,TMI,TME,DS,R,N_ele,N_bytes,UP,BM,BP,AP,PP
 end
-function unpack_type_params(::BitsBeamline{TM,TMI,TME,DS,R,N_ele,N_bytes,BitsLineElement{UP,BM,BP,AP}}) where {TM,TMI,TME,DS,R,N_ele,N_bytes,UP,BM,BP,AP}
-  return TM,TMI,TME,DS,R,N_ele,N_bytes,UP,BM,BP,AP
+function unpack_type_params(::BitsBeamline{TM,TMI,TME,DS,R,N_ele,N_bytes,BitsLineElement{UP,BM,BP,AP,PP}}) where {TM,TMI,TME,DS,R,N_ele,N_bytes,UP,BM,BP,AP,PP}
+  return TM,TMI,TME,DS,R,N_ele,N_bytes,UP,BM,BP,AP,PP
 end
 
 
@@ -62,7 +66,7 @@ function BitsBeamline(bl::Beamline; store_normalized=false, prep=nothing)
   if isnothing(prep)
     prep = prep_bitsbl(bl, store_normalized)
   end
-  TM,TMI,TME,DS,R,N_ele,N_bytes,UP,BM,BP,AP = unpack_type_params(prep[1])
+  TM,TMI,TME,DS,R,N_ele,N_bytes,UP,BM,BP,AP,PP = unpack_type_params(prep[1])
   rep = prep[2]
 
   if TM == MultipleTrackingMethods
@@ -106,47 +110,74 @@ function BitsBeamline(bl::Beamline; store_normalized=false, prep=nothing)
   
       bmp = ele.BMultipoleParams
       if !isnothing(bmp)
-        for bm in values(bmp.bdict)
-          if bm.tilt != 0
+        for bm in bmp
+          if !(bm.tilt ≈ 0)
             # 1 -> 22 inclusive is tilt (22 multipole orders including 0)
             i, cur_byte_arr = setval(i, cur_byte_arr, UInt8(1+bm.order), eltype(BM), bm.tilt)
           end
-          if bm.strength != 0
-            strength = bm.strength
+          if !(bm.n ≈ 0)
+            n = bm.n
             if !bm.integrated
-              strength *= ele.L
+              n *= ele.L
             end
             if isnormalized(BM)
               if !bm.normalized
-                strength /= ele.Brho_ref
+                n /= ele.Brho_ref
               end
             else
               if bm.normalized
-                strength *= ele.Brho_ref
+                n *= ele.Brho_ref
               end
             end
-            # 23 -> 44 inclusive is order (22 multipole orders including 0)
-            i, cur_byte_arr = setval(i, cur_byte_arr, UInt8(23+bm.order), eltype(BM), strength)
+            # 23 -> 44 inclusive is n (22 multipole orders including 0)
+            i, cur_byte_arr = setval(i, cur_byte_arr, UInt8(23+bm.order), eltype(BM), n)
+          end
+          if !(bm.s ≈ 0)
+            s = bm.s
+            if !bm.integrated
+              s *= ele.L
+            end
+            if isnormalized(BM)
+              if !bm.normalized
+                s /= ele.Brho_ref
+              end
+            else
+              if bm.normalized
+                s *= ele.Brho_ref
+              end
+            end
+            # 45 -> 66 inclusive is s (22 multipole orders including 0)
+            i, cur_byte_arr = setval(i, cur_byte_arr, UInt8(45+bm.order), eltype(BM), s)
           end
         end      
       end
   
-      # 45 -> 47 inclusive are BendParams
+      # 67 -> 69 inclusive are BendParams
       bp = ele.BendParams
       if !isnothing(bp)
         for (k,v) in enumerate((bp.g,bp.e1,bp.e2))
           if v != 0 
-            i, cur_byte_arr = setval(i, cur_byte_arr, UInt8(k+44), eltype(BP), v)
+            i, cur_byte_arr = setval(i, cur_byte_arr, UInt8(k+66), eltype(BP), v)
           end
         end
       end
   
-      # 48 -> 53 inclusive are AlignmentParams
+      # 70 -> 75 inclusive are AlignmentParams
       ap = ele.AlignmentParams
       if !isnothing(ap)
         for (k,v) in enumerate((ap.x_offset,ap.y_offset,ap.z_offset,ap.x_rot,ap.y_rot,ap.tilt))
           if v != 0 
-            i, cur_byte_arr = setval(i, cur_byte_arr, UInt8(k+47), eltype(AP), v)
+            i, cur_byte_arr = setval(i, cur_byte_arr, UInt8(k+69), eltype(AP), v)
+          end
+        end
+      end
+
+      # 76 -> 82 inclusive are PatchParams
+      pp = ele.PatchParams
+      if !isnothing(pp)
+        for (k,v) in enumerate((pp.dt, pp.dx, pp.dy, pp.dz, pp.dx_rot, pp.dy_rot, pp.dz_rot))
+          if v != 0 
+            i, cur_byte_arr = setval(i, cur_byte_arr, UInt8(k+75), eltype(PP), v)
           end
         end
       end
@@ -212,6 +243,7 @@ function prep_bitsbl(bl::Beamline, store_normalized::Bool=false) #, arr::Type{T}
   BM = Nothing
   BP = Nothing
   AP = Nothing
+  PP = Nothing
 
   N_parameters = zeros(Int, N_ele)
   line_w_duplicates = Vector{LineElement}(undef, N_ele)
@@ -267,15 +299,15 @@ function prep_bitsbl(bl::Beamline, store_normalized::Bool=false) #, arr::Type{T}
       # Now check each multipole - we have to do this bc only 
       # unnormalized+integrated is stored in BitsBeamLine, which 
       # can cause a promotion for the eltype of BitsBMultipole
-      for bm in values(bmp.bdict)
-        if bm.tilt != 0 # only store tilts when nonzero
+      for bm in bmp #values(bmp.bdict)
+        if !(bm.tilt ≈ 0) # only store tilts when nonzero
           N_bytes[i] += sizeof(eltype(bmp)) 
           N_parameters[i] += 1
         end
 
         bits_strength_type = eltype(bmp)
         
-        if bm.strength != 0 # also only store strengths when nonzero
+        if !(bm.n ≈ 0) || !(bm.s ≈ 0) # also only store strengths when nonzero
           if store_normalized != bm.normalized
             bits_strength_type = promote_type(bits_strength_type, typeof(ele.Brho_ref))
           end
@@ -283,7 +315,12 @@ function prep_bitsbl(bl::Beamline, store_normalized::Bool=false) #, arr::Type{T}
             bits_strength_type = promote_type(bits_strength_type, typeof(ele_L))
           end
           N_bytes[i] += sizeof(bits_strength_type)
-          N_parameters[i] += 1
+          if !(bm.n ≈ 0)
+            N_parameters[i] += 1
+          end
+          if !(bm.s ≈ 0)
+            N_parameters[i] += 1
+          end
           BM = BitsBMultipoleParams{promote_type(eltype(BM),bits_strength_type),length(BM),store_normalized}
         end
       end      
@@ -296,7 +333,7 @@ function prep_bitsbl(bl::Beamline, store_normalized::Bool=false) #, arr::Type{T}
         BP = BitsBendParams{eltype(bp)}
       end
       for v in (bp.g,bp.e1,bp.e2)
-        if v != 0 
+        if !(v ≈ 0)
           N_bytes[i] += sizeof(v)
           N_parameters[i] += 1
           BP = BitsBendParams{promote_type(eltype(BP),typeof(v))}
@@ -310,10 +347,25 @@ function prep_bitsbl(bl::Beamline, store_normalized::Bool=false) #, arr::Type{T}
         AP = BitsAlignmentParams{eltype(ap)}
       end
       for v in (ap.x_offset,ap.y_offset,ap.z_offset,ap.x_rot,ap.y_rot,ap.tilt)
-        if v != 0 
+        if !(v ≈ 0)
           N_bytes[i] += sizeof(v)
           N_parameters[i] += 1
           AP = BitsAlignmentParams{promote_type(eltype(AP),typeof(v))}
+        end
+      end
+    end
+
+    
+    pp = ele.PatchParams
+    if !isnothing(pp)
+      if PP == Nothing
+        PP = BitsPatchParams{eltype(pp)}
+      end
+      for v in (pp.dt, pp.dx, pp.dy,  pp.dz, pp.dx_rot, pp.dy_rot, pp.dz_rot)
+        if !(v ≈ 0)
+          N_bytes[i] += sizeof(v)
+          N_parameters[i] += 1
+          PP = BitsPatchParams{promote_type(eltype(PP),typeof(v))}
         end
       end
     end
@@ -369,7 +421,7 @@ function prep_bitsbl(bl::Beamline, store_normalized::Bool=false) #, arr::Type{T}
     DS = Dense
   end
 
-  outtype = BitsBeamline{TM,TMI,TME,DS,R,N_ele,bl_N_bytes,BitsLineElement{UP,BM,BP,AP}}
+  outtype = BitsBeamline{TM,TMI,TME,DS,R,N_ele,bl_N_bytes,BitsLineElement{UP,BM,BP,AP,PP}}
   if sizeof(outtype) > 65536
     @warn "This BitsBeamline is size $(sizeof(outtype)), which is greater than the 65536 bytes allowed in constant memory on a CUDA GPU. Consider combining repeated consecutive elements, using Float32/Float16 for LineElement parameters, simplifying the beamline, or splitting it up into one size that fits in constant memory and the rest in global memory."
   end
@@ -469,6 +521,7 @@ function Beamline(bbl::BitsBeamline{TM}; Brho_ref=NaN) where {TM}
       le.BMultipoleParams = BMultipoleParams(ble.BMultipoleParams)
       le.BendParams = BendParams(ble.BendParams)
       le.AlignmentParams = AlignmentParams(ble.AlignmentParams)
+      le.PatchParams = PatchParams(ble.PatchParams)
       bl[i] = le
     end
   else
@@ -497,6 +550,7 @@ function Beamline(bbl::BitsBeamline{TM}; Brho_ref=NaN) where {TM}
           le.BMultipoleParams = BMultipoleParams(ble.BMultipoleParams)
           le.BendParams = BendParams(ble.BendParams)
           le.AlignmentParams = AlignmentParams(ble.AlignmentParams)
+          le.PatchParams = PatchParams(ble.PatchParams)
           push!(bl, le)
 
           i += 1

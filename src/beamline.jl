@@ -1,32 +1,32 @@
 @kwdef mutable struct Beamline
   const line::Vector{LineElement}
-  Brho_ref::Number # Will be NaN if not specified
+  Brho_ref # Will be NaN if not specified
 
   # Beamlines can be very long, so realistically only 
   # Base.Vector should be allowed.
-  function Beamline(line::Vector{LineElement}; Brho_ref::Number=NaN)
+  function Beamline(line::Vector{LineElement}; Brho_ref=NaN)
     bl = new(line, Brho_ref)
+
+    # Check if any are in a Beamline already
     for i in eachindex(line)
-      if haskey(line[i].pdict, BeamlineParams)
-        if line[i].beamline != bl
-          error("Element is already in a beamline")
-        else
-          # This can be changed later...
-          error("Duplicate elements not currently allowed in a beamline")
-          #line[i] = deepcopy_no_beamline(line[line[i].beamline_index])
+      if haskey(getfield(line[i], :pdict), BeamlineParams)
+        if line[i].beamline != bl # Different Beamline - need to error
+          error("Cannot construct Beamline: element $i with name $(line[i].name) is already in a Beamline")
+        else # Duplicate element
+          line[i] = LineElement(ParamDict(InheritParams=>InheritParams(line[i])))
         end
       end
-      
-      line[i].BeamlineParams = BeamlineParams(bl, i)
+      # HARD put in because may need to override InheritParams
+      getfield(line[i], :pdict)[BeamlineParams] = BeamlineParams(bl, i)
     end
-    
+
     return bl
   end
 end
 
 
 function Base.getproperty(b::Beamline, key::Symbol)
-  field = getfield(b, key)
+  field = deval(getfield(b, key))
   if key == :Brho_ref && isnan(field)
     #@warn "Brho_ref has not been set: using default value of NaN"
     error("Unable to get magnetic rigidity: Brho_ref of the Beamline has not been set")
@@ -61,19 +61,19 @@ end
 
 function Base.getproperty(bp::BeamlineParams, key::Symbol)
   if key == :Brho_ref
-    return getproperty(bp.beamline, key) 
+    return deval(getproperty(bp.beamline, key))
   elseif key in (:s, :s_downstream)
     if key == :s
       n = bp.beamline_index - 1
       if n == 0
-        return 0.0
+        return 0
       end
     else
       n = bp.beamline_index
     end
     # s is the sum of the lengths of all preceding elements
     line = bp.beamline.line
-    return sum(line[i].L for i in 1:n)
+    return deval(sum(line[i].L for i in 1:n))
   else
     return getfield(bp, key)
   end
