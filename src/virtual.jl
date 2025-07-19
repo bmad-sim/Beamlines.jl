@@ -350,7 +350,7 @@ end
 function _get_cavity_frequency(c, key)
   harmon_master = CAVITY_FREQUENCY_MAP[key]
   if c.harmon_master == harmon_master
-    return c.frequency
+    return c.rate
   else
     correctkey = CAVITY_FREQUENCY_INVERSE_MAP[c.harmon_master]
     error("Cannot calculate $key of RFParams since particle species is unknown at Beamlines level and harmon_master=$(c.harmon_master)")
@@ -376,14 +376,14 @@ function _set_cavity_frequency!(ele, c1::RFParams{S}, key, value) where {S}
     # Create new RFParams with updated type and/or harmon_master
     c = RFParams(
       harmon_master = harmon_master,
-      frequency     = T(value),
+      rate     = T(value),
       voltage       = T(c1.voltage),
       phi0          = T(c1.phi0)
     )
     ele.pdict[RFParams] = c
   else
     # Can modify in place
-    c1.frequency = T(value)
+    c1.rate = T(value)
   end
   
   return
@@ -397,7 +397,7 @@ const VIRTUAL_GETTER_MAP = Dict{Symbol,Function}(
   :integrated_master => get_integrated_master,
 
   :rf_frequency => get_cavity_frequency,
-  :harmonic_number => get_cavity_frequency,
+  :harmon => get_cavity_frequency,
 )
 
 const VIRTUAL_SETTER_MAP = Dict{Symbol,Function}(
@@ -410,5 +410,5 @@ const VIRTUAL_SETTER_MAP = Dict{Symbol,Function}(
   :integrated_master => set_integrated_master!,
 
   :rf_frequency => set_cavity_frequency!,
-  :harmonic_number => set_cavity_frequency!,
+  :harmon => set_cavity_frequency!,
 )
