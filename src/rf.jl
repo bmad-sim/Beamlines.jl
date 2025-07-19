@@ -5,7 +5,7 @@
     const harmon_master::Bool = false    # false = frequency in Hz, true = harmonic number
 
     function RFParams(args...)
-        return new{promote_type(map(x->typeof(x),args)...)}(args...)
+      return new{promote_type(typeof.((args[1],args[2],args[3])))}(args...)
     end
 end
 
