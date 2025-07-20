@@ -834,7 +834,7 @@ using Test
     cav.RFParams.rf_frequency = 210.1e6
     @test_throws ErrorException cav.RFParams.dx_rot
     @test_throws ErrorException cav.RFParams.dx_rot = 1.0
-    @test_throws ErrorException cav.RFParams.rf_frequency = 210.1e6
+    @test_throws ErrorException cav.RFParams.harmon = 120
     
 
     # Harmonic number mode and mode switching
@@ -848,7 +848,8 @@ using Test
     cav2.harmon = 1160
     @test cav2.harmon == 1160 && cav2.harmon_master == true
     cav2.harmon_master = false
-    @test cav2.harmon == 1160 && cav2.harmon_master == false
+    @test cav2.harmon_master == false
+    @test_throws ErrorException cav2.harmon == 1160 
   
     # Direct property access and RFParams struct operations
     cp = RFParams(rate=352e6, harmon_master=false)
