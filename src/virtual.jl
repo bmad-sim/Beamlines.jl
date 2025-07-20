@@ -348,45 +348,56 @@ function get_cavity_frequency(ele::LineElement, key::Symbol)
 end
 
 function _get_cavity_frequency(c, key)
-  harmon_master = CAVITY_FREQUENCY_MAP[key]
-  if c.harmon_master == harmon_master
+  if !((key == :harmon) ⊻ c.harmon_master)
     return c.rate
   else
-    correctkey = CAVITY_FREQUENCY_INVERSE_MAP[c.harmon_master]
     error("Cannot calculate $key of RFParams since particle species is unknown at Beamlines level and harmon_master=$(c.harmon_master)")
   end
 end
 
 function set_cavity_frequency!(ele::LineElement, key::Symbol, value)
-r = ele.RFParams
-if isnothing(r)
-  ele.RFParams = RFParams(harmon_master=key == :harmon ? true : false)
-end
-
-  c = ele.RFParams
-  @noinline _set_cavity_frequency!(ele, c, key, value)
+  rfp = ele.RFParams
+  if isnothing(rfp)
+    ele.RFParams = rfp = RFParams(harmon_master = (key == :harmon))
+  end
+  @noinline _set_cavity_frequency!(ele, rfp, key, value)
   return value
 end
 
-function _set_cavity_frequency!(ele, c1::RFParams{S}, key, value) where {S}
-  harmon_master = CAVITY_FREQUENCY_MAP[key]
+function _set_cavity_frequency!(ele, rfp::RFParams{S}, key, value) where {S}
   
   T = promote_type(S, typeof(value))
-  if T != S || c1.harmon_master != harmon_master
+  if T != S || rfp.harmon_master != (key == :harmon)
     # Create new RFParams with updated type and/or harmon_master
-    c = RFParams(
-      harmon_master = harmon_master,
+    rfp = RFParams(
       rate     = T(value),
-      voltage       = T(c1.voltage),
-      phi0          = T(c1.phi0)
+      voltage       = T(rfp.voltage),
+      phi0          = T(rfp.phi0),
+      harmon_master = (key == :harmon)
     )
-    ele.pdict[RFParams] = c
+    ele.RFParams = rfp
   else
     # Can modify in place
-    c1.rate = T(value)
+    rfp.rate = T(value)
   end
   
   return
+end
+
+function set_harmon_master!(ele::LineElement, ::Symbol, value::Bool)
+  rfp = ele.RFParams
+  if isnothing(rfp)
+    ele.RFParams = RFParams(harmon_master = value)
+  else
+    # Create new RFParams with updated harmon_master since it's const
+    ele.RFParams = RFParams(
+      rate = rfp.rate,
+      voltage = rfp.voltage,
+      phi0 = rfp.phi0,
+      harmon_master = value
+    )
+  end
+  return value
 end
 
 const VIRTUAL_GETTER_MAP = Dict{Symbol,Function}(
@@ -411,4 +422,5 @@ const VIRTUAL_SETTER_MAP = Dict{Symbol,Function}(
 
   :rf_frequency => set_cavity_frequency!,
   :harmon => set_cavity_frequency!,
+  :harmon_master => set_harmon_master!,
 )

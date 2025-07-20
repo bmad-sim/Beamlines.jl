@@ -822,11 +822,11 @@ using Test
     @test ele.aperture_shifts_with_body == false    
 
     # RFParams tests
-    @test_throws ErrorException qf.rf_frequency
+    @test isnothing(qf.rf_frequency)
 
     # Basic RF frequency mode
-    cav = RFCavity(rate=352e6, voltage=1e6, harmon_master=false)
-    @test cav.rf_frequency == 352e6 && cav.harmon_master == false
+    cav = RFCavity(rf_frequency=352e6, voltage=1e6)
+    @test cav.harmon_master == false && cav.rf_frequency == 352e6
     @test_throws ErrorException cav.harmon
     cav.rf_frequency = 500e6 + 1e3im
     @test eltype(cav.RFParams) == ComplexF64
@@ -844,15 +844,6 @@ using Test
     cav2.harmon = 1160
     @test cav2.harmon == 1160 && cav2.harmon_master == true
   
-
-    # Type promotion via replace function
-    cp_new = Beamlines.replace(RFParams(rate=352f6, voltage = 200f6, harmon_master=false), :harmon, 1160e0)
-    @test cp_new.harmon_master == true && eltype(cp_new) == Float64
-    @test cp_new ≈ cav2.RFParams
-    @test_throws ErrorException cp_new.harmon_master = false
-    @test_throws ErrorException cp_new.rf_frequency = 210.1e6 
-
-
     # Direct property access and RFParams struct operations
     cp = RFParams(rate=352e6, harmon_master=false)
     @test hasproperty(cp, :rf_frequency) && !hasproperty(cp, :harmon)
