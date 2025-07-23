@@ -14,6 +14,7 @@ export MattStandard,
        ApertureParams,
        ApertureAt,
        ApertureShape,
+       RFParams,
        BMultipole,
        DefExpr,
        Drift,
@@ -70,6 +71,7 @@ include("defexpr.jl")
 include("element.jl")
 include("beamline.jl")
 include("multipole.jl")
+include("rf.jl")
 include("virtual.jl")
 include("bend.jl")
 include("control.jl")

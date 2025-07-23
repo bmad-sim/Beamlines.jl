@@ -60,6 +60,10 @@ const PROPERTIES_MAP = Dict{Symbol,Type{<:AbstractParams}}(
   :aperture_shape => ApertureParams,
   :aperture_at    => ApertureParams,
   :aperture_shifts_with_body => ApertureParams,
+
+  :voltage => RFParams,
+  :phi0 => RFParams,
+  :harmon_master => RFParams,
 )
 
 const PARAMS_MAP = Dict{Symbol,Type{<:AbstractParams}}(
@@ -69,6 +73,7 @@ const PARAMS_MAP = Dict{Symbol,Type{<:AbstractParams}}(
   :BendParams => BendParams,
   :AlignmentParams => AlignmentParams,
   :PatchParams => PatchParams,
+  :RFParams => RFParams,
   :ApertureParams => ApertureParams,
 )
 

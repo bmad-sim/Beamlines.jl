@@ -339,12 +339,76 @@ function _get_integrated_master(b)
   return check
 end
 
+function get_cavity_frequency(ele::LineElement, key::Symbol)
+  c = ele.RFParams
+  if isnothing(c)
+    return nothing
+  end
+  return @noinline _get_cavity_frequency(c, key)
+end
+
+function _get_cavity_frequency(c, key)
+  if !((key == :harmon) ⊻ c.harmon_master)
+    return c.rate
+  else
+    error("Cannot calculate $key of RFParams since particle species is unknown at Beamlines level and harmon_master=$(c.harmon_master)")
+  end
+end
+
+function set_cavity_frequency!(ele::LineElement, key::Symbol, value)
+  rfp = ele.RFParams
+  if isnothing(rfp)
+    ele.RFParams = rfp = RFParams(harmon_master = (key == :harmon))
+  end
+  @noinline _set_cavity_frequency!(ele, rfp, key, value)
+  return value
+end
+
+function _set_cavity_frequency!(ele, rfp::RFParams{S}, key, value) where {S}
+  
+  T = promote_type(S, typeof(value))
+  if T != S || rfp.harmon_master != (key == :harmon)
+    # Create new RFParams with updated type and/or harmon_master
+    rfp = RFParams(
+      rate     = T(value),
+      voltage       = T(rfp.voltage),
+      phi0          = T(rfp.phi0),
+      harmon_master = (key == :harmon)
+    )
+    ele.RFParams = rfp
+  else
+    # Can modify in place
+    rfp.rate = T(value)
+  end
+  
+  return
+end
+
+function set_harmon_master!(ele::LineElement, ::Symbol, value::Bool)
+  rfp = ele.RFParams
+  if isnothing(rfp)
+    ele.RFParams = RFParams(harmon_master = value)
+  else
+    # Create new RFParams with updated harmon_master since it's const
+    ele.RFParams = RFParams(
+      rate = rfp.rate,
+      voltage = rfp.voltage,
+      phi0 = rfp.phi0,
+      harmon_master = value
+    )
+  end
+  return value
+end
+
 const VIRTUAL_GETTER_MAP = Dict{Symbol,Function}(
   [key => get_BM_strength for (key, value) in BMULTIPOLE_STRENGTH_MAP]...,
 
   :BM_independent => get_BM_independent,
   :field_master => get_field_master,
   :integrated_master => get_integrated_master,
+
+  :rf_frequency => get_cavity_frequency,
+  :harmon => get_cavity_frequency,
 )
 
 const VIRTUAL_SETTER_MAP = Dict{Symbol,Function}(
@@ -355,4 +419,8 @@ const VIRTUAL_SETTER_MAP = Dict{Symbol,Function}(
   :BM_independent => set_BM_independent!,
   :field_master => set_field_master!,
   :integrated_master => set_integrated_master!,
+
+  :rf_frequency => set_cavity_frequency!,
+  :harmon => set_cavity_frequency!,
+  :harmon_master => set_harmon_master!,
 )
