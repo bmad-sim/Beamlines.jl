@@ -216,4 +216,4 @@ qf2.Kn1 == 0.1 # true
 
 # Acknowledgements
 
-`Beamlines.jl` aims to provide the powerful lattice definitions enabled by [classic Bmad](github.com/bmad-sim/bmad-ecosystem), [`AcceleratorLattice.jl`](https://github.com/bmad-sim/AcceleratorLattice.jl), and the [Particle Accelerator Lattice Standard (PALS) project](https://github.com/campa-consortium/pals). The lazily-evaluated deferred expressions is inspired completely from [MAD-NG](https://github.com/MethodicalAcceleratorDesign/MAD-NG). This package would be a fragment of what it is today without all of these efforts.
+`Beamlines.jl` aims to provide the powerful lattice definitions enabled by [classic Bmad](github.com/bmad-sim/bmad-ecosystem), [`AcceleratorLattice.jl`](https://github.com/bmad-sim/AcceleratorLattice.jl), and the [Particle Accelerator Lattice Standard (PALS) project](https://github.com/campa-consortium/pals). The use of lazily-evaluated deferred expressions is inspired completely by [MAD-NG](https://github.com/MethodicalAcceleratorDesign/MAD-NG). This package would be a fragment of what it is today without all of these efforts.
