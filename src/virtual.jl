@@ -339,15 +339,15 @@ function _get_integrated_master(b)
   return check
 end
 
-function get_cavity_frequency(ele::LineElement, key::Symbol)
+function get_cavity_rate(ele::LineElement, key::Symbol)
   c = ele.RFParams
   if isnothing(c)
     return nothing
   end
-  return @noinline _get_cavity_frequency(c, key)
+  return @noinline _get_cavity_rate(c, key)
 end
 
-function _get_cavity_frequency(c, key)
+function _get_cavity_rate(c, key)
   if !((key == :harmon) ⊻ c.harmon_master)
     return c.rate
   else
@@ -355,16 +355,16 @@ function _get_cavity_frequency(c, key)
   end
 end
 
-function set_cavity_frequency!(ele::LineElement, key::Symbol, value)
+function set_cavity_rate!(ele::LineElement, key::Symbol, value)
   rfp = ele.RFParams
   if isnothing(rfp)
     ele.RFParams = rfp = RFParams(harmon_master = (key == :harmon))
   end
-  @noinline _set_cavity_frequency!(ele, rfp, key, value)
+  @noinline _set_cavity_rate!(ele, rfp, key, value)
   return value
 end
 
-function _set_cavity_frequency!(ele, rfp::RFParams{S}, key, value) where {S}
+function _set_cavity_rate!(ele, rfp::RFParams{S}, key, value) where {S}
   
   T = promote_type(S, typeof(value))
   if T != S || rfp.harmon_master != (key == :harmon)
@@ -407,8 +407,8 @@ const VIRTUAL_GETTER_MAP = Dict{Symbol,Function}(
   :field_master => get_field_master,
   :integrated_master => get_integrated_master,
 
-  :rf_frequency => get_cavity_frequency,
-  :harmon => get_cavity_frequency,
+  :rf_frequency => get_cavity_rate,
+  :harmon => get_cavity_rate,
 )
 
 const VIRTUAL_SETTER_MAP = Dict{Symbol,Function}(
@@ -420,7 +420,9 @@ const VIRTUAL_SETTER_MAP = Dict{Symbol,Function}(
   :field_master => set_field_master!,
   :integrated_master => set_integrated_master!,
 
-  :rf_frequency => set_cavity_frequency!,
-  :harmon => set_cavity_frequency!,
+  :rf_frequency => set_cavity_rate!,
+  :harmon => set_cavity_rate!,
   :harmon_master => set_harmon_master!,
+
+
 )
