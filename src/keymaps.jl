@@ -34,7 +34,7 @@ const PROPERTIES_MAP = Dict{Symbol,Type{<:AbstractParams}}(
   :s => BeamlineParams,
   :s_downstream => BeamlineParams,
 
-  :g => BendParams,
+  :g_ref => BendParams,
   :e1 => BendParams,
   :e2 => BendParams,
 

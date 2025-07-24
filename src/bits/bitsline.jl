@@ -155,7 +155,7 @@ function BitsBeamline(bl::Beamline; store_normalized=false, prep=nothing)
       # 67 -> 69 inclusive are BendParams
       bp = ele.BendParams
       if !isnothing(bp)
-        for (k,v) in enumerate((bp.g,bp.e1,bp.e2))
+        for (k,v) in enumerate((bp.g_ref,bp.e1,bp.e2))
           if v != 0 
             i, cur_byte_arr = setval(i, cur_byte_arr, UInt8(k+66), eltype(BP), v)
           end
@@ -332,7 +332,7 @@ function prep_bitsbl(bl::Beamline, store_normalized::Bool=false) #, arr::Type{T}
       if BP == Nothing
         BP = BitsBendParams{eltype(bp)}
       end
-      for v in (bp.g,bp.e1,bp.e2)
+      for v in (bp.g_ref,bp.e1,bp.e2)
         if !(v ≈ 0)
           N_bytes[i] += sizeof(v)
           N_parameters[i] += 1

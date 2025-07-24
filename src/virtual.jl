@@ -216,16 +216,23 @@ function _set_bend_angle!(ele, L, value)
     error("Cannot set angle of LineElement with L = 0 (did you specify `angle` before specifying `L`?)")
   end
   Kn0 = value/L
-  #setproperty!(ele, :Kn0, Kn0)
-  setproperty!(ele, :g, Kn0)
+  setproperty!(ele, :g, Kn0) # sets both g_ref and Kn0
   return value
+end
+
+function get_bend_g(ele::LineElement, ::Symbol)
+  bp = ele.BendParams
+  if isnothing(bp)
+    error("Unable to get g_ref: BendParams is not active")
+  end
+  return bp.g_ref
 end
 
 function set_bend_g!(ele::LineElement, ::Symbol, value)
   bp = ele.BendParams
   bm = ele.BMultipoleParams
   if isnothing(bp)
-    ele.BendParams = bp = BendParams(g = value)
+    ele.BendParams = bp = BendParams(g_ref = value)
   end
   if isnothing(bm)
     ele.BMultipoleParams = bm = BMultipoleParams()
@@ -235,9 +242,9 @@ end
 
 function _set_bend_g!(ele::LineElement, bp::BendParams{S}, bm::BMultipoleParams, value) where {S}
   T = promote_type(S, typeof(value))
-  if T != S || bp.g != value
+  if T != S || bp.g_ref != value
     bp = BendParams(
-      g        = T(value),
+      g_ref    = T(value),
       e1       = T(bp.e1),
       e2       = T(bp.e2)
     )
@@ -428,6 +435,8 @@ end
 
 const VIRTUAL_GETTER_MAP = Dict{Symbol,Function}(
   [key => get_BM_strength for (key, value) in BMULTIPOLE_STRENGTH_MAP]...,
+
+  :g => get_bend_g,
 
   :BM_independent => get_BM_independent,
   :field_master => get_field_master,

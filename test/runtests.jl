@@ -43,8 +43,11 @@ using Test
     @test_throws ErrorException getfield(ele, :pdict)[UniversalParams] = 10.0
 
     @test !isactive(ele.BendParams)
-    ele.g = g
+    ele.g_ref = g
     @test isactive(ele.BendParams)
+    @test !isactive(ele.BMultipoleParams)
+    ele.g = g
+    @test isactive(ele.BMultipoleParams)
     @test ele.g == g
     @test ele.e1 == 0
     @test ele.e2 == 0
@@ -93,7 +96,6 @@ using Test
     @test !(ele.AlignmentParams === ap)
     @test typeof(ele.x_offset) == Float64
 
-    @test isactive(ele.BMultipoleParams)
     @test ele.BMultipoleParams.n[1] == 0.2
     @test !ele.BMultipoleParams.integrated[1]
     @test ele.BMultipoleParams.normalized[1]
