@@ -43,11 +43,13 @@ using Test
     @test_throws ErrorException getfield(ele, :pdict)[UniversalParams] = 10.0
 
     @test !isactive(ele.BendParams)
+    @test_throws ErrorException ele.g
     ele.g_ref = g
     @test isactive(ele.BendParams)
     @test !isactive(ele.BMultipoleParams)
     ele.g = g
     @test isactive(ele.BMultipoleParams)
+    @test ele.g_ref == g
     @test ele.g == g
     @test ele.e1 == 0
     @test ele.e2 == 0
