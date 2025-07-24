@@ -223,7 +223,7 @@ end
 function get_bend_g(ele::LineElement, ::Symbol)
   bp = ele.BendParams
   if isnothing(bp)
-    error("Unable to get g_ref: BendParams is not active")
+    error("Unable to get g: BendParams is not active")
   end
   return bp.g_ref
 end
