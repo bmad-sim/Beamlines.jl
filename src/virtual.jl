@@ -216,8 +216,34 @@ function _set_bend_angle!(ele, L, value)
     error("Cannot set angle of LineElement with L = 0 (did you specify `angle` before specifying `L`?)")
   end
   Kn0 = value/L
-  setproperty!(ele, :Kn0, Kn0)
+  #setproperty!(ele, :Kn0, Kn0)
   setproperty!(ele, :g, Kn0)
+  return value
+end
+
+function set_bend_g!(ele::LineElement, ::Symbol, value)
+  bp = ele.BendParams
+  bm = ele.BMultipoleParams
+  if isnothing(bp)
+    ele.BendParams = bp = BendParams(g = value)
+  end
+  if isnothing(bm)
+    ele.BMultipoleParams = bm = BMultipoleParams()
+  end
+  return _set_bend_g!(ele, bp, bm, value)
+end
+
+function _set_bend_g!(ele::LineElement, bp::BendParams{S}, bm::BMultipoleParams, value) where {S}
+  T = promote_type(S, typeof(value))
+  if T != S || bp.g != value
+    bp = BendParams(
+      g        = T(value),
+      e1       = T(bp.e1),
+      e2       = T(bp.e2)
+    )
+    ele.BendParams = bp
+  end
+  setproperty!(ele, :Kn0, T(value))
   return value
 end
 
@@ -370,7 +396,7 @@ function _set_cavity_rate!(ele, rfp::RFParams{S}, key, value) where {S}
   if T != S || rfp.harmon_master != (key == :harmon)
     # Create new RFParams with updated type and/or harmon_master
     rfp = RFParams(
-      rate     = T(value),
+      rate          = T(value),
       voltage       = T(rfp.voltage),
       phi0          = T(rfp.phi0),
       harmon_master = (key == :harmon)
@@ -415,6 +441,7 @@ const VIRTUAL_SETTER_MAP = Dict{Symbol,Function}(
   [key => set_BM_strength! for (key, value) in BMULTIPOLE_STRENGTH_MAP]...,
 
   :angle => set_bend_angle!,
+  :g => set_bend_g!,
 
   :BM_independent => set_BM_independent!,
   :field_master => set_field_master!,

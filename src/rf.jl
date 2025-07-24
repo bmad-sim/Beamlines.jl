@@ -1,5 +1,5 @@
 @kwdef mutable struct RFParams{T<:Number} <: AbstractParams
-    rate::T          = Float32(0.0) # RF frequency in Hz or Harmonic number
+    rate::T               = Float32(0.0) # RF frequency in Hz or Harmonic number
     voltage::T            = Float32(0.0) # Voltage in V 
     phi0::T               = Float32(0.0) # Phase at reference energy
     const harmon_master::Bool = false    # false = frequency in Hz, true = harmonic number

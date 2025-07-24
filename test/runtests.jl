@@ -66,7 +66,6 @@ using Test
 
     ele.g = 0.2
     @test ele.g == 0.2
-    @test ele.BendParams === bp # do not change parameter group if promotion is ok
 
     @test !isactive(ele.AlignmentParams)
     ap = AlignmentParams(1, 2, 3, 4, 5, 6)
@@ -94,16 +93,21 @@ using Test
     @test !(ele.AlignmentParams === ap)
     @test typeof(ele.x_offset) == Float64
 
-    @test !isactive(ele.BMultipoleParams)
-    ele.Kn1 = 0.36
     @test isactive(ele.BMultipoleParams)
-    @test ele.Kn1 == 0.36
-    @test ele.Kn1L == 0.36*ele.L
-    @test ele.BMultipoleParams.n[1] == 0.36
+    @test ele.BMultipoleParams.n[1] == 0.2
     @test !ele.BMultipoleParams.integrated[1]
     @test ele.BMultipoleParams.normalized[1]
-    @test ele.BMultipoleParams.order[1] == 2
-    @test ele.BMultipoleParams[2] == BMultipole(0.36,0.,0.,2,true,false)
+    @test ele.BMultipoleParams.order[1] == 1
+    @test ele.BMultipoleParams[1] == BMultipole(Complex(0.2),0.,0.,1,true,false)
+
+    ele.Kn1 = 0.36
+    @test ele.Kn1 == 0.36
+    @test ele.Kn1L == 0.36*ele.L
+    @test ele.BMultipoleParams.n[2] == 0.36
+    @test !ele.BMultipoleParams.integrated[2]
+    @test ele.BMultipoleParams.normalized[2]
+    @test ele.BMultipoleParams.order[2] == 2
+    @test ele.BMultipoleParams[2] == BMultipole(Complex(0.36),0.,0.,2,true,false)
     @test_throws ErrorException ele.BMultipoleParams[3]
     
     ele.L = 2.0
@@ -117,24 +121,24 @@ using Test
     ele.Bn2L = 0.50
     @test ele.Bn2L == 0.50
     @test ele.Bn2 == 0.50/ele.L
-    @test ele.BMultipoleParams.n[2] == 0.50
-    @test ele.BMultipoleParams.integrated[2]
-    @test !ele.BMultipoleParams.normalized[2]
-    @test ele.BMultipoleParams[3] == BMultipole(0.50,0.,0.,3,false,true)
+    @test ele.BMultipoleParams.n[3] == 0.50
+    @test ele.BMultipoleParams.integrated[3]
+    @test !ele.BMultipoleParams.normalized[3]
+    @test ele.BMultipoleParams[3] == BMultipole(Complex(0.50),0.,0.,3,false,true)
     
     # Test iteration over BMultipoles
-    i = 1
+    i = 0
     for bm in ele.BMultipoleParams
       if i == 1
-        @test bm == BMultipole(0.36,0.,0.,2,true,false)
-      else
-        @test bm == BMultipole(0.50,0.,0.,3,false,true)
+        @test bm == BMultipole(Complex(0.36),0.,0.,2,true,false)
+      elseif i == 2
+        @test bm == BMultipole(Complex(0.50),0.,0.,3,false,true)
       end
        i += 1
     end
     @test i == 3
 
-    @test eltype(ele.BMultipoleParams) == Float64
+    @test eltype(ele.BMultipoleParams) == ComplexF64 # promotion because g is complex
     ele.Bn2 = 1.2
     @test eltype(ele.BMultipoleParams) == ComplexF64 # promotion because length is complex
     @test ele.Bn2 == 1.2
