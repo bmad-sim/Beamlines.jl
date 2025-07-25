@@ -54,15 +54,16 @@ using Test
     @test ele.e1 == e1
     @test ele.e2 == e2
 
-    bp = BendParams(1.0im, 2.0im, 3.0im)
+    bp = BendParams(1.0im, 2.0im, 3.0im, 4.0im)
     @test eltype(bp) == ComplexF64
     @test eltype(typeof(bp)) == ComplexF64
-    @test bp ≈ BendParams(1.0im, 2.0im, 3.0im)
+    @test bp ≈ BendParams(1.0im, 2.0im, 3.0im, 4.0im)
     ele.BendParams = bp
     @test ele.BendParams === bp
     @test ele.g_ref == 1.0im
-    @test ele.e1 == 2.0im
-    @test ele.e2 == 3.0im
+    @test ele.tilt_ref == 2.0im
+    @test ele.e1 == 3.0im
+    @test ele.e2 == 4.0im
 
     ele.g_ref = 0.2
     @test ele.g_ref == 0.2
