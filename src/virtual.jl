@@ -210,6 +210,14 @@ function set_bend_angle!(ele::LineElement, ::Symbol, value)
   L = ele.L
   bm = ele.BMultipoleParams
   bp = ele.BendParams
+  if isnothing(bp)
+    bp = BendParams()
+    ele.BendParams = bp
+  end
+  if isnothing(bm)
+    bm = BMultipoleParams()
+    ele.BMultipoleParams = bm
+  end
   return @noinline _set_bend_angle!(ele, L, bm, bp, value)
 end
 

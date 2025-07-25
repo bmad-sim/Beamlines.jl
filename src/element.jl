@@ -86,6 +86,7 @@ end
 
 # Common class choices
 Solenoid(; kwargs...)   = LineElement(; class="Solenoid", kwargs...)
+SBend(; kwargs...)      = LineElement(; class="SBend", kwargs...)
 Quadrupole(; kwargs...) = LineElement(; class="Quadrupole", kwargs...)
 Sextupole(; kwargs...)  = LineElement(; class="Sextupole", kwargs...)
 Drift(; kwargs...)      = LineElement(; class="Drift", kwargs...)
@@ -98,16 +99,6 @@ VKicker(; kwargs...)    = LineElement(; class="VKicker", kwargs...)
 RFCavity(; kwargs...)   = LineElement(; class="RFCavity", kwargs...)
 Patch(; kwargs...)      = LineElement(; class="Patch", kwargs...)
 
-# The SBend is special:
-function SBend(; kwargs...)
-  if :Kn0 in keys(kwargs) && !(:g in keys(kwargs))
-    return LineElement(; class="SBend", g=kwargs[:Kn0], kwargs...)
-  elseif !(:Kn0 in keys(kwargs)) && (:g in keys(kwargs))
-    return LineElement(; class="SBend", Kn0=kwargs[:g], kwargs...)
-  else
-    return LineElement(; class="SBend", kwargs...)
-  end
-end
 
 # Default tracking method:
 struct SciBmadStandard end

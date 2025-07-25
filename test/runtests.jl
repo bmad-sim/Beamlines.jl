@@ -167,17 +167,17 @@ using Test
     @test b1.g == b1.Kn0
 
     b1.Kn0 = im
-    @test eltype(b1.BMultipole) == ComplexF32
+    @test eltype(b1.BMultipoleParams) == ComplexF32
     @test eltype(b1.BendParams) == Float32
     @test b1.g == 0.2f0
     @test b1.g_ref == 0.2f0
 
     b1.g_ref = 0.3
     @test eltype(b1.BendParams) == Float64
-    @test eltype(b1.BMultipole) == ComplexF32
+    @test eltype(b1.BMultipoleParams) == ComplexF32
     @test b1.g_ref ==  0.3
     @test b1.g == 0.3
-    @test b1.Kn0 == 0.2f0*im
+    @test b1.Kn0 == 1.0f0*im
 
     # Test storing Kn0L internally before setting g
     b2 = SBend(L=3.0, Kn0L=2, g=0.5)
@@ -851,7 +851,7 @@ using Test
     @test ele.aperture_shifts_with_body == false    
 
     # RFParams tests
-    @test isnothing(qf.rf_frequency)
+    @test !isactive(qf.RFParams)
 
     # Basic RF frequency mode
     cav = RFCavity(rf_frequency=352e6, voltage=1e6)

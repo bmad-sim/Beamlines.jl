@@ -36,7 +36,7 @@ function Base.getproperty(c::RFParams, key::Symbol)
     if (key == :harmon) == c.harmon_master
       return c.rate
     else
-      error("Only $(key == :harmon ? :rf_frequency : :harmon) is currently set in RFParams, $key cannot be calculated without particle species information")
+      error("RFParams does not have property $key with harmon_master = $(c.harmon_master)")
     end
   end
   error("RFParams does not have property $key")
@@ -51,14 +51,11 @@ function Base.setproperty!(c::RFParams{T}, key::Symbol, value) where {T}
     if (key == :harmon) == c.harmon_master
       return setfield!(c, :rate, T(value))
     else
-      error("Cannot set $key in RFParams directly because `harmon_master` = $(c.harmon_master), set $key in element instead")
+      error("Cannot set $key in RFParams with harmon_master = $(c.harmon_master); set $key at the element level instead")
     end
   end
   error("RFParams does not have property $key")
 end
-
-
-
 
 
 # Note that it is currently impossible to derive harmonic number from frequency
