@@ -3,7 +3,6 @@
     voltage::T            = Float32(0.0) # Voltage in V 
     phi0::T               = Float32(0.0) # Phase at reference energy
     const harmon_master::Bool = false    # false = frequency in Hz, true = harmonic number
-
     function RFParams(args...)
       return new{promote_type(typeof.((args[1],args[2],args[3]))...)}(args...)
     end
@@ -24,7 +23,7 @@ function Base.hasproperty(c::RFParams, key::Symbol)
   if key in fieldnames(RFParams)
     return true
   elseif key in (:rf_frequency, :harmon)
-    return !((key == :harmon) ⊻ c.harmon_master)
+    return (key == :harmon) == c.harmon_master
   else
     return false
   end
@@ -34,7 +33,7 @@ function Base.getproperty(c::RFParams, key::Symbol)
   if key in fieldnames(RFParams)
     return getfield(c, key)
   elseif key in (:rf_frequency, :harmon)
-    if !((key == :harmon) ⊻ c.harmon_master)
+    if (key == :harmon) == c.harmon_master
       return c.rate
     else
       error("Only $(key == :harmon ? :rf_frequency : :harmon) is currently set in RFParams, $key cannot be calculated without particle species information")
@@ -49,7 +48,7 @@ function Base.setproperty!(c::RFParams{T}, key::Symbol, value) where {T}
   elseif key == :harmon_master
     return setfield!(c, key, value)
   elseif key in (:rf_frequency, :harmon)
-    if !((key == :harmon) ⊻ c.harmon_master)
+    if (key == :harmon) == c.harmon_master
       return setfield!(c, :rate, T(value))
     else
       error("Cannot set $key in RFParams directly because `harmon_master` = $(c.harmon_master), set $key in element instead")

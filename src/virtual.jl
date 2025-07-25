@@ -97,15 +97,16 @@ function _get_BM_strength(ele, b::BMultipoleParams, key)
 end
 
 function set_BM_strength!(ele::LineElement, key::Symbol, value)
-  if isnothing(ele.BMultipoleParams)
-    ele.BMultipoleParams = BMultipoleParams() 
+  b = ele.BMultipoleParams
+  if isnothing(b)
+    b = BMultipoleParams() 
+    ele.BMultipoleParams = b
   end
 
   # Setting is painful, because we do not know what the type of
   # of the input must be (including L and Brho_ref potentially)
   # And, if it requires promotion of the BMultipoleParams struct,
   # ouchies
-  b = ele.BMultipoleParams
   strength = calc_BM_internal_strength(ele, b, key, value)
   @noinline _set_BM_strength!(ele, b, key, strength)
   return value
@@ -207,23 +208,25 @@ end
 
 function set_bend_angle!(ele::LineElement, ::Symbol, value)
   L = ele.L
-  return @noinline _set_bend_angle!(ele, L, value)
+  bm = ele.BMultipoleParams
+  bp = ele.BendParams
+  return @noinline _set_bend_angle!(ele, L, bm, bp, value)
 end
 
-function _set_bend_angle!(ele, L, value)
+function _set_bend_angle!(ele, L, bm, bp, value)
   # Angle = K0*L -> K0 = angle/L
   if L == 0
     error("Cannot set angle of LineElement with L = 0 (did you specify `angle` before specifying `L`?)")
   end
   Kn0 = value/L
-  setproperty!(ele, :g, Kn0) # sets both g_ref and Kn0
+  _set_bend_g!(ele, bp, bm, Kn0) # sets both g_ref and Kn0
   return value
 end
 
 function get_bend_g(ele::LineElement, ::Symbol)
   bp = ele.BendParams
   if isnothing(bp)
-    error("Unable to get g: BendParams is not active")
+    error("Unable to get g: LineElement does not contain BendParams")
   end
   return bp.g_ref
 end
@@ -232,12 +235,14 @@ function set_bend_g!(ele::LineElement, ::Symbol, value)
   bp = ele.BendParams
   bm = ele.BMultipoleParams
   if isnothing(bp)
-    ele.BendParams = bp = BendParams(g_ref = value)
+    bp = BendParams()
+    ele.BendParams = bp
   end
   if isnothing(bm)
-    ele.BMultipoleParams = bm = BMultipoleParams()
+    bm = BMultipoleParams()
+    ele.BMultipoleParams = bm
   end
-  return _set_bend_g!(ele, bp, bm, value)
+  return @noinline _set_bend_g!(ele, bp, bm, value)
 end
 
 function _set_bend_g!(ele::LineElement, bp::BendParams{S}, bm::BMultipoleParams, value) where {S}
@@ -250,7 +255,8 @@ function _set_bend_g!(ele::LineElement, bp::BendParams{S}, bm::BMultipoleParams,
     )
     ele.BendParams = bp
   end
-  setproperty!(ele, :Kn0, T(value))
+  strength = calc_BM_internal_strength(ele, bm, :Kn0, T(value))
+  @noinline _set_BM_strength!(ele, bm, :Kn0, strength)
   return value
 end
 
@@ -273,7 +279,8 @@ function set_BM_independent!(ele::LineElement, ::Symbol, value)
   eltype(value) == @NamedTuple{order::Int, normalized::Bool, integrated::Bool}  || error("Please provide a list/array/tuple with eltype @NamedTuple{order::Int, normalized::Bool, integrated::Bool} to specify the multipole properties you want to set as independent variables.")
   b = ele.BMultipoleParams
   if isnothing(b)
-    ele.BMultipoleParams = BMultipoleParams()
+    b = BMultipoleParams()
+    ele.BMultipoleParams = b
   end
   for bm in value
     if bm.order in b.order
@@ -347,7 +354,7 @@ end
 
 function _get_field_master(b)
   if isnothing(b)
-    error("Unable to get field_master: LineElement does not contain a BMultipoleParams")
+    error("Unable to get field_master: LineElement does not contain BMultipoleParams")
   end
   check = first(b.normalized)
   if !all(t->t==check, b.normalized)
@@ -363,7 +370,7 @@ end
 
 function _get_integrated_master(b)
   if isnothing(b)
-    error("Unable to get integrated_master: LineElement does not contain a BMultipoleParams")
+    error("Unable to get integrated_master: LineElement does not contain BMultipoleParams")
   end
   check = first(b.integrated)
   if !all(t->t==check, b.integrated)
@@ -374,14 +381,13 @@ end
 
 function get_cavity_rate(ele::LineElement, key::Symbol)
   c = ele.RFParams
-  if isnothing(c)
-    return nothing
-  end
   return @noinline _get_cavity_rate(c, key)
 end
 
 function _get_cavity_rate(c, key)
-  if !((key == :harmon) ⊻ c.harmon_master)
+  if isnothing(c)
+    error("Unable to get $key: LineElement does not contain RFParams")
+  elseif (key == :harmon) == c.harmon_master
     return c.rate
   else
     error("Cannot calculate $key of RFParams since particle species is unknown at Beamlines level and harmon_master=$(c.harmon_master)")
@@ -391,8 +397,10 @@ end
 function set_cavity_rate!(ele::LineElement, key::Symbol, value)
   rfp = ele.RFParams
   if isnothing(rfp)
-    ele.RFParams = rfp = RFParams(harmon_master = (key == :harmon))
+    rfp = RFParams(harmon_master = (key == :harmon))
+    ele.RFParams = rfp
   end
+  
   @noinline _set_cavity_rate!(ele, rfp, key, value)
   return value
 end
@@ -411,10 +419,10 @@ function _set_cavity_rate!(ele, rfp::RFParams{S}, key, value) where {S}
     ele.RFParams = rfp
   else
     # Can modify in place
-    rfp.rate = T(value)
+    rfp.rate = value
   end
   
-  return
+  return value
 end
 
 function set_harmon_master!(ele::LineElement, ::Symbol, value::Bool)
@@ -459,6 +467,4 @@ const VIRTUAL_SETTER_MAP = Dict{Symbol,Function}(
   :rf_frequency => set_cavity_rate!,
   :harmon => set_cavity_rate!,
   :harmon_master => set_harmon_master!,
-
-
 )
