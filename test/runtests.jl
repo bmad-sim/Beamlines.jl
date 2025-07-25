@@ -32,7 +32,7 @@ using Test
     @test ele.L == up_new.L
     @test ele.tracking_method == up_new.tracking_method
 
-    g = 0.1
+    g_ref = 0.1
     e1 = 0.123
     e2 = 0.456
 
@@ -43,9 +43,9 @@ using Test
     @test_throws ErrorException getfield(ele, :pdict)[UniversalParams] = 10.0
 
     @test !isactive(ele.BendParams)
-    ele.g = g
+    ele.g_ref = g_ref
     @test isactive(ele.BendParams)
-    @test ele.g == g
+    @test ele.g_ref == g_ref
     @test ele.e1 == 0
     @test ele.e2 == 0
 
@@ -54,18 +54,19 @@ using Test
     @test ele.e1 == e1
     @test ele.e2 == e2
 
-    bp = BendParams(1.0im, 2.0im, 3.0im)
+    bp = BendParams(1.0im, 2.0im, 3.0im, 4.0im)
     @test eltype(bp) == ComplexF64
     @test eltype(typeof(bp)) == ComplexF64
-    @test bp ≈ BendParams(1.0im, 2.0im, 3.0im)
+    @test bp ≈ BendParams(1.0im, 2.0im, 3.0im, 4.0im)
     ele.BendParams = bp
     @test ele.BendParams === bp
-    @test ele.g == 1.0im
-    @test ele.e1 == 2.0im
-    @test ele.e2 == 3.0im
+    @test ele.g_ref == 1.0im
+    @test ele.tilt_ref == 2.0im
+    @test ele.e1 == 3.0im
+    @test ele.e2 == 4.0im
 
-    ele.g = 0.2
-    @test ele.g == 0.2
+    ele.g_ref = 0.2
+    @test ele.g_ref == 0.2
     @test ele.BendParams === bp # do not change parameter group if promotion is ok
 
     @test !isactive(ele.AlignmentParams)
@@ -161,20 +162,49 @@ using Test
     @test ele.BMultipoleParams.integrated[1]
     @test ele.BMultipoleParams.normalized[1]
 
-    b1 = SBend(L=1.0f0, Kn0=0.2f0)
+    b1 = SBend(L=1.0f0, g=0.2f0)
     @test b1.Kn0 == 0.2f0
+    @test b1.g_ref == b1.Kn0
     @test b1.g == b1.Kn0
-    b2 = SBend(L=1.0, g=5.0)
-    @test b2.Kn0 == 5.0
-    @test b2.g == 5.0
-    b3 = SBend(L=2.0, g=3.0, Kn0=3.0*im)
-    @test b3.g == 3.0
+
+    b1.Kn0 = im
+    @test eltype(b1.BMultipoleParams) == ComplexF32
+    @test eltype(b1.BendParams) == Float32
+    @test b1.g == 0.2f0
+    @test b1.g_ref == 0.2f0
+
+    b1.g_ref = 0.3
+    @test eltype(b1.BendParams) == Float64
+    @test eltype(b1.BMultipoleParams) == ComplexF32
+    @test b1.g_ref ==  0.3
+    @test b1.g == 0.3
+    @test b1.Kn0 == 1.0f0*im
+
+    # Test storing Kn0L internally before setting g
+    b2 = SBend(L=3.0, Kn0L=2, g=0.5)
+    @test eltype(b2.BMultipoleParams) == Float64
+    @test eltype(b2.BendParams) == Float64
+    @test b2.g == 0.5
+    @test b2.Kn0L == 0.5*3.0 # note NOT 2! changed by g, order matters
+    @test b2.Kn0 == 0.5
+    @test b2.g_ref == b2.g
+
+    b2.g = 0.5*im
+    @test eltype(b2.BendParams) == ComplexF64
+    @test eltype(b2.BMultipoleParams) == ComplexF64
+    @test b2.g == 0.5*im
+    @test b2.Kn0 == 0.5*im
+    @test b2.g_ref == b2.g
+    @test b2.Kn0L == 0.5*im*3.0
+
+    b3 = SBend(L=2.0, g_ref=3.0, Kn0=3.0*im)
+    @test b3.g_ref == 3.0
     @test b3.Kn0 == 3.0*im
     @test b3.Kn0L == 6.0*im
     @test eltype(b3.BendParams) == Float64
     @test eltype(b3.BMultipoleParams) == ComplexF64
     b4 = SBend(L=2.0, angle=pi/2)
-    @test b4.g == pi/2/b4.L
+    @test b4.g_ref == pi/2/b4.L
     @test b4.Kn0 == pi/2/b4.L
 
     # Basic beamline:
@@ -822,7 +852,7 @@ using Test
     @test ele.aperture_shifts_with_body == false    
 
     # RFParams tests
-    @test isnothing(qf.rf_frequency)
+    @test !isactive(qf.RFParams)
 
     # Basic RF frequency mode
     cav = RFCavity(rf_frequency=352e6, voltage=1e6)

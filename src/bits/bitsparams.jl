@@ -131,7 +131,8 @@ end
 
 # BendParams
 struct BitsBendParams{T<:Number} <: AbstractBitsParams
-  g::T      
+  g_ref::T      
+  tilt_ref::T
   e1::T     
   e2::T     
 end
@@ -139,17 +140,17 @@ end
 Base.eltype(::BitsBendParams{T}) where {T} = T
 Base.eltype(::Type{BitsBendParams{T}}) where {T} = T
 
-isactive(bbp::BitsBendParams) = !isnan(bbp.g)
+isactive(bbp::BitsBendParams) = !isnan(bbp.g_ref)
 
 function BitsBendParams{T}() where {T<:Number}
-  return BitsBendParams{T}(T(NaN), T(NaN), T(NaN))
+  return BitsBendParams{T}(T(NaN), T(NaN), T(NaN), T(NaN))
 end
 
 function BendParams(bbp::Union{Nothing,BitsBendParams})
   if !isactive(bbp)
     return nothing
   else
-    return BendParams(bbp.g,bbp.e1,bbp.e2)
+    return BendParams(bbp.g_ref,bbp.tilt_ref,bbp.e1,bbp.e2)
   end
 end
 

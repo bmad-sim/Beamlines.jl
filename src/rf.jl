@@ -1,9 +1,8 @@
 @kwdef mutable struct RFParams{T<:Number} <: AbstractParams
-    rate::T          = Float32(0.0) # RF frequency in Hz or Harmonic number
+    rate::T               = Float32(0.0) # RF frequency in Hz or Harmonic number
     voltage::T            = Float32(0.0) # Voltage in V 
     phi0::T               = Float32(0.0) # Phase at reference energy
     const harmon_master::Bool = false    # false = frequency in Hz, true = harmonic number
-
     function RFParams(args...)
       return new{promote_type(typeof.((args[1],args[2],args[3]))...)}(args...)
     end
@@ -24,7 +23,7 @@ function Base.hasproperty(c::RFParams, key::Symbol)
   if key in fieldnames(RFParams)
     return true
   elseif key in (:rf_frequency, :harmon)
-    return !((key == :harmon) ⊻ c.harmon_master)
+    return (key == :harmon) == c.harmon_master
   else
     return false
   end
@@ -34,10 +33,10 @@ function Base.getproperty(c::RFParams, key::Symbol)
   if key in fieldnames(RFParams)
     return getfield(c, key)
   elseif key in (:rf_frequency, :harmon)
-    if !((key == :harmon) ⊻ c.harmon_master)
+    if (key == :harmon) == c.harmon_master
       return c.rate
     else
-      error("Only $(key == :harmon ? :rf_frequency : :harmon) is currently set in RFParams, $key cannot be calculated without particle species information")
+      error("RFParams does not have property $key with harmon_master = $(c.harmon_master)")
     end
   end
   error("RFParams does not have property $key")
@@ -49,17 +48,14 @@ function Base.setproperty!(c::RFParams{T}, key::Symbol, value) where {T}
   elseif key == :harmon_master
     return setfield!(c, key, value)
   elseif key in (:rf_frequency, :harmon)
-    if !((key == :harmon) ⊻ c.harmon_master)
+    if (key == :harmon) == c.harmon_master
       return setfield!(c, :rate, T(value))
     else
-      error("Cannot set $key in RFParams directly because `harmon_master` = $(c.harmon_master), set $key in element instead")
+      error("Cannot set $key in RFParams with harmon_master = $(c.harmon_master); set $key at the element level instead")
     end
   end
   error("RFParams does not have property $key")
 end
-
-
-
 
 
 # Note that it is currently impossible to derive harmonic number from frequency
