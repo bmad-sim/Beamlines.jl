@@ -208,3 +208,45 @@ function PatchParams(bpp::Union{Nothing,BitsPatchParams})
   end
 end
 
+# ApertureParams
+# Store default options in type -> dshape = default shape, dat = default_at, dswb = default shifts w body
+struct BitsApertureParams{T<:Number,dshape,dat,dswb} <: AbstractBitsParams
+  x1_limit::T                               
+  x2_limit::T                   
+  y1_limit::T                   
+  y2_limit::T                   
+  aperture_shape::ApertureShape.T
+  aperture_at::ApertureAt.T     
+  aperture_shifts_with_body::Bool
+end
+
+Base.eltype(::BitsApertureParams{T}) where {T} = T
+Base.eltype(::Type{BitsApertureParams{T}}) where {T} = T
+
+isactive(bdp::BitsApertureParams) = !isnan(bdp.x1_limit)
+
+shape(::Type{BitsApertureParams{T,dshape,dat,dswb}}) where {T,dshape,dat,dswb} = dshape
+at(::Type{BitsApertureParams{T,dshape,dat,dswb}}) where {T,dshape,dat,dswb} = dat
+swb(::Type{BitsApertureParams{T,dshape,dat,dswb}}) where {T,dshape,dat,dswb} = dswb
+
+function BitsApertureParams{T,dshape,dat,dswb}() where {T <: Number,dshape,dat,dswb}
+  return BitsApertureParams{T,dshape,dat,dswb}(T(NaN), T(NaN), T(NaN), T(NaN), dshape, dat, dswb)
+end
+
+function ApertureParams(bdp::Union{Nothing,BitsApertureParams})
+  if !isactive(bdp)
+    return nothing
+  else
+    return ApertureParams(
+      bdp.x1_limit,
+      bdp.x2_limit,
+      bdp.y1_limit,
+      bdp.y2_limit,
+      bdp.aperture_shape,
+      bdp.aperture_at,
+      bdp.aperture_shifts_with_body,
+    )
+  end
+end
+
+

@@ -36,13 +36,15 @@ struct BitsLineElement{
   BM<:Union{BitsBMultipoleParams,Nothing},
   BP<:Union{BitsBendParams,Nothing},
   AP<:Union{BitsAlignmentParams,Nothing},
-  PP<:Union{BitsPatchParams,Nothing}
+  PP<:Union{BitsPatchParams,Nothing},
+  DP<:Union{BitsApertureParams,Nothing},
 }
   UniversalParams::UP
   BMultipoleParams::BM
   BendParams::BP
   AlignmentParams::AP
   PatchParams::PP
+  ApertureParams::DP
 end
 function Base.getproperty(ble::BitsLineElement, key::Symbol)
   if key == :L
@@ -54,11 +56,11 @@ end
 
 @inline unsafe_getparams(ele::BitsLineElement, param::Symbol) = getfield(ele, param)
 
-function unpack_type_params(::Type{BitsBeamline{TM,TMI,TME,DS,R,N_ele,N_bytes,BitsLineElement{UP,BM,BP,AP,PP}}}) where {TM,TMI,TME,DS,R,N_ele,N_bytes,UP,BM,BP,AP,PP}
-  return TM,TMI,TME,DS,R,N_ele,N_bytes,UP,BM,BP,AP,PP
+function unpack_type_params(::Type{BitsBeamline{TM,TMI,TME,DS,R,N_ele,N_bytes,BitsLineElement{UP,BM,BP,AP,PP,DP}}}) where {TM,TMI,TME,DS,R,N_ele,N_bytes,UP,BM,BP,AP,PP,DP}
+  return TM,TMI,TME,DS,R,N_ele,N_bytes,UP,BM,BP,AP,PP,DP
 end
-function unpack_type_params(::BitsBeamline{TM,TMI,TME,DS,R,N_ele,N_bytes,BitsLineElement{UP,BM,BP,AP,PP}}) where {TM,TMI,TME,DS,R,N_ele,N_bytes,UP,BM,BP,AP,PP}
-  return TM,TMI,TME,DS,R,N_ele,N_bytes,UP,BM,BP,AP,PP
+function unpack_type_params(::BitsBeamline{TM,TMI,TME,DS,R,N_ele,N_bytes,BitsLineElement{UP,BM,BP,AP,PP,DP}}) where {TM,TMI,TME,DS,R,N_ele,N_bytes,UP,BM,BP,AP,PP,DP}
+  return TM,TMI,TME,DS,R,N_ele,N_bytes,UP,BM,BP,AP,PP,DP
 end
 
 
@@ -66,7 +68,7 @@ function BitsBeamline(bl::Beamline; store_normalized=false, prep=nothing)
   if isnothing(prep)
     prep = prep_bitsbl(bl, store_normalized)
   end
-  TM,TMI,TME,DS,R,N_ele,N_bytes,UP,BM,BP,AP,PP = unpack_type_params(prep[1])
+  TM,TMI,TME,DS,R,N_ele,N_bytes,UP,BM,BP,AP,PP,DP = unpack_type_params(prep[1])
   rep = prep[2]
 
   if TM == MultipleTrackingMethods
@@ -181,6 +183,27 @@ function BitsBeamline(bl::Beamline; store_normalized=false, prep=nothing)
           end
         end
       end
+
+      # 83 -> 89 inclusive are ApertureParams
+      dp = ele.ApertureParams
+      if !isnothing(dp)
+        for (k,v) in enumerate((dp.x1_limit, dp.x2_limit, dp.y1_limit, dp.y2_limit))
+          if v != 0 
+            i, cur_byte_arr = setval(i, cur_byte_arr, UInt8(k+82), eltype(DP), v)
+          end
+        end
+        # Now check dshape, dat, dswb
+        if dp.aperture_shape != shape(DP)
+          i, cur_byte_arr = setval(i, cur_byte_arr, UInt8(k+86))
+        end
+        if dp.aperture_at != at(DP)
+          i, cur_byte_arr = setval(i, cur_byte_arr, UInt8(k+87))
+        end
+        if dp.aperture_shifts_with_body != swb(DP)
+          i, cur_byte_arr = setval(i, cur_byte_arr, UInt8(k+88))
+        end
+      end
+      
       #=if i > N_bytes
         println("here is the maximally filled one!: $bl_idx: $cur_byte_arr")
       end=#

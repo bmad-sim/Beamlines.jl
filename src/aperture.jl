@@ -1,5 +1,5 @@
-@enumx ApertureShape Elliptical Rectangular
-@enumx ApertureAt Entrance Exit BothEnds
+@enumx ApertureShape::UInt8 Elliptical Rectangular
+@enumx ApertureAt::UInt8 Entrance Exit BothEnds
 
 @kwdef mutable struct ApertureParams{T} <: AbstractParams
   x1_limit::T                     = Float32(0)                     
