@@ -154,32 +154,32 @@ function BitsBeamline(bl::Beamline; store_normalized=false, prep=nothing)
         end      
       end
   
-      # 67 -> 69 inclusive are BendParams
+      # 67 -> 70 inclusive are BendParams
       bp = ele.BendParams
       if !isnothing(bp)
-        for (k,v) in enumerate((bp.g,bp.e1,bp.e2))
+        for (k,v) in enumerate((bp.g_ref,bp.tilt_ref,bp.e1,bp.e2))
           if v != 0 
             i, cur_byte_arr = setval(i, cur_byte_arr, UInt8(k+66), eltype(BP), v)
           end
         end
       end
   
-      # 70 -> 75 inclusive are AlignmentParams
+      # 71 -> 76 inclusive are AlignmentParams
       ap = ele.AlignmentParams
       if !isnothing(ap)
         for (k,v) in enumerate((ap.x_offset,ap.y_offset,ap.z_offset,ap.x_rot,ap.y_rot,ap.tilt))
           if v != 0 
-            i, cur_byte_arr = setval(i, cur_byte_arr, UInt8(k+69), eltype(AP), v)
+            i, cur_byte_arr = setval(i, cur_byte_arr, UInt8(k+70), eltype(AP), v)
           end
         end
       end
 
-      # 76 -> 82 inclusive are PatchParams
+      # 77 -> 83 inclusive are PatchParams
       pp = ele.PatchParams
       if !isnothing(pp)
         for (k,v) in enumerate((pp.dt, pp.dx, pp.dy, pp.dz, pp.dx_rot, pp.dy_rot, pp.dz_rot))
           if v != 0 
-            i, cur_byte_arr = setval(i, cur_byte_arr, UInt8(k+75), eltype(PP), v)
+            i, cur_byte_arr = setval(i, cur_byte_arr, UInt8(k+76), eltype(PP), v)
           end
         end
       end
@@ -355,7 +355,7 @@ function prep_bitsbl(bl::Beamline, store_normalized::Bool=false) #, arr::Type{T}
       if BP == Nothing
         BP = BitsBendParams{eltype(bp)}
       end
-      for v in (bp.g,bp.e1,bp.e2)
+      for v in (bp.g_ref,bp.tilt_ref,bp.e1,bp.e2)
         if !(v ≈ 0)
           N_bytes[i] += sizeof(v)
           N_parameters[i] += 1

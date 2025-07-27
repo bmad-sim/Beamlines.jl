@@ -144,25 +144,28 @@ function BitsLineElement(bbl::BitsBeamline, idx::Integer=1)
       @reset bmp = BM(n, s, tilt, orders)
     end
 
-    if i <= length(params) && params[i] >= UInt8(67)  && params[i] < UInt8(70) # bendparams!
+    if i <= length(params) && params[i] >= UInt8(67)  && params[i] < UInt8(71) # bendparams!
       id = params[i]
-      if isnan(bp.g)
-        @reset bp.g = zero(eltype(BP))
+      if isnan(bp.g_ref)
+        @reset bp.g_ref = zero(eltype(BP))
+        @reset bp.tilt_ref = zero(eltype(BP))
         @reset bp.e1 = zero(eltype(BP))
         @reset bp.e2 = zero(eltype(BP))
       end
 
       i, v = readval(i, params, eltype(BP))
       if id == UInt8(67)
-        @reset bp.g = v
+        @reset bp.g_ref = v
       elseif id == UInt8(68)
+        @reset bp.tilt_ref = v
+      elseif id == UInt8(69)
         @reset bp.e1 = v
       else
         @reset bp.e2 = v
       end
     end
 
-    if i <= length(params) && params[i] >= UInt8(70)  && params[i] < UInt8(76) # alignmentparams
+    if i <= length(params) && params[i] >= UInt8(71)  && params[i] < UInt8(77) # alignmentparams
       id = params[i]
       if isnan(ap.x_offset)
         @reset ap.x_offset = zero(eltype(AP))
@@ -174,22 +177,22 @@ function BitsLineElement(bbl::BitsBeamline, idx::Integer=1)
       end
 
       i, v = readval(i, params, eltype(AP))
-      if id == UInt8(70)
+      if id == UInt8(71)
         @reset ap.x_offset = v
-      elseif id == UInt8(71)
-        @reset ap.y_offset = v
       elseif id == UInt8(72)
-        @reset ap.z_offset = v
+        @reset ap.y_offset = v
       elseif id == UInt8(73)
-        @reset ap.x_rot = v
+        @reset ap.z_offset = v
       elseif id == UInt8(74)
+        @reset ap.x_rot = v
+      elseif id == UInt8(75)
         @reset ap.y_rot = v
       else
         @reset ap.tilt = v
       end
     end
 
-    if i <= length(params) && params[i] >= UInt8(76)  && params[i] < UInt8(83) # patchparams
+    if i <= length(params) && params[i] >= UInt8(77)  && params[i] < UInt8(84) # patchparams
       id = params[i]
       if isnan(pp.dt)
         @reset pp.dt = zero(eltype(PP))
@@ -202,17 +205,17 @@ function BitsLineElement(bbl::BitsBeamline, idx::Integer=1)
       end
 
       i, v = readval(i, params, eltype(PP))
-      if id == UInt8(76)
+      if id == UInt8(77)
         @reset pp.dt = v
-      elseif id == UInt8(77)
-        @reset pp.dx = v
       elseif id == UInt8(78)
-        @reset pp.dy = v
+        @reset pp.dx = v
       elseif id == UInt8(79)
-        @reset pp.dz = v
+        @reset pp.dy = v
       elseif id == UInt8(80)
-        @reset pp.dx_rot = v
+        @reset pp.dz = v
       elseif id == UInt8(81)
+        @reset pp.dx_rot = v
+      elseif id == UInt8(82)
         @reset pp.dy_rot = v
       else
         @reset pp.dz_rot = v
