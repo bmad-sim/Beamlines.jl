@@ -597,6 +597,7 @@ function Beamline(bbl::BitsBeamline{TM}; Brho_ref=NaN) where {TM}
       le.BendParams = BendParams(ble.BendParams)
       le.AlignmentParams = AlignmentParams(ble.AlignmentParams)
       le.PatchParams = PatchParams(ble.PatchParams)
+      le.ApertureParams = ApertureParams(ble.ApertureParams)
       bl[i] = le
     end
   else
@@ -626,6 +627,7 @@ function Beamline(bbl::BitsBeamline{TM}; Brho_ref=NaN) where {TM}
           le.BendParams = BendParams(ble.BendParams)
           le.AlignmentParams = AlignmentParams(ble.AlignmentParams)
           le.PatchParams = PatchParams(ble.PatchParams)
+          le.ApertureParams = ApertureParams(ble.ApertureParams)
           push!(bl, le)
 
           i += 1
