@@ -222,7 +222,7 @@ struct BitsApertureParams{T<:Number,dshape,dat,dswb} <: AbstractBitsParams
 end
 
 Base.eltype(::BitsApertureParams{T}) where {T} = T
-Base.eltype(::Type{BitsApertureParams{T}}) where {T} = T
+Base.eltype(::Type{<:BitsApertureParams{T}}) where {T} = T
 
 isactive(bdp::BitsApertureParams) = !isnan(bdp.x1_limit)
 

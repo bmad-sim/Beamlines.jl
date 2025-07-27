@@ -9,6 +9,10 @@ is compressed into an array of bytes.
 
 =#
 
+# WE SHOULD ALLOW ANOTHER TYPE WITH VARYING LENGTH N_bytes!!
+# This will benefit in cases where e.g. one element has 4 elements but 
+# the rest have two
+
 struct MultipleTrackingMethods end
 struct Dense end
 struct Sparse end # Sparse is NOT implemented yet but here as a placeholder 
@@ -184,23 +188,23 @@ function BitsBeamline(bl::Beamline; store_normalized=false, prep=nothing)
         end
       end
 
-      # 83 -> 89 inclusive are ApertureParams
+      # 84 -> 90 inclusive are ApertureParams
       dp = ele.ApertureParams
       if !isnothing(dp)
         for (k,v) in enumerate((dp.x1_limit, dp.x2_limit, dp.y1_limit, dp.y2_limit))
           if v != 0 
-            i, cur_byte_arr = setval(i, cur_byte_arr, UInt8(k+82), eltype(DP), v)
+            i, cur_byte_arr = setval(i, cur_byte_arr, UInt8(k+83), eltype(DP), v)
           end
         end
         # Now check dshape, dat, dswb
         if dp.aperture_shape != shape(DP)
-          i, cur_byte_arr = setval(i, cur_byte_arr, UInt8(k+86))
+          i, cur_byte_arr = setval(i, cur_byte_arr, UInt8(88), UInt8, UInt8(dp.aperture_shape))
         end
         if dp.aperture_at != at(DP)
-          i, cur_byte_arr = setval(i, cur_byte_arr, UInt8(k+87))
+          i, cur_byte_arr = setval(i, cur_byte_arr, UInt8(89), UInt8, UInt8(dp.aperture_at))
         end
         if dp.aperture_shifts_with_body != swb(DP)
-          i, cur_byte_arr = setval(i, cur_byte_arr, UInt8(k+88))
+          i, cur_byte_arr = setval(i, cur_byte_arr, UInt8(90), Bool, dp.aperture_shifts_with_body)
         end
       end
       
@@ -267,9 +271,30 @@ function prep_bitsbl(bl::Beamline, store_normalized::Bool=false) #, arr::Type{T}
   BP = Nothing
   AP = Nothing
   PP = Nothing
+  DP = Nothing
 
   N_parameters = zeros(Int, N_ele)
   line_w_duplicates = Vector{LineElement}(undef, N_ele)
+
+  # ApertureParams will rudimentarily check what defaults (shape, at, swb)
+  # to store in its type via a first pass choosing the most frequently encountered options
+  # This may not be optimal but it is a decent guess.
+  shapes = zeros(Int, length(instances(ApertureShape.T)))
+  ats = zeros(Int, length(instances(ApertureAt.T)))
+  swbs = zeros(Int, 2)
+  for ele in bl.line
+    dp = ele.ApertureParams
+    if !isnothing(dp)
+      shapes[Int(dp.aperture_shape)+1] += 1
+      ats[Int(dp.aperture_at)+1] += 1
+      swbs[Int(dp.aperture_shifts_with_body)+1] += 1
+    end
+  end
+  if any(shapes .!= 0)
+    dshape::ApertureShape.T = ApertureShape.T(argmax(shapes)-1)
+    dat::ApertureAt.T = ApertureAt.T(argmax(ats)-1)
+    dswb::Bool = argmax(swbs)-1
+  end
 
   for i in 1:length(bl.line)
     ele = bl.line[i]
@@ -393,6 +418,33 @@ function prep_bitsbl(bl::Beamline, store_normalized::Bool=false) #, arr::Type{T}
       end
     end
 
+
+    dp = ele.ApertureParams
+    if !isnothing(dp)
+      if DP == Nothing
+        DP = BitsApertureParams{eltype(dp),dshape,dat,dswb}
+      end
+      for v in (dp.x1_limit, dp.x2_limit, dp.y1_limit, dp.y2_limit)
+        if !(v ≈ 0)
+          N_bytes[i] += sizeof(v)
+          N_parameters[i] += 1
+          DP = BitsApertureParams{promote_type(eltype(DP),typeof(v)),dshape,dat,dswb}
+        end
+        if dp.aperture_shape != dshape
+          N_bytes[i] += sizeof(dp.aperture_shape)
+          N_parameters[i] += 1
+        end
+        if dp.aperture_at != dat
+          N_bytes[i] += sizeof(dp.aperture_at)
+          N_parameters[i] += 1
+        end
+        if dp.aperture_shifts_with_body != dswb
+          N_bytes[i] += sizeof(dp.aperture_shifts_with_body)
+          N_parameters[i] += 1
+        end
+      end
+    end
+
     # Now do the duplicates check
     j = 1   
     ele_to_add = ele
@@ -444,7 +496,7 @@ function prep_bitsbl(bl::Beamline, store_normalized::Bool=false) #, arr::Type{T}
     DS = Dense
   end
 
-  outtype = BitsBeamline{TM,TMI,TME,DS,R,N_ele,bl_N_bytes,BitsLineElement{UP,BM,BP,AP,PP}}
+  outtype = BitsBeamline{TM,TMI,TME,DS,R,N_ele,bl_N_bytes,BitsLineElement{UP,BM,BP,AP,PP,DP}}
   if sizeof(outtype) > 65536
     @warn "This BitsBeamline is size $(sizeof(outtype)), which is greater than the 65536 bytes allowed in constant memory on a CUDA GPU. Consider combining repeated consecutive elements, using Float32/Float16 for LineElement parameters, simplifying the beamline, or splitting it up into one size that fits in constant memory and the rest in global memory."
   end
