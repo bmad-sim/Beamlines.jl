@@ -32,7 +32,7 @@ end
 
 
 function BitsLineElement(bbl::BitsBeamline, idx::Integer=1)
-  TM,TMI,TME,DS,R,N_ele,N_bytes,UP,BM,BP,AP,PP = unpack_type_params(bbl)
+  TM,TMI,TME,DS,R,N_ele,N_bytes,UP,BM,BP,AP,PP,DP = unpack_type_params(bbl)
   if DS == Sparse
     error("Sparse BitsBeamline not implemented yet!")
   end
@@ -43,6 +43,7 @@ function BitsLineElement(bbl::BitsBeamline, idx::Integer=1)
   bp::BP  = BP()
   ap::AP = AP()
   pp::PP = PP()
+  dp::DP = DP()
 
 
   i = 1
@@ -221,7 +222,38 @@ function BitsLineElement(bbl::BitsBeamline, idx::Integer=1)
         @reset pp.dz_rot = v
       end
     end
+
+    if i <= length(params) && params[i] >= UInt8(84)  && params[i] < UInt8(91) # apertureparams
+      id = params[i]
+      if isnan(dp.x1_limit)
+        dp = DP(zero(eltype(DP)), zero(eltype(DP)), zero(eltype(DP)), zero(eltype(DP)), shape(DP), at(DP), swb(DP))
+      end
+
+      if id == UInt8(84)
+        i, v = readval(i, params, eltype(DP))
+        dp = DP(v, dp.x2_limit, dp.y1_limit, dp.y2_limit, dp.aperture_shape, dp.aperture_at, dp.aperture_shifts_with_body)
+      elseif id == UInt8(85)
+        i, v = readval(i, params, eltype(DP))
+        dp = DP(dp.x1_limit, v, dp.y1_limit, dp.y2_limit, dp.aperture_shape, dp.aperture_at, dp.aperture_shifts_with_body)
+      elseif id == UInt8(86)
+        i, v = readval(i, params, eltype(DP))
+        dp = DP(dp.x1_limit, dp.x2_limit, v, dp.y2_limit, dp.aperture_shape, dp.aperture_at, dp.aperture_shifts_with_body)
+      elseif id == UInt8(87)
+        i, v = readval(i, params, eltype(DP))
+        dp = DP(dp.x1_limit, dp.x2_limit, dp.y1_limit, v, dp.aperture_shape, dp.aperture_at, dp.aperture_shifts_with_body)
+      elseif id == UInt8(88)
+        i, v = readval(i, params, ApertureShape.T)
+        dp = DP(dp.x1_limit, dp.x2_limit, dp.y1_limit, dp.y2_limit, v, dp.aperture_at, dp.aperture_shifts_with_body)
+      elseif id == UInt8(89)
+        i, v = readval(i, params, ApertureAt.T)
+        dp = DP(dp.x1_limit, dp.x2_limit, dp.y1_limit, dp.y2_limit, dp.aperture_shape, v, dp.aperture_shifts_with_body)
+      else
+        i, v = readval(i, params, Bool)
+        dp = DP(dp.x1_limit, dp.x2_limit, dp.y1_limit, dp.y2_limit, dp.aperture_shape, dp.aperture_at, v)
+      end
+    end
+
   end
 
-  return BitsLineElement(up,bmp,bp,ap,pp)
+  return BitsLineElement(up,bmp,bp,ap,pp,dp)
 end

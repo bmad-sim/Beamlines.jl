@@ -390,6 +390,11 @@ using Test
     foreach(t->t.integrated_master=true, bl.line)
     foreach(t->t.field_master=true, bl.line)
     a.dt = 69.; a.dx = 68.; a.dy = 67.; a.dz = 66.; a.dx_rot = 65.; a.dy_rot = 64.; a.dz_rot =63.
+    a.x1_limit = 70; a.x2_limit = 71; a.y1_limit = 72; a.y2_limit = 73;
+    ele.x1_limit = 74; ele.x2_limit = 75; ele.y1_limit = 76; ele.y2_limit = 77;
+    ele.aperture_shape = ApertureShape.Rectangular
+    ele.aperture_at = ApertureAt.BothEnds
+    ele.aperture_shifts_with_body = false
     bbl = BitsBeamline(bl)
     bl2 = Beamline(bbl)
     @test all(bl.line .≈ bl2.line)
