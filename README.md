@@ -13,7 +13,7 @@ using Beamlines, GTPSA
 qf = Quadrupole(Kn1=0.36, L=0.5)
 sf = Sextupole(Kn2=0.1, L=0.5)
 d1 = Drift(L=0.6)
-Bn1 = SBend(L=6.0, angle=pi/132)
+b1 = SBend(L=6.0, angle=pi/132)
 d2 = Drift(L=1.0)
 qd = Quadrupole(Kn1=-qf.Kn1, L=0.5)
 sd = Sextupole(Kn2=-sf.Kn2, L=0.5)
