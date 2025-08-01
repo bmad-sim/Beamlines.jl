@@ -37,9 +37,16 @@ struct LineElement
   pdict::ParamDict
   function LineElement(pdict=ParamDict(UniversalParams => UniversalParams()); kwargs...)
     ele = new(pdict)
+    if :L in keys(kwargs) # this is for Python compatibility which reorders the arguments.
+      setproperty!(ele, :L, kwargs[:L])
+    end
     for (k, v) in kwargs
+      if k == :L
+        continue
+      end
       setproperty!(ele, k, v)
     end
+
     return ele
   end
 end

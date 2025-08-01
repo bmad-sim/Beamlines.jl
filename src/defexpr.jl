@@ -7,19 +7,19 @@ end
 (d::DefExpr{T})() where {T} = d.f()::T
 
 # Construct for Function -> DefExpr{FunctionWrapper}
-function DefExpr{T}(f::Function) where {T}
+function DefExpr{T}(f) where {T}
   return DefExpr{T}(FunctionWrapper{T,Tuple{}}(f))
 end
 
 # Conversion of types to DefExpr
-DefExpr{T}(a) where {T} = DefExpr{T}(()->convert(T,a))
+DefExpr{T}(a::Number) where {T} = DefExpr{T}(()->convert(T,a))
 DefExpr{T}(a::DefExpr) where {T} = DefExpr{T}(()->convert(T,a()))
 
 # Make these apply via convert
 Base.convert(::Type{D}, a) where {D<:DefExpr} = D(a)
 
 # Now simple constructor for convenience
-function DefExpr(f::Function)
+function DefExpr(f)
   T = Base.promote_op(f)
   return DefExpr{T}(f)
 end
