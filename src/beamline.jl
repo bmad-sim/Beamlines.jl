@@ -4,20 +4,19 @@
 
   # Beamlines can be very long, so realistically only 
   # Base.Vector should be allowed.
-  function Beamline(line::Vector{LineElement}; Brho_ref=NaN)
-    bl = new(line, Brho_ref)
-
+  function Beamline(line; Brho_ref=NaN)
+    bl = new(vec(line), Brho_ref)
     # Check if any are in a Beamline already
-    for i in eachindex(line)
-      if haskey(getfield(line[i], :pdict), BeamlineParams)
-        if line[i].beamline != bl # Different Beamline - need to error
-          error("Cannot construct Beamline: element $i with name $(line[i].name) is already in a Beamline")
+    for i in eachindex(bl.line)
+      if haskey(getfield(bl.line[i], :pdict), BeamlineParams)
+        if bl.line[i].beamline != bl # Different Beamline - need to error
+          error("Cannot construct Beamline: element $i with name $(bl.line[i].name) is already in a Beamline")
         else # Duplicate element
-          line[i] = LineElement(ParamDict(InheritParams=>InheritParams(line[i])))
+          bl.line[i] = LineElement(ParamDict(InheritParams=>InheritParams(bl.line[i])))
         end
       end
       # HARD put in because may need to override InheritParams
-      getfield(line[i], :pdict)[BeamlineParams] = BeamlineParams(bl, i)
+      getfield(bl.line[i], :pdict)[BeamlineParams] = BeamlineParams(bl, i)
     end
 
     return bl
