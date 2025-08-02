@@ -130,7 +130,8 @@ end
 function deval(a::BMultipoleParams)
   return BMultipoleParams(
     deval.(a.n),         
-    deval.(a.s),         
+    deval.(a.s),       
+    deval.(a.tilt),         
     deval.(a.order),     
     deval.(a.normalized),
     deval.(a.integrated),

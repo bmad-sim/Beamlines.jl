@@ -928,4 +928,13 @@ using Test
 
     bo = 2.34
     @test Beamlines.deval(ele.AlignmentParams) ≈ AlignmentParams(bo, bo + 1, bo + 2, bo + 3, bo + 4, bo + 5)
+    @test Beamlines.deval(ele.ApertureParams ) ≈ ApertureParams(bo + 6, bo + 7, bo + 8, bo + 9, ApertureShape.Elliptical, ApertureAt.Entrance, true)
+    @test Beamlines.deval(ele.BendParams) ≈ BendParams(bo + 13, bo + 14, bo + 15,bo + 16)
+    n = Beamlines.SizedVector{3}([bo+17, bo+18, 0])
+    s = zero(n)
+    tilt = Beamlines.SizedVector{3}([0, 0, bo+19])
+    order = Beamlines.SA[2, 3, 4]
+    normalized = Beamlines.SA[true, false, true]
+    integrated = Beamlines.SA[false, true, true]
+    @test Beamlines.deval(ele.BMultipoleParams) = BMultipoleParams(n, s, tilt, order, normalized, integrated)
 end

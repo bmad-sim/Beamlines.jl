@@ -232,18 +232,12 @@ function Base.setproperty!(ele::LineElement, key::Symbol, value)
 end
 
 function _setproperty!(pdict::ParamDict, p::AbstractParams, key::Symbol, value)
-  println("checking")
   if hasproperty(p, key) # Check if we can put this value in current struct
     T = typeof(getproperty(p, key))
-    @show typeof(value)
-    @show T
-    @show promote_type(typeof(value), T)
     if promote_type(typeof(value), T) == T
-      println("no update")
       return setproperty!(p, key, value)
     end
   end
-  println("udpate!")
   return pdict[PROPERTIES_MAP[key]] = replace(p, key, value)
 end
 

@@ -29,12 +29,13 @@ end
 #Base.getproperty(a::ApertureParams, key::Symbol) = deval(getfield(a, key))
 function deval(a::ApertureParams{<:DefExpr})
   return ApertureParams(
-    deval(a.x_offset),
-    deval(a.y_offset),
-    deval(a.z_offset),
-    deval(a.x_rot),
-    deval(a.y_rot),
-    deval(a.tilt),    
+    deval(a.x1_limit),
+    deval(a.x2_limit),
+    deval(a.y1_limit),
+    deval(a.y2_limit),
+    deval(a.aperture_shape),
+    deval(a.aperture_at),
+    deval(a.aperture_shifts_with_body),   
   )
 end
 
