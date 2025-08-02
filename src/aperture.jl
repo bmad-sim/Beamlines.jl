@@ -26,7 +26,18 @@ function Base.isapprox(a::ApertureParams, b::ApertureParams)
          a.aperture_at               ==  b.aperture_at    &&
          a.aperture_shifts_with_body ==  b.aperture_shifts_with_body
 end
-Base.getproperty(a::ApertureParams, key::Symbol) = deval(getfield(a, key))
+#Base.getproperty(a::ApertureParams, key::Symbol) = deval(getfield(a, key))
+function deval(a::ApertureParams{<:DefExpr})
+  return ApertureParams(
+    deval(a.x_offset),
+    deval(a.y_offset),
+    deval(a.z_offset),
+    deval(a.x_rot),
+    deval(a.y_rot),
+    deval(a.tilt),    
+  )
+end
+
 
 # Note that here the reference energy is really needed to compute anything
 # other than the above so there is no more work to do here. Must define 

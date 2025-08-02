@@ -22,4 +22,15 @@ function Base.isapprox(a::AlignmentParams, b::AlignmentParams)
          a.tilt     ≈ b.tilt
 end
 
-Base.getproperty(a::AlignmentParams, key::Symbol) = deval(getfield(a, key))
+#Base.getproperty(a::AlignmentParams, key::Symbol) = deval(getfield(a, key))
+
+function deval(a::AlignmentParams{<:DefExpr})
+  return AlignmentParams(
+    deval(a.x_offset),
+    deval(a.y_offset),
+    deval(a.z_offset),
+    deval(a.x_rot),
+    deval(a.y_rot),
+    deval(a.tilt),    
+  )
+end

@@ -1,4 +1,4 @@
-@kwdef mutable struct RFParams{T<:Number} <: AbstractParams
+@kwdef mutable struct RFParams{T} <: AbstractParams
     rate::T               = Float32(0.0) # RF frequency in Hz or Harmonic number
     voltage::T            = Float32(0.0) # Voltage in V 
     phi0::T               = Float32(0.0) # Phase at reference energy
@@ -27,6 +27,15 @@ function Base.hasproperty(c::RFParams, key::Symbol)
   else
     return false
   end
+end
+
+function deval(a::RFParams{<:DefExpr})
+  return RFParams(
+    deval(a.rate),
+    deval(a.voltage),
+    deval(a.phi0),
+    deval(a.harmon_master),   
+  )
 end
 
 function Base.getproperty(c::RFParams, key::Symbol)

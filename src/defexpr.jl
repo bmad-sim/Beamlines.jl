@@ -7,12 +7,12 @@ end
 (d::DefExpr{T})() where {T} = d.f()::T
 
 # Construct for Function -> DefExpr{FunctionWrapper}
-function DefExpr{T}(f) where {T}
+function DefExpr{T}(f::Function) where {T}
   return DefExpr{T}(FunctionWrapper{T,Tuple{}}(f))
 end
 
 # Conversion of types to DefExpr
-DefExpr{T}(a::Number) where {T} = DefExpr{T}(()->convert(T,a))
+DefExpr{T}(a) where {T} = DefExpr{T}(()->convert(T,a))
 DefExpr{T}(a::DefExpr) where {T} = DefExpr{T}(()->convert(T,a()))
 
 # Make these apply via convert

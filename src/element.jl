@@ -26,13 +26,6 @@ function Base.setindex!(h::ParamDict, v::AbstractParams, key::Type{<:AbstractPar
   # ==================================================================
 end
 
-# Equality of ParamDict does NOT consider BeamlineParams
-# following is copied from Base abstractdict.jl with modification
-# to ignore BeamlineParams if present
-function Base.isapprox(l::ParamDict, r::ParamDict)
-
-end
-
 struct LineElement
   pdict::ParamDict
   function LineElement(pdict=ParamDict(UniversalParams => UniversalParams()); kwargs...)
@@ -158,7 +151,7 @@ function Base.getproperty(ele::LineElement, key::Symbol)
     if is_protected(pdict, key)
       error("Cannot get $(PARAMS_MAP[key]): parameter group is protected by ProtectParams. This can be unsafely-overridden using `unsafe_getparams`")
     elseif haskey(pdict, PARAMS_MAP[key]) # To get parameters struct
-      return getindex(pdict, PARAMS_MAP[key])
+      return getindex(pdict, PARAMS_MAP[key]) # NO DEVAL HERE!
     elseif haskey(pdict, InheritParams)
       return getproperty(get_parent(pdict), key)
     else
@@ -167,11 +160,11 @@ function Base.getproperty(ele::LineElement, key::Symbol)
   elseif haskey(VIRTUAL_GETTER_MAP, key) # Virtual properties override regular properties
     # Virtual properties access the element by properties or parameter structs, so this should
     # also not worry about InheritParams
-    return VIRTUAL_GETTER_MAP[key](ele, key)
+    return deval(VIRTUAL_GETTER_MAP[key](ele, key))
   elseif haskey(PROPERTIES_MAP, key)
     if haskey(pdict, PROPERTIES_MAP[key])  # To get a property in a parameter struct
       # If there is the parameter group, then the property 100% exists, don't worry about InheritParams
-      return getproperty(getindex(pdict, PROPERTIES_MAP[key]), key)
+      return deval(getproperty(getindex(pdict, PROPERTIES_MAP[key]), key))
     elseif haskey(pdict, InheritParams)
         return getproperty(get_parent(pdict), key)
     end
@@ -239,12 +232,18 @@ function Base.setproperty!(ele::LineElement, key::Symbol, value)
 end
 
 function _setproperty!(pdict::ParamDict, p::AbstractParams, key::Symbol, value)
+  println("checking")
   if hasproperty(p, key) # Check if we can put this value in current struct
     T = typeof(getproperty(p, key))
+    @show typeof(value)
+    @show T
+    @show promote_type(typeof(value), T)
     if promote_type(typeof(value), T) == T
+      println("no update")
       return setproperty!(p, key, value)
     end
   end
+  println("udpate!")
   return pdict[PROPERTIES_MAP[key]] = replace(p, key, value)
 end
 

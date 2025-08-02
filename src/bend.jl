@@ -12,7 +12,17 @@ Base.eltype(::BendParams{T}) where {T} = T
 Base.eltype(::Type{BendParams{T}}) where {T} = T
 
 Base.isapprox(a::BendParams, b::BendParams) = a.g_ref ≈ b.g_ref && a.tilt_ref ≈ b.tilt_ref && a.e1 ≈ b.e1 && a.e2 ≈ b.e2
-Base.getproperty(a::BendParams, key::Symbol) = deval(getfield(a, key))
+#Base.getproperty(a::BendParams, key::Symbol) = deval(getfield(a, key))
+
+function deval(a::BendParams{<:DefExpr})
+  return BendParams(
+    deval(g_ref),  
+    deval(tilt_ref),
+    deval(e1),     
+    deval(e2),       
+  )
+end
+
 
 # Note that here the reference energy is really needed to compute anything
 # other than the above so there is no more work to do here. Must define 

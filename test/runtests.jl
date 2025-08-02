@@ -892,4 +892,40 @@ using Test
     @test_throws ErrorException cp.harmon
     cav2.RFParams = cp
     @test cav2.RFParams === cp
+
+    bo = 1.23
+    dbo = DefExpr(()->bo)
+
+    ele = LineElement(
+      x_offset = dbo,
+      y_offset = dbo + 1,
+      z_offset = dbo + 2,
+      x_rot    = dbo + 3,
+      y_rot    = dbo + 4,
+      tilt     = dbo + 5,
+      x1_limit = dbo + 6,
+      x2_limit = dbo + 7,
+      y1_limit = dbo + 8,
+      y2_limit = dbo + 9,
+      g_ref    = dbo + 13,
+      tilt_ref = dbo + 14,
+      e1       = dbo + 15,
+      e2       = dbo + 16 ,
+      Kn1   = dbo + 17,
+      Bn2L  = dbo + 18,
+      tilt3 = dbo + 19,
+      dt     = dbo + 20,
+      dx     = dbo + 21,
+      dy     = dbo + 22,
+      dz     = dbo + 23,
+      dx_rot = dbo + 24,
+      dy_rot = dbo + 25,
+      dz_rot = dbo + 26,
+      rf_frequency = dbo + 27,
+      voltage = dbo + 28,
+      phi0 = dbo + 29,
+    )
+
+    bo = 2.34
+    @test Beamlines.deval(ele.AlignmentParams) ≈ AlignmentParams(bo, bo + 1, bo + 2, bo + 3, bo + 4, bo + 5)
 end

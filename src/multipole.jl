@@ -44,7 +44,7 @@ function Base.getproperty(b::BMultipoleParams{T}, key::Symbol) where {T}
   elseif haskey(BMULTIPOLE_TILT_MAP, key)
     ord = BMULTIPOLE_TILT_MAP[key]
     if ord in b.order
-      return deval(b.tilt[o2i(b,ord)])
+      return b.tilt[o2i(b,ord)]
     else
       error("Unable to get $key: BMultipoleParams $b does not have a multipole of order $ord")
     end
@@ -126,6 +126,17 @@ function Base.isapprox(a::BMultipoleParams, b::BMultipoleParams)
          a.normalized ≈ b.normalized &&
          a.integrated ≈ b.integrated
 end
+
+function deval(a::BMultipoleParams)
+  return BMultipoleParams(
+    deval.(a.n),         
+    deval.(a.s),         
+    deval.(a.order),     
+    deval.(a.normalized),
+    deval.(a.integrated),
+  )
+end
+
 
 # To go from SoA to AoS:
 struct BMultipole{T}

@@ -23,7 +23,20 @@ function Base.isapprox(a::PatchParams, b::PatchParams)
          a.dy_rot      ≈ b.dy_rot &&
          a.dz_rot      ≈ b.dz_rot
 end
-Base.getproperty(a::PatchParams, key::Symbol) = deval(getfield(a, key))
+#Base.getproperty(a::PatchParams, key::Symbol) = deval(getfield(a, key))
+function deval(a::PatchParams{<:DefExpr})
+  return PatchParams(
+    deval(a.dt),
+    deval(a.dx),
+    deval(a.dy),
+    deval(a.dz),
+    deval(a.dx_rot),
+    deval(a.dy_rot),
+    deval(a.dz_rot),   
+  )
+end
+
+
 
 # May want to include reference energy changes
 # In the future, would want to include "flexible" patches for global geometry connections.
