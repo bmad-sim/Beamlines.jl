@@ -1,11 +1,11 @@
 @kwdef mutable struct Beamline
   const line::Vector{LineElement}
-  Brho_ref # Will be NaN if not specified
+  rigidity # Will be NaN if not specified
 
   # Beamlines can be very long, so realistically only 
   # Base.Vector should be allowed.
-  function Beamline(line; Brho_ref=NaN)
-    bl = new(vec(line), Brho_ref)
+  function Beamline(line; rigidity=NaN)
+    bl = new(vec(line), rigidity)
     # Check if any are in a Beamline already
     for i in eachindex(bl.line)
       if haskey(getfield(bl.line[i], :pdict), BeamlineParams)
@@ -26,9 +26,9 @@ end
 
 function Base.getproperty(b::Beamline, key::Symbol)
   field = deval(getfield(b, key))
-  if key == :Brho_ref && isnan(field)
-    #@warn "Brho_ref has not been set: using default value of NaN"
-    error("Unable to get magnetic rigidity: Brho_ref of the Beamline has not been set")
+  if key == :rigidity && isnan(field)
+    #@warn "rigidity has not been set: using default value of NaN"
+    error("Unable to get magnetic rigidity: rigidity of the Beamline has not been set")
   end
   return field
 end
@@ -38,10 +38,10 @@ struct BeamlineParams <: AbstractParams
   beamline_index::Int
 end
 
-# Make E_ref and Brho_ref (in beamline) be properties
+# Make E_ref and rigidity (in beamline) be properties
 # Also make s a property of BeamlineParams
 # Note that because BeamlineParams is immutable, not setting rn
-Base.propertynames(::BeamlineParams) = (:beamline, :beamline_index, :Brho_ref, :s, :s_downstream)
+Base.propertynames(::BeamlineParams) = (:beamline, :beamline_index, :rigidity, :s, :s_downstream)
 
 function Base.setproperty!(bp::BeamlineParams, key::Symbol, value)
   setproperty!(bp.beamline, key, value)
@@ -50,7 +50,7 @@ end
 # Because BeamlineParams contains an abstract type, "replacing" it 
 # is just modifying the field and returning itself
 function replace(bp::BeamlineParams, key::Symbol, value)
-  if key == :Brho_ref
+  if key == :rigidity
     setproperty!(bp, key, value)
     return bp
   else
@@ -59,7 +59,7 @@ function replace(bp::BeamlineParams, key::Symbol, value)
 end
 
 function Base.getproperty(bp::BeamlineParams, key::Symbol)
-  if key == :Brho_ref
+  if key == :rigidity
     return deval(getproperty(bp.beamline, key))
   elseif key in (:s, :s_downstream)
     if key == :s

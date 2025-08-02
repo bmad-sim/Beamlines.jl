@@ -57,39 +57,39 @@ function _get_BM_strength(ele, b::BMultipoleParams, key)
   else
     if !isactive(ele.BeamlineParams)
       if stored_normalized == true
-        error("Unable to get $key of LineElement: Normalized multipole is stored, but the element is not within a Beamline with a set Brho_ref")
+        error("Unable to get $key of LineElement: Normalized multipole is stored, but the element is not within a Beamline with a set rigidity")
       else
-        error("Unable to get $key of LineElement: Unnormalized multipole is stored, but the element is not within a Beamline with a set Brho_ref")
+        error("Unable to get $key of LineElement: Unnormalized multipole is stored, but the element is not within a Beamline with a set rigidity")
       end
     end
-    Brho_ref = ele.Brho_ref
+    rigidity = ele.rigidity
     if stored_integrated == integrated
       if stored_normalized == false
         # user asking for normalized strength of unnormalized BMultipole
-        return strength/Brho_ref
+        return strength/rigidity
       else
         # user asking for unnormalized strength of normalized BMultipole
-        return strength*Brho_ref
+        return strength*rigidity
       end
     else
       L = ele.L
       if stored_normalized == false
         if stored_integrated == false
-          return strength/Brho_ref*L
+          return strength/rigidity*L
         else
           if L == 0
             error("Unable to get $key of LineElement: Integrated multipole is stored, but the element length L = 0")
           end
-          return strength/Brho_ref/L
+          return strength/rigidity/L
         end
       else
         if stored_integrated == false
-          return strength*Brho_ref*L
+          return strength*rigidity*L
         else
           if L == 0
             error("Unable to get $key of LineElement: Integrated multipole is stored, but the element length L = 0")
           end
-          return strength*Brho_ref/L
+          return strength*rigidity/L
         end
       end
     end
@@ -104,7 +104,7 @@ function set_BM_strength!(ele::LineElement, key::Symbol, value)
   end
 
   # Setting is painful, because we do not know what the type of
-  # of the input must be (including L and Brho_ref potentially)
+  # of the input must be (including L and rigidity potentially)
   # And, if it requires promotion of the BMultipoleParams struct,
   # ouchies
   strength = calc_BM_internal_strength(ele, b, key, value)
@@ -138,14 +138,14 @@ function calc_BM_internal_strength(ele, b::BMultipoleParams, key, value)
         end
       end
     else
-      Brho_ref = ele.Brho_ref
+      rigidity = ele.rigidity
       if stored_integrated == integrated
         if stored_normalized == false
           # user setting normalized strength of unnormalized BMultipole
-          return value*Brho_ref
+          return value*rigidity
         else
           # user setting unnormalized strength of normalized BMultipole
-          return value/Brho_ref
+          return value/rigidity
         end
       else
         L = ele.L
@@ -156,11 +156,11 @@ function calc_BM_internal_strength(ele, b::BMultipoleParams, key, value)
             if L == 0
               error("Unable to set $key of LineElement: Nonintegrated multipole is stored, but the element length L = 0")
             end
-            return value*Brho_ref/L
+            return value*rigidity/L
           else
             # user setting normalized, nonintegrated strength of 
             # unnormalized, integrated BMultipole
-            return value*Brho_ref*L
+            return value*rigidity*L
           end
         else
           if stored_integrated == false
@@ -169,11 +169,11 @@ function calc_BM_internal_strength(ele, b::BMultipoleParams, key, value)
             if L == 0
               error("Unable to set $key of LineElement: Nonintegrated multipole is stored, but the element length L = 0")
             end
-            return value/Brho_ref/L
+            return value/rigidity/L
           else
             # user setting unnormalized, nonintegrated strength of 
             # normalized, integrated BMultipole
-            return value/Brho_ref*L
+            return value/rigidity*L
           end
         end
       end
@@ -304,11 +304,11 @@ function set_BM_independent!(ele::LineElement, ::Symbol, value)
       s = olds
       if old_normalized != normalized
         if old_normalized == true
-          n *= ele.Brho_ref
-          s *= ele.Brho_ref
+          n *= ele.rigidity
+          s *= ele.rigidity
         else
-          n /= ele.Brho_ref
-          s /= ele.Brho_ref
+          n /= ele.rigidity
+          s /= ele.rigidity
         end
       end
 
