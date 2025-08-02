@@ -16,10 +16,10 @@ Base.isapprox(a::BendParams, b::BendParams) = a.g_ref ≈ b.g_ref && a.tilt_ref 
 
 function deval(a::BendParams{<:DefExpr})
   return BendParams(
-    deval(g_ref),  
-    deval(tilt_ref),
-    deval(e1),     
-    deval(e2),       
+    deval(a.g_ref),  
+    deval(a.tilt_ref),
+    deval(a.e1),     
+    deval(a.e2),       
   )
 end
 

@@ -9,7 +9,13 @@
     if !issorted(order)
       error("Something went very wrong: BMultipoleParams not sorted by order. Please submit an issue to Beamlines.jl")
     end
-    return new{promote_type(eltype(n),eltype(s), eltype(tilt)),length(n)}(n, s, tilt, order, normalized, integrated)
+    T = promote_type(eltype(n),eltype(s), eltype(tilt))
+    return new{T,length(n)}(
+      convert(Vector{T}, n),
+      convert(Vector{T}, s),
+      convert(Vector{T}, tilt), 
+      order, normalized, integrated
+    )
   end
 end
 
@@ -109,9 +115,9 @@ function addord(b1::BMultipoleParams{T,N0}, ord, nrm=true, intg=true) where {T,N
       i = length(b1.order) + 1
     end
   end
-  n = StaticArrays.insert(b1.n, i, T(0))
-  s = StaticArrays.insert(b1.s, i, T(0))
-  tilt = StaticArrays.insert(b1.tilt, i, T(0))
+  n = StaticArrays.insert(b1.n, i, T(0f0))
+  s = StaticArrays.insert(b1.s, i, T(0f0))
+  tilt = StaticArrays.insert(b1.tilt, i, T(0f0))
   order = StaticArrays.insert(b1.order, i, ord)
   normalized = StaticArrays.insert(b1.normalized, i, nrm)
   integrated = StaticArrays.insert(b1.integrated, i, intg)
@@ -120,11 +126,11 @@ end
 
 
 function Base.isapprox(a::BMultipoleParams, b::BMultipoleParams)
-  return a.n          ≈ b.n &&
-         a.s          ≈ b.s &&
-         a.order      ≈ b.order &&
-         a.normalized ≈ b.normalized &&
-         a.integrated ≈ b.integrated
+  return all(a.n          .≈ b.n) &&
+         all(a.s          .≈ b.s) &&
+         all(a.order      .≈ b.order) &&
+         all(a.normalized .≈ b.normalized) &&
+         all(a.integrated .≈ b.integrated)
 end
 
 function deval(a::BMultipoleParams)

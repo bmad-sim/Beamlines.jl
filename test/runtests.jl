@@ -936,5 +936,7 @@ using Test
     order = Beamlines.SA[2, 3, 4]
     normalized = Beamlines.SA[true, false, true]
     integrated = Beamlines.SA[false, true, true]
-    @test Beamlines.deval(ele.BMultipoleParams) = BMultipoleParams(n, s, tilt, order, normalized, integrated)
+    @test Beamlines.deval(ele.BMultipoleParams) ≈ BMultipoleParams(n, s, tilt, order, normalized, integrated)
+    @test Beamlines.deval(ele.PatchParams) ≈ PatchParams(bo + 20, bo + 21, bo + 22, bo + 23, bo + 24, bo + 25, bo + 26)
+    @test Beamlines.deval(ele.RFParams) ≈ RFParams(bo + 27, bo + 28, bo + 29, false)
 end
