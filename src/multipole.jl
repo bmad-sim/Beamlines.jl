@@ -133,7 +133,7 @@ function Base.isapprox(a::BMultipoleParams, b::BMultipoleParams)
          all(a.integrated .≈ b.integrated)
 end
 
-function deval(a::BMultipoleParams)
+function deval(a::BMultipoleParams{<:DefExpr})
   return BMultipoleParams(
     deval.(a.n),         
     deval.(a.s),       
