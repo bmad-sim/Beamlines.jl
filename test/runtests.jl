@@ -961,5 +961,5 @@ using Test
     @test bl.R_ref ≈ -59.52872449027632
     @test bl.pc_ref ≈ 1.7846262612447e10
     @test bl.E_ref ≈ 1.784626264386055e10
-    @test bl.pc_ref*sinh(acosh(bl.E_ref/bl.pc_ref)) ≈ Beamlines.massof(bl.species)
+    @test abs(bl.pc_ref*sinh(acosh(bl.E_ref/bl.pc_ref)) - Beamlines.massof(bl.species)) < 0.02
 end

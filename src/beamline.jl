@@ -1,19 +1,19 @@
 @kwdef mutable struct Beamline
   const line::Vector{LineElement}
   const species::Species
-  R_ref # Will be NaN if not specified
+  R_ref # Will be nothing if not specified
 
 
   # Beamlines can be very long, so realistically only 
   # Base.Vector should be allowed.
-  function Beamline(line; R_ref=NaN, species=Species(), E_ref=NaN, pc_ref=NaN)
-    count(!isnan, (R_ref, E_ref, pc_ref)) <= 1 || error("Only one of R_ref, E_ref, and pc_ref can be specified")
-    if !isnan(E_ref)
+  function Beamline(line; R_ref=nothing, species=Species(), E_ref=nothing, pc_ref=nothing)
+    count(t->!isnothing(t), (R_ref, E_ref, pc_ref)) <= 1 || error("Only one of R_ref, E_ref, and pc_ref can be specified")
+    if !isnothing(E_ref)
       if isnullspecies(species)
         error("If E_ref is specified, then a particle species must also be specified")
       end
       R_ref = E_to_R(species, E_ref)
-    elseif !isnan(pc_ref)
+    elseif !isnothing(pc_ref)
       if isnullspecies(species)
         error("If E_ref is specified, then a particle species must also be specified")
       end
@@ -49,7 +49,7 @@ function Base.getproperty(b::Beamline, key::Symbol)
     return R_to_pc(b.species, b.R_ref)
   end
   field = deval(getfield(b, key))
-  if key == :R_ref && isnan(field)
+  if key == :R_ref && isnothing(field)
     #@warn "R_ref has not been set: using default value of NaN"
     error("Unable to get magnetic rigidity: R_ref of the Beamline has not been set")
   elseif key == :species && isnullspecies(field)
@@ -64,7 +64,7 @@ function Base.setproperty!(b::Beamline, key::Symbol, value)
   elseif key == :E_ref
     return b.R_ref = E_to_R(b.species, value)
   else
-    return setfield!(key, key, value)
+    return setfield!(b, key, value)
   end
 end
 

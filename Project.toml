@@ -1,7 +1,7 @@
 name = "Beamlines"
 uuid = "5bb90b03-0719-46b8-8ce4-1ef3afd3cd4b"
 authors = ["Matt Signorelli <mgs255@cornell.edu> and contributors"]
-version = "0.5.1"
+version = "0.6.0"
 
 [deps]
 Accessors = "7d9f7c33-5ae7-4f3b-8dc6-eff91059b697"
@@ -16,6 +16,7 @@ StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 
 [compat]
 Accessors = "0.1.42"
+AtomicAndPhysicalConstants = "0.7.0"
 EnumX = "1.0.5"
 FunctionWrappers = "1.1.3"
 GTPSA = "1.4"
