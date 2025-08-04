@@ -128,11 +128,11 @@ function BitsBeamline(bl::Beamline; store_normalized=false, prep=nothing)
             end
             if isnormalized(BM)
               if !bm.normalized
-                n /= ele.rigidity
+                n /= ele.R_ref
               end
             else
               if bm.normalized
-                n *= ele.rigidity
+                n *= ele.R_ref
               end
             end
             # 23 -> 44 inclusive is n (22 multipole orders including 0)
@@ -145,11 +145,11 @@ function BitsBeamline(bl::Beamline; store_normalized=false, prep=nothing)
             end
             if isnormalized(BM)
               if !bm.normalized
-                s /= ele.rigidity
+                s /= ele.R_ref
               end
             else
               if bm.normalized
-                s *= ele.rigidity
+                s *= ele.R_ref
               end
             end
             # 45 -> 66 inclusive is s (22 multipole orders including 0)
@@ -357,7 +357,7 @@ function prep_bitsbl(bl::Beamline, store_normalized::Bool=false) #, arr::Type{T}
         
         if !(bm.n ≈ 0) || !(bm.s ≈ 0) # also only store strengths when nonzero
           if store_normalized != bm.normalized
-            bits_strength_type = promote_type(bits_strength_type, typeof(ele.rigidity))
+            bits_strength_type = promote_type(bits_strength_type, typeof(ele.R_ref))
           end
           if !bm.integrated
             bits_strength_type = promote_type(bits_strength_type, typeof(ele_L))
@@ -573,7 +573,7 @@ end
 # Convert BitsBeamline back to regular Beamline
 # Compression is lossy - all BMultipoles are converted 
 # to integrated and a uniform choice of normalized/unnormalized
-function Beamline(bbl::BitsBeamline{TM}; rigidity=NaN) where {TM}
+function Beamline(bbl::BitsBeamline{TM}; R_ref=NaN) where {TM}
 
   if !isnothing(bbl.tracking_method)
     TRACKING_METHOD_INVERSE_MAP = Dict(value => key for (key, value) in TRACKING_METHOD_MAP)
@@ -640,7 +640,7 @@ function Beamline(bbl::BitsBeamline{TM}; rigidity=NaN) where {TM}
     end
   end
 
-  return Beamline(bl; rigidity=rigidity)
+  return Beamline(bl; R_ref=R_ref)
 
 
 end

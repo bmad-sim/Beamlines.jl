@@ -15,7 +15,7 @@ L_quad = 0.5
 L_drift = 5.0
 N_fodo = 1000
 
-bl = Beamline([ele for i in 1:N_fodo for ele in make_fodo(K1,L_quad,L_drift)]; rigidity=60.0)
+bl = Beamline([ele for i in 1:N_fodo for ele in make_fodo(K1,L_quad,L_drift)]; R_ref=60.0)
 
 bunch = Bunch(1000)
 track!(bunch, bl)

@@ -215,8 +215,8 @@ using Test
     bl = Beamline([a,ele])
     @test bl.line[1] === a
     @test bl.line[2] === ele
-    @test_throws ErrorException bl.rigidity
-    @test_throws ErrorException a.rigidity
+    @test_throws ErrorException bl.R_ref
+    @test_throws ErrorException a.R_ref
 
     @test a.beamline_index == 1
     @test a.beamline === bl
@@ -224,13 +224,13 @@ using Test
     @test ele.beamline_index == 2
     @test ele.beamline === bl
 
-    bl.rigidity = 5.0
+    bl.R_ref = 5.0
     @test a.Kn1 == 2.0f0/5.0
     @test a.Kn1L == 0.5f0*2.0f0/5.0
-    @test a.rigidity == 5.0
-    a.rigidity = 6.0
-    @test a.rigidity == 6.0
-    a.rigidity = 5.0
+    @test a.R_ref == 5.0
+    a.R_ref = 6.0
+    @test a.R_ref == 6.0
+    a.R_ref = 5.0
     @test eltype(a.BMultipoleParams) == Float32
     a.Kn1 = 123 # should cause promotion
     @test eltype(a.BMultipoleParams) == Float64
@@ -430,7 +430,7 @@ using Test
     bl = Beamline([deepcopy_no_beamline(a), 
                    deepcopy_no_beamline(ele), 
                    deepcopy_no_beamline(a), 
-                   deepcopy_no_beamline(ele)], rigidity=60.0)
+                   deepcopy_no_beamline(ele)], R_ref=60.0)
     foreach(t->t.field_master=true, bl.line)
     bbl = BitsBeamline(bl)
     bl2 = Beamline(bbl)
@@ -578,7 +578,7 @@ using Test
     d = Drift(L=1)
     qd = Quadrupole(Kn1=-0.36, L=0.5)
 
-    fodo = Beamline([qf, d, qd, d, qf, d, qd, d], rigidity=60)
+    fodo = Beamline([qf, d, qd, d, qf, d, qd, d], R_ref=60)
     @test qf === fodo.line[1]
     @test d === fodo.line[2]
     @test qd === fodo.line[3]
@@ -682,28 +682,28 @@ using Test
       @test dc() ≈ 0.5
       @test dd() ≈ 0.5 && typeof(dd()) == ComplexF64
 
-      local rigidity = 60.
+      local R_ref = 60.
       local Kn1 = 0.36
       local L = 0.5
       qf = Quadrupole(Kn1=DefExpr(()->Kn1), L=DefExpr(()->L))
       d = Drift(L=1)
       qd = Quadrupole(Kn1=DefExpr(()->-qf.Kn1), L=DefExpr(()->L))
 
-      fodo = Beamline([qf, d, qd, d], rigidity=DefExpr(()->rigidity))
+      fodo = Beamline([qf, d, qd, d], R_ref=DefExpr(()->R_ref))
 
-      @test fodo.rigidity == rigidity
-      @test qf.rigidity == rigidity
+      @test fodo.R_ref == R_ref
+      @test qf.R_ref == R_ref
 
-      rigidity = 40.
-      @test fodo.rigidity == rigidity
-      @test qf.rigidity == rigidity
+      R_ref = 40.
+      @test fodo.R_ref == R_ref
+      @test qf.R_ref == R_ref
 
       @test qf.Kn1L ≈ Kn1*L
       @test qd.Kn1L ≈ -Kn1*L
-      @test qf.Bn1L ≈ Kn1*rigidity*L
-      @test qd.Bn1L ≈ -Kn1*rigidity*L
-      @test qf.Bn1 ≈ Kn1*rigidity
-      @test qd.Bn1 ≈ -Kn1*rigidity
+      @test qf.Bn1L ≈ Kn1*R_ref*L
+      @test qd.Bn1L ≈ -Kn1*R_ref*L
+      @test qf.Bn1 ≈ Kn1*R_ref
+      @test qd.Bn1 ≈ -Kn1*R_ref
       @test qf.L ≈ L
       @test qd.L ≈ L
       @test fodo.line[end].s_downstream ≈ 3
@@ -714,34 +714,34 @@ using Test
       
       @test qf.Kn1L ≈ Kn1*L
       @test qd.Kn1L ≈ -Kn1*L
-      @test qf.Bn1L ≈ Kn1*rigidity*L
-      @test qd.Bn1L ≈ -Kn1*rigidity*L
-      @test qf.Bn1 ≈ Kn1*rigidity
-      @test qd.Bn1 ≈ -Kn1*rigidity
+      @test qf.Bn1L ≈ Kn1*R_ref*L
+      @test qd.Bn1L ≈ -Kn1*R_ref*L
+      @test qf.Bn1 ≈ Kn1*R_ref
+      @test qd.Bn1 ≈ -Kn1*R_ref
   
       Kn1 = 0.2
       @test qf.Kn1L ≈ Kn1*L
       @test qd.Kn1L ≈ -Kn1*L
-      @test qf.Bn1L ≈ Kn1*rigidity*L
-      @test qd.Bn1L ≈ -Kn1*rigidity*L
-      @test qf.Bn1 ≈ Kn1*rigidity
-      @test qd.Bn1 ≈ -Kn1*rigidity
+      @test qf.Bn1L ≈ Kn1*R_ref*L
+      @test qd.Bn1L ≈ -Kn1*R_ref*L
+      @test qf.Bn1 ≈ Kn1*R_ref
+      @test qd.Bn1 ≈ -Kn1*R_ref
 
-      rigidity = 3*im
+      R_ref = 3*im
       @test qf.Kn1L ≈ Kn1*L
       @test qd.Kn1L ≈ -Kn1*L
-      @test qf.Bn1L ≈ Kn1*rigidity*L
-      @test qd.Bn1L ≈ -Kn1*rigidity*L
-      @test qf.Bn1 ≈ Kn1*rigidity
-      @test qd.Bn1 ≈ -Kn1*rigidity
+      @test qf.Bn1L ≈ Kn1*R_ref*L
+      @test qd.Bn1L ≈ -Kn1*R_ref*L
+      @test qf.Bn1 ≈ Kn1*R_ref
+      @test qd.Bn1 ≈ -Kn1*R_ref
 
       Kn1 = 4*im
       @test qf.Kn1L ≈ Kn1*L
       @test qd.Kn1L ≈ -Kn1*L
-      @test qf.Bn1L ≈ Kn1*rigidity*L
-      @test qd.Bn1L ≈ -Kn1*rigidity*L
-      @test qf.Bn1 ≈ Kn1*rigidity
-      @test qd.Bn1 ≈ -Kn1*rigidity
+      @test qf.Bn1L ≈ Kn1*R_ref*L
+      @test qd.Bn1L ≈ -Kn1*R_ref*L
+      @test qf.Bn1 ≈ Kn1*R_ref
+      @test qd.Bn1 ≈ -Kn1*R_ref
     end
 
     # CFunction
@@ -765,28 +765,28 @@ using Test
       @test dc() ≈ 0.5
       @test dd() ≈ 0.5 && typeof(dd()) == ComplexF64
       
-      local rigidity::Float64 = 60.
+      local R_ref::Float64 = 60.
       local Kn1::Float64 = 0.36
       local L::Float64 = 0.5
       qf = Quadrupole(Kn1=DefExpr(()->Kn1), L=DefExpr(()->L))
       d = Drift(L=1)
       qd = Quadrupole(Kn1=DefExpr(()->-qf.Kn1), L=DefExpr(()->L))
 
-      fodo = Beamline([qf, d, qd, d], rigidity=DefExpr(()->rigidity))
+      fodo = Beamline([qf, d, qd, d], R_ref=DefExpr(()->R_ref))
 
-      @test fodo.rigidity == rigidity
-      @test qf.rigidity == rigidity
+      @test fodo.R_ref == R_ref
+      @test qf.R_ref == R_ref
 
-      rigidity = 40.
-      @test fodo.rigidity == rigidity
-      @test qf.rigidity == rigidity
+      R_ref = 40.
+      @test fodo.R_ref == R_ref
+      @test qf.R_ref == R_ref
 
       @test qf.Kn1L ≈ Kn1*L
       @test qd.Kn1L ≈ -Kn1*L
-      @test qf.Bn1L ≈ Kn1*rigidity*L
-      @test qd.Bn1L ≈ -Kn1*rigidity*L
-      @test qf.Bn1 ≈ Kn1*rigidity
-      @test qd.Bn1 ≈ -Kn1*rigidity
+      @test qf.Bn1L ≈ Kn1*R_ref*L
+      @test qd.Bn1L ≈ -Kn1*R_ref*L
+      @test qf.Bn1 ≈ Kn1*R_ref
+      @test qd.Bn1 ≈ -Kn1*R_ref
       @test qf.L ≈ L
       @test qd.L ≈ L
       @test fodo.line[end].s_downstream ≈ 3
@@ -797,34 +797,34 @@ using Test
       
       @test qf.Kn1L ≈ Kn1*L
       @test qd.Kn1L ≈ -Kn1*L
-      @test qf.Bn1L ≈ Kn1*rigidity*L
-      @test qd.Bn1L ≈ -Kn1*rigidity*L
-      @test qf.Bn1 ≈ Kn1*rigidity
-      @test qd.Bn1 ≈ -Kn1*rigidity
+      @test qf.Bn1L ≈ Kn1*R_ref*L
+      @test qd.Bn1L ≈ -Kn1*R_ref*L
+      @test qf.Bn1 ≈ Kn1*R_ref
+      @test qd.Bn1 ≈ -Kn1*R_ref
   
       Kn1 = 0.2
       @test qf.Kn1L ≈ Kn1*L
       @test qd.Kn1L ≈ -Kn1*L
-      @test qf.Bn1L ≈ Kn1*rigidity*L
-      @test qd.Bn1L ≈ -Kn1*rigidity*L
-      @test qf.Bn1 ≈ Kn1*rigidity
-      @test qd.Bn1 ≈ -Kn1*rigidity
+      @test qf.Bn1L ≈ Kn1*R_ref*L
+      @test qd.Bn1L ≈ -Kn1*R_ref*L
+      @test qf.Bn1 ≈ Kn1*R_ref
+      @test qd.Bn1 ≈ -Kn1*R_ref
 
-      rigidity = 3.0
+      R_ref = 3.0
       @test qf.Kn1L ≈ Kn1*L
       @test qd.Kn1L ≈ -Kn1*L
-      @test qf.Bn1L ≈ Kn1*rigidity*L
-      @test qd.Bn1L ≈ -Kn1*rigidity*L
-      @test qf.Bn1 ≈ Kn1*rigidity
-      @test qd.Bn1 ≈ -Kn1*rigidity
+      @test qf.Bn1L ≈ Kn1*R_ref*L
+      @test qd.Bn1L ≈ -Kn1*R_ref*L
+      @test qf.Bn1 ≈ Kn1*R_ref
+      @test qd.Bn1 ≈ -Kn1*R_ref
 
       Kn1 = 4.0
       @test qf.Kn1L ≈ Kn1*L
       @test qd.Kn1L ≈ -Kn1*L
-      @test qf.Bn1L ≈ Kn1*rigidity*L
-      @test qd.Bn1L ≈ -Kn1*rigidity*L
-      @test qf.Bn1 ≈ Kn1*rigidity
-      @test qd.Bn1 ≈ -Kn1*rigidity
+      @test qf.Bn1L ≈ Kn1*R_ref*L
+      @test qd.Bn1L ≈ -Kn1*R_ref*L
+      @test qf.Bn1 ≈ Kn1*R_ref
+      @test qd.Bn1 ≈ -Kn1*R_ref
     end
     ele = LineElement(x1_limit=123,
                       x2_limit=456,
@@ -939,4 +939,27 @@ using Test
     @test Beamlines.deval(ele.BMultipoleParams) ≈ BMultipoleParams(n, s, tilt, order, normalized, integrated)
     @test Beamlines.deval(ele.PatchParams) ≈ PatchParams(bo + 20, bo + 21, bo + 22, bo + 23, bo + 24, bo + 25, bo + 26)
     @test Beamlines.deval(ele.RFParams) ≈ RFParams(bo + 27, bo + 28, bo + 29, false)
+
+    # Species addition
+    @test_throws ErrorException Beamline([LineElement()]; E_ref=10)
+    @test_throws ErrorException Beamline([LineElement()]; E_ref=10, R_ref=2)
+    @test_throws ErrorException Beamline([LineElement()]; E_ref=10, pc_ref=12)
+    bl = Beamline([LineElement(), LineElement()]; R_ref=-59.52872449027632, species=Species("electron"))
+    @test bl.species == Species("electron")
+    @test bl.R_ref == -59.52872449027632
+    @test bl.pc_ref ≈ 1.7846262612447e10
+    @test bl.E_ref ≈ 1.784626264386055e10
+    @test sqrt(bl.E_ref^2-bl.pc_ref^2) ≈ Beamlines.massof(bl.species)
+    bl = Beamline([LineElement(), LineElement()]; pc_ref=1.7846262612447e10, species=Species("electron"))
+    @test bl.species == Species("electron")
+    @test bl.R_ref ≈ -59.52872449027632
+    @test bl.pc_ref ≈ 1.7846262612447e10
+    @test bl.E_ref ≈ 1.784626264386055e10
+    @test sqrt(bl.E_ref^2-bl.pc_ref^2) ≈ Beamlines.massof(bl.species)
+    bl = Beamline([LineElement(), LineElement()]; E_ref=1.784626264386055e10, species=Species("electron"))
+    @test bl.species == Species("electron")
+    @test bl.R_ref ≈ -59.52872449027632
+    @test bl.pc_ref ≈ 1.7846262612447e10
+    @test bl.E_ref ≈ 1.784626264386055e10
+    @test bl.pc_ref*sinh(acosh(bl.E_ref/bl.pc_ref)) ≈ Beamlines.massof(bl.species)
 end
