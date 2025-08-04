@@ -398,7 +398,7 @@ function _get_cavity_rate(c, key)
   elseif (key == :harmon) == c.harmon_master
     return c.rate
   else
-    error("Cannot calculate $key of RFParams since particle species is unknown at Beamlines level and harmon_master=$(c.harmon_master)")
+    error("Cannot calculate $key of RFParams since particle species_ref is unknown at Beamlines level and harmon_master=$(c.harmon_master)")
   end
 end
 

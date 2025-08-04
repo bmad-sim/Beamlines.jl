@@ -1,5 +1,5 @@
 module Constants
 using AtomicAndPhysicalConstants
 @APCdef tupleflag=false
-isnullspecies(species::Species) = getfield(species, :kind) == Kind.NULL
+isnullspecies(species_ref::Species) = getfield(species_ref, :kind) == Kind.NULL
 end

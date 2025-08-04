@@ -944,22 +944,22 @@ using Test
     @test_throws ErrorException Beamline([LineElement()]; E_ref=10)
     @test_throws ErrorException Beamline([LineElement()]; E_ref=10, R_ref=2)
     @test_throws ErrorException Beamline([LineElement()]; E_ref=10, pc_ref=12)
-    bl = Beamline([LineElement(), LineElement()]; R_ref=-59.52872449027632, species=Species("electron"))
-    @test bl.species == Species("electron")
+    bl = Beamline([LineElement(), LineElement()]; R_ref=-59.52872449027632, species_ref=Species("electron"))
+    @test bl.species_ref == Species("electron")
     @test bl.R_ref == -59.52872449027632
     @test bl.pc_ref ≈ 1.7846262612447e10
     @test bl.E_ref ≈ 1.784626264386055e10
-    @test sqrt(bl.E_ref^2-bl.pc_ref^2) ≈ Beamlines.massof(bl.species)
-    bl = Beamline([LineElement(), LineElement()]; pc_ref=1.7846262612447e10, species=Species("electron"))
-    @test bl.species == Species("electron")
+    @test sqrt(bl.E_ref^2-bl.pc_ref^2) ≈ Beamlines.massof(bl.species_ref)
+    bl = Beamline([LineElement(), LineElement()]; pc_ref=1.7846262612447e10, species_ref=Species("electron"))
+    @test bl.species_ref == Species("electron")
     @test bl.R_ref ≈ -59.52872449027632
     @test bl.pc_ref ≈ 1.7846262612447e10
     @test bl.E_ref ≈ 1.784626264386055e10
-    @test sqrt(bl.E_ref^2-bl.pc_ref^2) ≈ Beamlines.massof(bl.species)
-    bl = Beamline([LineElement(), LineElement()]; E_ref=1.784626264386055e10, species=Species("electron"))
-    @test bl.species == Species("electron")
+    @test sqrt(bl.E_ref^2-bl.pc_ref^2) ≈ Beamlines.massof(bl.species_ref)
+    bl = Beamline([LineElement(), LineElement()]; E_ref=1.784626264386055e10, species_ref=Species("electron"))
+    @test bl.species_ref == Species("electron")
     @test bl.R_ref ≈ -59.52872449027632
     @test bl.pc_ref ≈ 1.7846262612447e10
     @test bl.E_ref ≈ 1.784626264386055e10
-    @test abs(bl.pc_ref*sinh(acosh(bl.E_ref/bl.pc_ref)) - Beamlines.massof(bl.species)) < 0.02
+    @test abs(bl.pc_ref*sinh(acosh(bl.E_ref/bl.pc_ref)) - Beamlines.massof(bl.species_ref)) < 0.02
 end

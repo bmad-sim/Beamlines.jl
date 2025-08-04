@@ -1,25 +1,25 @@
 @kwdef mutable struct Beamline
   const line::Vector{LineElement}
-  const species::Species
+  const species_ref::Species
   R_ref # Will be nothing if not specified
 
 
   # Beamlines can be very long, so realistically only 
   # Base.Vector should be allowed.
-  function Beamline(line; R_ref=nothing, species=Species(), E_ref=nothing, pc_ref=nothing)
+  function Beamline(line; R_ref=nothing, species_ref=Species(), E_ref=nothing, pc_ref=nothing)
     count(t->!isnothing(t), (R_ref, E_ref, pc_ref)) <= 1 || error("Only one of R_ref, E_ref, and pc_ref can be specified")
     if !isnothing(E_ref)
-      if isnullspecies(species)
-        error("If E_ref is specified, then a particle species must also be specified")
+      if isnullspecies(species_ref)
+        error("If E_ref is specified, then a species_ref must also be specified")
       end
-      R_ref = E_to_R(species, E_ref)
+      R_ref = E_to_R(species_ref, E_ref)
     elseif !isnothing(pc_ref)
-      if isnullspecies(species)
-        error("If E_ref is specified, then a particle species must also be specified")
+      if isnullspecies(species_ref)
+        error("If E_ref is specified, then a species_ref must also be specified")
       end
-      R_ref = pc_to_R(species, pc_ref)
+      R_ref = pc_to_R(species_ref, pc_ref)
     end
-    bl = new(vec(line), species, R_ref)
+    bl = new(vec(line), species_ref, R_ref)
     # Check if any are in a Beamline already
     for i in eachindex(bl.line)
       if haskey(getfield(bl.line[i], :pdict), BeamlineParams)
@@ -37,32 +37,32 @@
   end
 end
 
-R_to_E(species::Species, R) = @FastGTPSA sqrt((R*C_LIGHT*chargeof(species))^2 + massof(species)^2)
-E_to_R(species::Species, E) = @FastGTPSA massof(species)*sinh(acosh(E/massof(species)))/C_LIGHT/chargeof(species)  # sqrt(E^2-massof(species)^2)/C_LIGHT/chargeof(species)
-pc_to_R(species::Species, pc) = @FastGTPSA pc/C_LIGHT/chargeof(species)
-R_to_pc(species::Species, R) = @FastGTPSA R*chargeof(species)*C_LIGHT
+R_to_E(species_ref::Species, R) = @FastGTPSA sqrt((R*C_LIGHT*chargeof(species_ref))^2 + massof(species_ref)^2)
+E_to_R(species_ref::Species, E) = @FastGTPSA massof(species_ref)*sinh(acosh(E/massof(species_ref)))/C_LIGHT/chargeof(species_ref)  # sqrt(E^2-massof(species_ref)^2)/C_LIGHT/chargeof(species_ref)
+pc_to_R(species_ref::Species, pc) = @FastGTPSA pc/C_LIGHT/chargeof(species_ref)
+R_to_pc(species_ref::Species, R) = @FastGTPSA R*chargeof(species_ref)*C_LIGHT
 
 function Base.getproperty(b::Beamline, key::Symbol)
   if key == :E_ref
-    return R_to_E(b.species, b.R_ref)
+    return R_to_E(b.species_ref, b.R_ref)
   elseif key == :pc_ref
-    return R_to_pc(b.species, b.R_ref)
+    return R_to_pc(b.species_ref, b.R_ref)
   end
   field = deval(getfield(b, key))
   if key == :R_ref && isnothing(field)
     #@warn "R_ref has not been set: using default value of NaN"
     error("Unable to get magnetic rigidity: R_ref of the Beamline has not been set")
-  elseif key == :species && isnullspecies(field)
-    error("Unable to get species: species of the Beamline has not been set")
+  elseif key == :species_ref && isnullspecies(field)
+    error("Unable to get species_ref: species_ref of the Beamline has not been set")
   end
   return field
 end
 
 function Base.setproperty!(b::Beamline, key::Symbol, value)
   if key == :pc_ref
-    return b.R_ref = pc_to_R(b.species, value)
+    return b.R_ref = pc_to_R(b.species_ref, value)
   elseif key == :E_ref
-    return b.R_ref = E_to_R(b.species, value)
+    return b.R_ref = E_to_R(b.species_ref, value)
   else
     return setfield!(b, key, value)
   end
@@ -76,7 +76,7 @@ end
 # Make E_ref and R_ref (in beamline) be properties
 # Also make s a property of BeamlineParams
 # Note that because BeamlineParams is immutable, not setting rn
-Base.propertynames(::BeamlineParams) = (:beamline, :beamline_index, :R_ref, :E_ref, :pc_ref, :species, :s, :s_downstream)
+Base.propertynames(::BeamlineParams) = (:beamline, :beamline_index, :R_ref, :E_ref, :pc_ref, :species_ref, :s, :s_downstream)
 
 function Base.setproperty!(bp::BeamlineParams, key::Symbol, value)
   setproperty!(bp.beamline, key, value)

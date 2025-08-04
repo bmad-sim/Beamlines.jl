@@ -68,5 +68,5 @@ end
 
 
 # Note that it is currently impossible to derive harmonic number from frequency
-# or vice versa without knowing the particle species, so the virtual getter
+# or vice versa without knowing the particle species_ref, so the virtual getter
 # function throws an error for the unspecified property.
