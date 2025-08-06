@@ -3,8 +3,11 @@ struct DefExpr{T}
   DefExpr{T}(f::FunctionWrapper{T,Tuple{}}) where {T} = new{T}(f)
 end
 
+# In Julia we don't need to do any conversion, just static asserts
+defconvert(::Type{T}, f) where {T} = f::T
+
 # Calling DefExpr
-(d::DefExpr{T})() where {T} = d.f()::T
+(d::DefExpr{T})() where {T} = defconvert(T, d.f())
 
 # Construct for Function -> DefExpr{FunctionWrapper}
 function DefExpr{T}(f) where {T}
