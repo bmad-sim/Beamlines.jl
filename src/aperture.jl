@@ -45,15 +45,4 @@ function deval(a::ApertureParams{<:DefExpr})
   )
 end
 
-#
-
-function isactive(ap::ApertureParams)
-  if !ap.aperture_active; return false; end
-
-  if ap.aperture_shape == ApertureShape.Elliptical &&
-          (ap.x1_limit == -Inf || ap.x2_limit == Inf || ap.y1_limit == -Inf || ap.y2_limit == Inf)
-    return false
-  end
-
-  return true
-end
+isactive(ap::ApertureParams) = ap.aperture_active
