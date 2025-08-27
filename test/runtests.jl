@@ -395,7 +395,7 @@ using Test
     ele.aperture_shape = ApertureShape.Rectangular
     ele.aperture_at = ApertureAt.BothEnds
     ele.aperture_shifts_with_body = false
-    ele.aperture_active = true
+    ele.aperture_active = false
     bbl = BitsBeamline(bl)
     bl2 = Beamline(bbl)
     @test all(bl.line .≈ bl2.line)
