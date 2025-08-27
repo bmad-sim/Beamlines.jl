@@ -188,7 +188,7 @@ function BitsBeamline(bl::Beamline; store_normalized=false, prep=nothing)
         end
       end
 
-      # 84 -> 90 inclusive are ApertureParams
+      # 84 -> 91 inclusive are ApertureParams
       dp = ele.ApertureParams
       if !isnothing(dp)
         for (k,v) in enumerate((dp.x1_limit, dp.x2_limit, dp.y1_limit, dp.y2_limit))
@@ -196,7 +196,7 @@ function BitsBeamline(bl::Beamline; store_normalized=false, prep=nothing)
             i, cur_byte_arr = setval(i, cur_byte_arr, UInt8(k+83), eltype(DP), v)
           end
         end
-        # Now check dshape, dat, dswb
+        # Now check dshape, dat, dswb, dactive
         if dp.aperture_shape != shape(DP)
           i, cur_byte_arr = setval(i, cur_byte_arr, UInt8(88), UInt8, UInt8(dp.aperture_shape))
         end
@@ -205,6 +205,9 @@ function BitsBeamline(bl::Beamline; store_normalized=false, prep=nothing)
         end
         if dp.aperture_shifts_with_body != swb(DP)
           i, cur_byte_arr = setval(i, cur_byte_arr, UInt8(90), Bool, dp.aperture_shifts_with_body)
+        end
+        if dp.aperture_shifts_with_body != active(DP)
+          i, cur_byte_arr = setval(i, cur_byte_arr, UInt8(91), Bool, dp.aperture_active)
         end
       end
       
@@ -276,24 +279,27 @@ function prep_bitsbl(bl::Beamline, store_normalized::Bool=false) #, arr::Type{T}
   N_parameters = zeros(Int, N_ele)
   line_w_duplicates = Vector{LineElement}(undef, N_ele)
 
-  # ApertureParams will rudimentarily check what defaults (shape, at, swb)
+  # ApertureParams will rudimentarily check what defaults (shape, at, swb, active)
   # to store in its type via a first pass choosing the most frequently encountered options
   # This may not be optimal but it is a decent guess.
   shapes = zeros(Int, length(instances(ApertureShape.T)))
   ats = zeros(Int, length(instances(ApertureAt.T)))
   swbs = zeros(Int, 2)
+  active = zeros(Int, 2)
   for ele in bl.line
     dp = ele.ApertureParams
     if !isnothing(dp)
       shapes[Int(dp.aperture_shape)+1] += 1
       ats[Int(dp.aperture_at)+1] += 1
       swbs[Int(dp.aperture_shifts_with_body)+1] += 1
+      active[Int(dp.aperture_active)+1] += 1
     end
   end
   if any(shapes .!= 0)
     dshape::ApertureShape.T = ApertureShape.T(argmax(shapes)-1)
     dat::ApertureAt.T = ApertureAt.T(argmax(ats)-1)
     dswb::Bool = argmax(swbs)-1
+    dactive::Bool = argmax(active)-1
   end
 
   for i in 1:length(bl.line)
@@ -422,13 +428,13 @@ function prep_bitsbl(bl::Beamline, store_normalized::Bool=false) #, arr::Type{T}
     dp = ele.ApertureParams
     if !isnothing(dp)
       if DP == Nothing
-        DP = BitsApertureParams{eltype(dp),dshape,dat,dswb}
+        DP = BitsApertureParams{eltype(dp),dshape,dat,dswb,dactive}
       end
       for v in (dp.x1_limit, dp.x2_limit, dp.y1_limit, dp.y2_limit)
         if !(v ≈ 0)
           N_bytes[i] += sizeof(v)
           N_parameters[i] += 1
-          DP = BitsApertureParams{promote_type(eltype(DP),typeof(v)),dshape,dat,dswb}
+          DP = BitsApertureParams{promote_type(eltype(DP),typeof(v)),dshape,dat,dswb,dactive}
         end
         if dp.aperture_shape != dshape
           N_bytes[i] += sizeof(dp.aperture_shape)
@@ -440,6 +446,10 @@ function prep_bitsbl(bl::Beamline, store_normalized::Bool=false) #, arr::Type{T}
         end
         if dp.aperture_shifts_with_body != dswb
           N_bytes[i] += sizeof(dp.aperture_shifts_with_body)
+          N_parameters[i] += 1
+        end
+        if dp.aperture_active != dactive
+          N_bytes[i] += sizeof(dp.aperture_active)
           N_parameters[i] += 1
         end
       end
