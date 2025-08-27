@@ -849,7 +849,7 @@ using Test
     ele.x1_limit = 12*im
     @test eltype(ele.ApertureParams) == ComplexF32
     @test eltype(typeof(ele.ApertureParams)) == ComplexF32
-    @test ele.ApertureParams ≈ ApertureParams(12*im, 456, 789, 012, ApertureShape.Elliptical, ApertureAt.Exit, false, false)
+    @test ele.ApertureParams ≈ ApertureParams(12*im, 456, 789, 012, ApertureShape.Elliptical, ApertureAt.Exit, false, true)
     @test ele.x1_limit == 12*im
     @test ele.x1_limit == ComplexF32(12*im)
     @test ele.x2_limit == ComplexF32(456)
@@ -858,7 +858,7 @@ using Test
     @test ele.aperture_shape == ApertureShape.Elliptical
     @test ele.aperture_at == ApertureAt.Exit 
     @test ele.aperture_shifts_with_body == false
-    @test ele.aperture_active = false  
+    @test ele.aperture_active == true  
 
     # RFParams tests
     @test !isactive(qf.RFParams)
