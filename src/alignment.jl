@@ -34,10 +34,3 @@ function deval(a::AlignmentParams{<:DefExpr})
     deval(a.tilt),    
   )
 end
-
-#
-
-function isactive(ap::AlignmentParams)
-  return ap.x_offset != 0 || ap.y_offset != 0 || ap.z_offset != 0 || ap.x_rot != 0 || 
-         ap.y_rot != 0 || ap.tilt != 0
-end

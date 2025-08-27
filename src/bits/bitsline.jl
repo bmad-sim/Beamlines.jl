@@ -188,7 +188,7 @@ function BitsBeamline(bl::Beamline; store_normalized=false, prep=nothing)
         end
       end
 
-      # 84 -> 90 inclusive are ApertureParams
+      # 84 -> 91 inclusive are ApertureParams
       dp = ele.ApertureParams
       if !isnothing(dp)
         for (k,v) in enumerate((dp.x1_limit, dp.x2_limit, dp.y1_limit, dp.y2_limit))
@@ -207,7 +207,7 @@ function BitsBeamline(bl::Beamline; store_normalized=false, prep=nothing)
           i, cur_byte_arr = setval(i, cur_byte_arr, UInt8(90), Bool, dp.aperture_shifts_with_body)
         end
         if dp.aperture_shifts_with_body != active(DP)
-          i, cur_byte_arr = setval(i, cur_byte_arr, UInt8(90), Bool, dp.aperture_active)
+          i, cur_byte_arr = setval(i, cur_byte_arr, UInt8(91), Bool, dp.aperture_active)
         end
       end
       
