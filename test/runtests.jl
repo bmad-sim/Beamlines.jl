@@ -395,6 +395,7 @@ using Test
     ele.aperture_shape = ApertureShape.Rectangular
     ele.aperture_at = ApertureAt.BothEnds
     ele.aperture_shifts_with_body = false
+    ele.aperture_active = true
     bbl = BitsBeamline(bl)
     bl2 = Beamline(bbl)
     @test all(bl.line .≈ bl2.line)
@@ -832,7 +833,8 @@ using Test
                       y2_limit=012, 
                       aperture_shape=ApertureShape.Elliptical, 
                       aperture_at=ApertureAt.Exit, 
-                      aperture_shifts_with_body=false)
+                      aperture_shifts_with_body=false,
+                      aperture_active=true)
     @test isactive(ele.ApertureParams)
     @test ele.x1_limit == 123
     @test ele.x1_limit == 123
@@ -842,11 +844,12 @@ using Test
     @test ele.aperture_shape == ApertureShape.Elliptical
     @test ele.aperture_at == ApertureAt.Exit 
     @test ele.aperture_shifts_with_body == false
+    @test ele.aperture_active == true
     
     ele.x1_limit = 12*im
     @test eltype(ele.ApertureParams) == ComplexF32
     @test eltype(typeof(ele.ApertureParams)) == ComplexF32
-    @test ele.ApertureParams ≈ ApertureParams(12*im, 456, 789, 012, ApertureShape.Elliptical, ApertureAt.Exit, false)
+    @test ele.ApertureParams ≈ ApertureParams(12*im, 456, 789, 012, ApertureShape.Elliptical, ApertureAt.Exit, false, false)
     @test ele.x1_limit == 12*im
     @test ele.x1_limit == ComplexF32(12*im)
     @test ele.x2_limit == ComplexF32(456)
@@ -854,7 +857,8 @@ using Test
     @test ele.y2_limit == ComplexF32(012 )
     @test ele.aperture_shape == ApertureShape.Elliptical
     @test ele.aperture_at == ApertureAt.Exit 
-    @test ele.aperture_shifts_with_body == false    
+    @test ele.aperture_shifts_with_body == false
+    @test ele.aperture_active = false  
 
     # RFParams tests
     @test !isactive(qf.RFParams)
@@ -928,7 +932,7 @@ using Test
 
     bo = 2.34
     @test Beamlines.deval(ele.AlignmentParams) ≈ AlignmentParams(bo, bo + 1, bo + 2, bo + 3, bo + 4, bo + 5)
-    @test Beamlines.deval(ele.ApertureParams ) ≈ ApertureParams(bo + 6, bo + 7, bo + 8, bo + 9, ApertureShape.Elliptical, ApertureAt.Entrance, true)
+    @test Beamlines.deval(ele.ApertureParams ) ≈ ApertureParams(bo + 6, bo + 7, bo + 8, bo + 9, ApertureShape.Elliptical, ApertureAt.Entrance, true, true)
     @test Beamlines.deval(ele.BendParams) ≈ BendParams(bo + 13, bo + 14, bo + 15,bo + 16)
     n = Beamlines.SizedVector{3}([bo+17, bo+18, 0])
     s = zero(n)

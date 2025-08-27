@@ -211,7 +211,7 @@ end
 
 # ApertureParams
 # Store default options in type -> dshape = default shape, dat = default_at, dswb = default shifts w body
-struct BitsApertureParams{T<:Number,dshape,dat,dswb} <: AbstractBitsParams
+struct BitsApertureParams{T<:Number,dshape,dat,dswb,dactive} <: AbstractBitsParams
   x1_limit::T                               
   x2_limit::T                   
   y1_limit::T                   
@@ -219,6 +219,7 @@ struct BitsApertureParams{T<:Number,dshape,dat,dswb} <: AbstractBitsParams
   aperture_shape::ApertureShape.T
   aperture_at::ApertureAt.T     
   aperture_shifts_with_body::Bool
+  aperture_active::Bool
 end
 
 Base.eltype(::BitsApertureParams{T}) where {T} = T
@@ -226,12 +227,13 @@ Base.eltype(::Type{<:BitsApertureParams{T}}) where {T} = T
 
 isactive(bdp::BitsApertureParams) = !isnan(bdp.x1_limit)
 
-shape(::Type{BitsApertureParams{T,dshape,dat,dswb}}) where {T,dshape,dat,dswb} = dshape
-at(::Type{BitsApertureParams{T,dshape,dat,dswb}}) where {T,dshape,dat,dswb} = dat
-swb(::Type{BitsApertureParams{T,dshape,dat,dswb}}) where {T,dshape,dat,dswb} = dswb
+shape(::Type{BitsApertureParams{T,dshape,dat,dswb,dactive}}) where {T,dshape,dat,dswb,dactive} = dshape
+at(::Type{BitsApertureParams{T,dshape,dat,dswb,dactive}}) where {T,dshape,dat,dswb,dactive} = dat
+swb(::Type{BitsApertureParams{T,dshape,dat,dswb,dactive}}) where {T,dshape,dat,dswb,dactive} = dswb
+active(::Type{BitsApertureParams{T,dshape,dat,dswb,dactive}}) where {T,dshape,dat,dswb,dactive} = dactive
 
-function BitsApertureParams{T,dshape,dat,dswb}() where {T <: Number,dshape,dat,dswb}
-  return BitsApertureParams{T,dshape,dat,dswb}(T(NaN), T(NaN), T(NaN), T(NaN), dshape, dat, dswb)
+function BitsApertureParams{T,dshape,dat,dswb,dactive}() where {T <: Number,dshape,dat,dswb,dactive}
+  return BitsApertureParams{T,dshape,dat,dswb,dactive}(T(NaN), T(NaN), T(NaN), T(NaN), dshape, dat, dswb, dactive)
 end
 
 function ApertureParams(bdp::Union{Nothing,BitsApertureParams})
@@ -246,6 +248,7 @@ function ApertureParams(bdp::Union{Nothing,BitsApertureParams})
       bdp.aperture_shape,
       bdp.aperture_at,
       bdp.aperture_shifts_with_body,
+      bdp.aperture_active,
     )
   end
 end
