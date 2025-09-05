@@ -158,6 +158,9 @@ struct BMultipole{T}
   end
 end
 
+Base.eltype(::BMultipole{T}) where {T} = T
+Base.eltype(::Type{BMultipole{T}}) where {T} = T
+
 # Make it easy to get BMultipole by order:
 function Base.getindex(b::BMultipoleParams, order::Integer)
   i = o2i(b, order)
@@ -232,7 +235,7 @@ const BMULTIPOLE_STRENGTH_MAP = Dict{Symbol,Tuple{Bool,Int,Bool,Bool}}(
   :Kn20 => (true, 21, true, false),
   :Kn21 => (true, 22, true, false),
 
-  :BsL   => (true, 0,  false, true),
+  :BsolL => (true, 0,  false, true),
   :Bn0L  => (true, 1 , false, true),
   :Bn1L  => (true, 2 , false, true),
   :Bn2L  => (true, 3 , false, true),
@@ -256,7 +259,7 @@ const BMULTIPOLE_STRENGTH_MAP = Dict{Symbol,Tuple{Bool,Int,Bool,Bool}}(
   :Bn20L => (true, 21, false, true),
   :Bn21L => (true, 22, false, true),
 
-  :KsL   => (true, 0,  true, true),
+  :KsolL => (true, 0,  true, true),
   :Kn0L  => (true, 1 , true, true),
   :Kn1L  => (true, 2 , true, true),
   :Kn2L  => (true, 3 , true, true),
