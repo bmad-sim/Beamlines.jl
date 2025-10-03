@@ -44,6 +44,7 @@ export MattStandard,
 
 using GTPSA, 
       Accessors, 
+      AtomicAndPhysicalConstants,
       StaticArrays, 
       OrderedCollections,
       MacroTools,
@@ -51,11 +52,6 @@ using GTPSA,
 
 using FunctionWrappers: FunctionWrapper
 import GTPSA: sincu, sinhc, sinhcu, asinc, asincu, asinhc, asinhcu
-
-# Put AtomicAndPhysicalConstants in a box for now for safety
-include("Constants.jl")
-using .Constants: Constants, Species, massof, chargeof, C_LIGHT, isnullspecies
-export Species
 
 # Note that LineElement and parameter structs have three things:
 # 1) Fields: These are actual fields within a struct, e.g. pdict in LineElement
