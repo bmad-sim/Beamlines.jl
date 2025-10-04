@@ -50,6 +50,8 @@ using GTPSA,
       MacroTools,
       EnumX
 
+export Species
+
 using FunctionWrappers: FunctionWrapper
 import GTPSA: sincu, sinhc, sinhcu, asinc, asincu, asinhc, asinhcu
 
