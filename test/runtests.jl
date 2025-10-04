@@ -1,7 +1,6 @@
 using Beamlines
 using Beamlines: isactive
 using Test
-using AtomicAndPhysicalConstants
 
 @testset "Beamlines.jl" begin
     L = 5.0f0
