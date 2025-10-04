@@ -23,7 +23,7 @@ BeamlinesPythonCallExt = "PythonCall"
 
 [compat]
 Accessors = "0.1.42"
-AtomicAndPhysicalConstants = "0.7.1"
+AtomicAndPhysicalConstants = "0.8.0"
 EnumX = "1.0.5"
 FunctionWrappers = "1.1.3"
 GTPSA = "1.4"
