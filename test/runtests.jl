@@ -865,6 +865,11 @@ using Test
 
     # Basic RF frequency mode
     cav = RFCavity(rf_frequency=352e6, voltage=1e6)
+    @test isactive(qf.RFParams)
+    cav.voltage = 0
+    @test !isactive(qf.RFParams)
+    cav.voltage=1e6
+    @test isactive(qf.RFParams)
     @test cav.harmon_master == false && cav.rf_frequency == 352e6
     @test_throws ErrorException cav.harmon
     cav.rf_frequency = 500e6 + 1e3im
