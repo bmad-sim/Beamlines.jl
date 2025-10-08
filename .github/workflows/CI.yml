@@ -23,16 +23,17 @@ jobs:
       fail-fast: false
       matrix:
         version:
+          - '1.12'
           - '1.11'
           - 'lts'
         os:
           - ubuntu-latest
         arch:
           - x64
-        include:
-          - os: ubuntu-24.04-arm
-            version: '1.11'
-            arch: aarch64
+        #include:
+        #  - os: ubuntu-24.04-arm
+        #    version: '1.11'
+        #    arch: aarch64
     steps:
       - uses: actions/checkout@v5
       - uses: julia-actions/setup-julia@v2
