@@ -46,8 +46,8 @@ bad_quad = Quadrupole(Kn1=0.36, L=0.5, x_offset=0.2e-3, tilt=0.5e-3, y_rot=-0.5e
 # All of these are really just one type, LineElement
 # E.g. literally,
 # Quadrupole(; kwargs) = LineElement("Quadrupole"; kwargs...)
-# Feel free to define your own element "classes":
-SkewQuadrupole(; kwargs...) = LineElement(; class="SkewQuadrupole", kwargs..., tilt1=pi/4)
+# Feel free to define your own element "kinds":
+SkewQuadrupole(; kwargs...) = LineElement(; kind="SkewQuadrupole", kwargs..., tilt1=pi/4)
 sqf = SkewQuadrupole(Kn1=0.36, L=0.2)
 # Alternatively and equivalently:
 sqf = Quadrupole(Ks1=0.36, L=0.2)
@@ -73,10 +73,10 @@ qd.s
 qd.s_downstream
 
 # We can get all Quadrupoles for example in the line with:
-quads = findall(t->t.class == "Quadrupole", bl.line)
+quads = findall(t->t.kind == "Quadrupole", bl.line)
 
 # Or just the focusing quadrupoles with:
-f_quads = findall(t->t.class == "Quadrupole" && t.Kn1 > 0., bl.line)
+f_quads = findall(t->t.kind == "Quadrupole" && t.Kn1 > 0., bl.line)
 
 # And of course, EVERYTHING is fully polymorphic for differentiability.
 # Let's make the length of the first drift a TPSA variable:

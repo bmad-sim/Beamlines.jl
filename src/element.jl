@@ -84,20 +84,20 @@ function Base.isapprox(a::LineElement, b::LineElement)
   return anymissing ? missing : true
 end
 
-# Common class choices
-Solenoid(; kwargs...)   = LineElement(; class="Solenoid", kwargs...)
-SBend(; kwargs...)      = LineElement(; class="SBend", kwargs...)
-Quadrupole(; kwargs...) = LineElement(; class="Quadrupole", kwargs...)
-Sextupole(; kwargs...)  = LineElement(; class="Sextupole", kwargs...)
-Drift(; kwargs...)      = LineElement(; class="Drift", kwargs...)
-Octupole(; kwargs...)   = LineElement(; class="Octupole", kwargs...)
-Multipole(; kwargs...)  = LineElement(; class="Multipole", kwargs...)
-Marker(; kwargs...)     = LineElement(; class="Marker", kwargs...)
-Kicker(; kwargs...)     = LineElement(; class="Kicker", kwargs...)
-HKicker(; kwargs...)    = LineElement(; class="HKicker", kwargs...)
-VKicker(; kwargs...)    = LineElement(; class="VKicker", kwargs...)
-RFCavity(; kwargs...)   = LineElement(; class="RFCavity", kwargs...)
-Patch(; kwargs...)      = LineElement(; class="Patch", kwargs...)
+# Common kind choices
+Solenoid(; kwargs...)   = LineElement(; kind="Solenoid", kwargs...)
+SBend(; kwargs...)      = LineElement(; kind="SBend", kwargs...)
+Quadrupole(; kwargs...) = LineElement(; kind="Quadrupole", kwargs...)
+Sextupole(; kwargs...)  = LineElement(; kind="Sextupole", kwargs...)
+Drift(; kwargs...)      = LineElement(; kind="Drift", kwargs...)
+Octupole(; kwargs...)   = LineElement(; kind="Octupole", kwargs...)
+Multipole(; kwargs...)  = LineElement(; kind="Multipole", kwargs...)
+Marker(; kwargs...)     = LineElement(; kind="Marker", kwargs...)
+Kicker(; kwargs...)     = LineElement(; kind="Kicker", kwargs...)
+HKicker(; kwargs...)    = LineElement(; kind="HKicker", kwargs...)
+VKicker(; kwargs...)    = LineElement(; kind="VKicker", kwargs...)
+RFCavity(; kwargs...)   = LineElement(; kind="RFCavity", kwargs...)
+Patch(; kwargs...)      = LineElement(; kind="Patch", kwargs...)
 
 
 # Default tracking method:
@@ -106,7 +106,7 @@ struct SciBmadStandard end
 @kwdef mutable struct UniversalParams <: AbstractParams
   tracking_method = SciBmadStandard()
   L               = Float32(0.0)
-  class           = ""
+  kind           = ""
   name            = ""
 end
 
@@ -116,7 +116,7 @@ function Base.isapprox(a::UniversalParams, b::UniversalParams)
   return a.tracking_method == b.tracking_method &&
          a.L               ≈  b.L
          # Only compare things that affect the physics
-         #a.class           == b.class &&
+         #a.kind           == b.kind &&
          #a.name            
 end
 

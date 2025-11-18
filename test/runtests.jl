@@ -4,18 +4,18 @@ using Test
 
 @testset "Beamlines.jl" begin
     L = 5.0f0
-    ele = LineElement(class="Test", name="Test123", L=L)
+    ele = LineElement(kind="Test", name="Test123", L=L)
 
     @test getfield(ele, :pdict)[UniversalParams] === ele.UniversalParams
 
     up = ele.UniversalParams
     @test isactive(up)
-    @test up.class == "Test"
+    @test up.kind == "Test"
     @test up.name == "Test123"
     @test typeof(up.L) == typeof(L)
     @test up.L == L
     @test up.tracking_method == SciBmadStandard()
-    @test ele.class == up.class
+    @test ele.kind == up.kind
     @test ele.name == up.name
     @test ele.L == up.L
     @test ele.tracking_method == up.tracking_method
@@ -27,7 +27,7 @@ using Test
     up_new = UniversalParams(SciBmadStandard(), 10.0, "NewTest", "NewTest123")
     ele.UniversalParams = up_new
     @test ele.UniversalParams === up_new
-    @test ele.class == up_new.class
+    @test ele.kind == up_new.kind
     @test ele.name == up_new.name
     @test ele.L == up_new.L
     @test ele.tracking_method == up_new.tracking_method
