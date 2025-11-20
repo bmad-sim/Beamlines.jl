@@ -15,9 +15,14 @@
       R_ref = E_to_R(species_ref, E_ref)
     elseif !isnothing(pc_ref)
       if isnullspecies(species_ref)
-        error("If E_ref is specified, then a species_ref must also be specified")
+        error("If pc_ref is specified, then a species_ref must also be specified")
       end
       R_ref = pc_to_R(species_ref, pc_ref)
+    elseif !isnothing(R_ref) && !isnullspecies(species_ref)
+      if sign(species_ref.charge) != sign(R_ref)
+        println("Setting sign of R_ref to that of species_ref charge")
+        R_ref = sign(species_ref.charge)*R_ref
+      end
     end
     bl = new(vec(line), species_ref, R_ref)
     # Check if any are in a Beamline already
@@ -60,9 +65,17 @@ end
 
 function Base.setproperty!(b::Beamline, key::Symbol, value)
   if key == :pc_ref
+    if isnullspecies(b.species_ref)
+      error("Beamline must have a species_ref set before setting pc_ref")
+    end
     return b.R_ref = pc_to_R(b.species_ref, value)
   elseif key == :E_ref
+    if isnullspecies(b.species_ref)
+      error("Beamline must have a species_ref set before setting E_ref")
+    end
     return b.R_ref = E_to_R(b.species_ref, value)
+  elseif key == :R_ref && !isnullspecies(b.species_ref) && sign(species_ref.charge) != sign(R_ref)
+    error("Unable to set R_ref to $value: sign of R_ref must match sign of species_ref charge")
   else
     return setfield!(b, key, value)
   end
