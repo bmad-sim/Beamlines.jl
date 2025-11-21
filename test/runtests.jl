@@ -873,6 +873,7 @@ using Test
     @test cav.harmon_master == false && cav.rf_frequency == 352e6
     @test_throws ErrorException cav.harmon
     cav.rf_frequency = 500e6 + 1e3im
+    @test cav.traveling_wave == false
     @test eltype(cav.RFParams) == ComplexF64
     @test eltype(typeof(cav.RFParams)) == ComplexF64
     cav.RFParams.rf_frequency = 210.1e6
