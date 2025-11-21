@@ -1,5 +1,5 @@
 @kwdef mutable struct Beamline
-  const line::Vector{LineElement}
+  const line::ReadOnlyVector{LineElement, Vector{LineElement}}
   const species_ref::Species
   R_ref # Will be nothing if not specified
 
@@ -20,11 +20,11 @@
       R_ref = pc_to_R(species_ref, pc_ref)
     elseif !isnothing(R_ref) && !isnullspecies(species_ref)
       if sign(species_ref.charge) != sign(R_ref)
-        println("Setting sign of R_ref to that of species_ref charge")
+        println("Setting R_ref to $(sign(species_ref.charge)*R_ref) to match sign of species_ref charge")
         R_ref = sign(species_ref.charge)*R_ref
       end
     end
-    bl = new(vec(line), species_ref, R_ref)
+    bl = new(ReadOnlyVector(vec(line)), species_ref, R_ref)
     # Check if any are in a Beamline already
     for i in eachindex(bl.line)
       if haskey(getfield(bl.line[i], :pdict), BeamlineParams)
@@ -56,7 +56,7 @@ function Base.getproperty(b::Beamline, key::Symbol)
   field = deval(getfield(b, key))
   if key == :R_ref && isnothing(field)
     #@warn "R_ref has not been set: using default value of NaN"
-    error("Unable to get magnetic rigidity: R_ref of the Beamline has not been set")
+    error("Unable to get R_ref: R_ref of the Beamline has not been set")
   elseif key == :species_ref && isnullspecies(field)
     error("Unable to get species_ref: species_ref of the Beamline has not been set")
   end
@@ -74,8 +74,17 @@ function Base.setproperty!(b::Beamline, key::Symbol, value)
       error("Beamline must have a species_ref set before setting E_ref")
     end
     return b.R_ref = E_to_R(b.species_ref, value)
-  elseif key == :R_ref && !isnullspecies(b.species_ref) && sign(species_ref.charge) != sign(R_ref)
-    error("Unable to set R_ref to $value: sign of R_ref must match sign of species_ref charge")
+  elseif key == :R_ref && !isnullspecies(b.species_ref) && sign(b.species_ref.charge) != sign(value)
+    println("Setting R_ref to $(sign(b.species_ref.charge)*value) to match sign of species_ref charge")
+    return setfield!(b, key, sign(b.species_ref.charge)*value)
+  #=
+  elseif key == :species_ref && !isnothing(getfield(b, :R_ref))
+    if sign(value.charge) != sign(b.R_ref)
+      println("Setting R_ref to $(sign(value.charge)*getfield(b, :R_ref)) to match sign of new species_ref charge")
+      b.R_ref = sign(value.charge)*b.R_ref
+    end
+    return setfield!(b, key, value)
+  =#
   else
     return setfield!(b, key, value)
   end
