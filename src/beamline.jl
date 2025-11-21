@@ -65,27 +65,20 @@ function Base.getproperty(b::Beamline, key::Symbol)
 end
 
 function Base.setproperty!(b::Beamline, key::Symbol, value)
+  species_ref = getfield(b, :species_ref)
   if key == :pc_ref
-    if isnullspecies(b.species_ref)
+    if isnullspecies(species_ref)
       error("Beamline must have a species_ref set before setting pc_ref")
     end
-    return b.R_ref = pc_to_R(b.species_ref, value)
+    return b.R_ref = pc_to_R(species_ref, value)
   elseif key == :E_ref
-    if isnullspecies(b.species_ref)
+    if isnullspecies(species_ref)
       error("Beamline must have a species_ref set before setting E_ref")
     end
-    return b.R_ref = E_to_R(b.species_ref, value)
-  elseif key == :R_ref && !isnullspecies(getfield(b, :species_ref)) && sign(getfield(b, :species_ref).charge) != sign(value)
-    println("Setting R_ref to $(sign(b.species_ref.charge)*value) to match sign of species_ref charge")
-    return setfield!(b, key, sign(b.species_ref.charge)*value)
-  #=
-  elseif key == :species_ref && !isnothing(getfield(b, :R_ref))
-    if sign(value.charge) != sign(b.R_ref)
-      println("Setting R_ref to $(sign(value.charge)*getfield(b, :R_ref)) to match sign of new species_ref charge")
-      b.R_ref = sign(value.charge)*b.R_ref
-    end
-    return setfield!(b, key, value)
-  =#
+    return b.R_ref = E_to_R(species_ref, value)
+  elseif key == :R_ref && !isnullspecies(species_ref) && sign(species_ref.charge) != sign(value)
+    println("Setting R_ref to $(sign(species_ref.charge)*value) to match sign of species_ref charge")
+    return setfield!(b, key, sign(species_ref.charge)*value)
   else
     return setfield!(b, key, value)
   end
