@@ -3,7 +3,7 @@
     voltage::T            = Float32(0.0) # Voltage in V 
     phi0::T               = Float32(0.0) # Phase at reference energy
     const harmon_master::Bool = false    # false = frequency in Hz, true = harmonic number
-    traveling_wave::Bool = false         # Traveling wave or standing wave cavity?
+    const traveling_wave::Bool = false   # Traveling wave or standing wave cavity?
     function RFParams(args...)
       return new{promote_type(typeof.((args[1],args[2],args[3]))...)}(args...)
     end
@@ -14,10 +14,11 @@ Base.eltype(::Type{RFParams{T}}) where {T} = T
 
 
 function Base.isapprox(a::RFParams, b::RFParams) 
-    return  a.rate          ≈  b.rate && 
-            a.voltage       ≈  b.voltage && 
-            a.phi0          ≈  b.phi0 &&
-            a.harmon_master == b.harmon_master
+    return  a.rate           ≈  b.rate && 
+            a.voltage        ≈  b.voltage && 
+            a.phi0           ≈  b.phi0 &&
+            a.harmon_master  == b.harmon_master
+            a.traveling_wave == b.traveling_wave
 end
 
 function Base.hasproperty(c::RFParams, key::Symbol)
@@ -35,7 +36,8 @@ function deval(a::RFParams{<:DefExpr})
     deval(a.rate),
     deval(a.voltage),
     deval(a.phi0),
-    deval(a.harmon_master),   
+    deval(a.harmon_master),
+    deval(a.traveling_wave),   
   )
 end
 
@@ -55,7 +57,7 @@ end
 function Base.setproperty!(c::RFParams{T}, key::Symbol, value) where {T}
   if key in (:rate, :voltage, :phi0)
     return setfield!(c, key, T(value))
-  elseif key == :harmon_master
+  elseif key in (:harmon_master, :traveling_wave)
     return setfield!(c, key, value)
   elseif key in (:rf_frequency, :harmon)
     if (key == :harmon) == c.harmon_master
