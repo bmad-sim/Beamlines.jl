@@ -972,16 +972,16 @@ using Test
     @test bl.E_ref ≈ 1.784626264386055e10
     @test abs(bl.pc_ref*sinh(acosh(bl.E_ref/bl.pc_ref)) - Beamlines.massof(bl.species_ref)) < 0.02
 
-    @test_throws ErrorException Beamline([], pc_ref=10)
-    @test_throws ErrorException Beamline([], E_ref=10)
-    @test Beamline([], species_ref=Species("electron"), R_ref = 10).R_ref == -10
+    @test_throws ErrorException Beamline(LineElement[], pc_ref=10)
+    @test_throws ErrorException Beamline(LineElement[], E_ref=10)
+    @test Beamline(LineElement[], species_ref=Species("electron"), R_ref = 10).R_ref == -10
     ele = LineElement()
     bl1 = Beamline([ele])
     @test_throws ErrorException Beamline([ele])
-    bl = Beamline([], species_ref=Species("electron"), R_ref = 10)
+    bl = Beamline(LineElement[], species_ref=Species("electron"), R_ref = 10)
     @test bl.R_ref == -10
-    @test_throws ErrorException Beamline([]).pc_ref = 10
-    @test_throws ErrorException Beamline([]).E_ref = 10
+    @test_throws ErrorException Beamline(LineElement[]).pc_ref = 10
+    @test_throws ErrorException Beamline(LineElement[]).E_ref = 10
     bl.R_ref = 10
     @test bl.R_ref == -10
 
