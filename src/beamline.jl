@@ -1,5 +1,5 @@
 @kwdef mutable struct Beamline
-  const line::Vector{LineElement}
+  const line::ReadOnlyVector{LineElement, Vector{LineElement}}
   const species_ref::Species
   R_ref # Will be nothing if not specified
 
@@ -15,18 +15,24 @@
       R_ref = E_to_R(species_ref, E_ref)
     elseif !isnothing(pc_ref)
       if isnullspecies(species_ref)
-        error("If E_ref is specified, then a species_ref must also be specified")
+        error("If pc_ref is specified, then a species_ref must also be specified")
       end
       R_ref = pc_to_R(species_ref, pc_ref)
+    elseif !isnothing(R_ref) && !isnullspecies(species_ref)
+      if sign(chargeof(species_ref)) != sign(R_ref)
+        println("Setting R_ref to $(sign(chargeof(species_ref))*R_ref) to match sign of species_ref charge")
+        R_ref = sign(chargeof(species_ref))*R_ref
+      end
     end
-    bl = new(vec(line), species_ref, R_ref)
+    bl = new(ReadOnlyVector(vec(line)), species_ref, R_ref)
     # Check if any are in a Beamline already
     for i in eachindex(bl.line)
       if haskey(getfield(bl.line[i], :pdict), BeamlineParams)
         if bl.line[i].beamline != bl # Different Beamline - need to error
           error("Cannot construct Beamline: element $i with name $(bl.line[i].name) is already in a Beamline")
         else # Duplicate element
-          bl.line[i] = LineElement(ParamDict(InheritParams=>InheritParams(bl.line[i])))
+          # .parent overrides ReadOnlyArray
+          bl.line.parent[i] = LineElement(ParamDict(InheritParams=>InheritParams(bl.line[i])))
         end
       end
       # HARD put in because may need to override InheritParams
@@ -51,7 +57,7 @@ function Base.getproperty(b::Beamline, key::Symbol)
   field = deval(getfield(b, key))
   if key == :R_ref && isnothing(field)
     #@warn "R_ref has not been set: using default value of NaN"
-    error("Unable to get magnetic rigidity: R_ref of the Beamline has not been set")
+    error("Unable to get R_ref: R_ref of the Beamline has not been set")
   elseif key == :species_ref && isnullspecies(field)
     error("Unable to get species_ref: species_ref of the Beamline has not been set")
   end
@@ -59,10 +65,20 @@ function Base.getproperty(b::Beamline, key::Symbol)
 end
 
 function Base.setproperty!(b::Beamline, key::Symbol, value)
+  species_ref = getfield(b, :species_ref)
   if key == :pc_ref
-    return b.R_ref = pc_to_R(b.species_ref, value)
+    if isnullspecies(species_ref)
+      error("Beamline must have a species_ref set before setting pc_ref")
+    end
+    return b.R_ref = pc_to_R(species_ref, value)
   elseif key == :E_ref
-    return b.R_ref = E_to_R(b.species_ref, value)
+    if isnullspecies(species_ref)
+      error("Beamline must have a species_ref set before setting E_ref")
+    end
+    return b.R_ref = E_to_R(species_ref, value)
+  elseif key == :R_ref && !isnullspecies(species_ref) && sign(chargeof(species_ref)) != sign(value)
+    println("Setting R_ref to $(sign(chargeof(species_ref))*value) to match sign of species_ref charge")
+    return setfield!(b, key, sign(chargeof(species_ref))*value)
   else
     return setfield!(b, key, value)
   end

@@ -1,6 +1,5 @@
 module Beamlines
-export MattStandard, 
-       AbstractParams, 
+export AbstractParams, 
        LineElement, 
        Bunch, 
        ParamDict, 
@@ -48,7 +47,8 @@ using GTPSA,
       StaticArrays, 
       OrderedCollections,
       MacroTools,
-      EnumX
+      EnumX,
+      ReadOnlyArrays
 
 export Species
 
