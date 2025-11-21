@@ -31,7 +31,8 @@
         if bl.line[i].beamline != bl # Different Beamline - need to error
           error("Cannot construct Beamline: element $i with name $(bl.line[i].name) is already in a Beamline")
         else # Duplicate element
-          bl.line[i] = LineElement(ParamDict(InheritParams=>InheritParams(bl.line[i])))
+          # .parent overrides ReadOnlyArray
+          bl.line.parent[i] = LineElement(ParamDict(InheritParams=>InheritParams(bl.line[i])))
         end
       end
       # HARD put in because may need to override InheritParams
