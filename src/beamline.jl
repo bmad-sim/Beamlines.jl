@@ -19,9 +19,9 @@
       end
       R_ref = pc_to_R(species_ref, pc_ref)
     elseif !isnothing(R_ref) && !isnullspecies(species_ref)
-      if sign(species_ref.charge) != sign(R_ref)
-        println("Setting R_ref to $(sign(species_ref.charge)*R_ref) to match sign of species_ref charge")
-        R_ref = sign(species_ref.charge)*R_ref
+      if sign(chargeof(species_ref)) != sign(R_ref)
+        println("Setting R_ref to $(sign(chargeof(species_ref))*R_ref) to match sign of species_ref charge")
+        R_ref = sign(chargeof(species_ref))*R_ref
       end
     end
     bl = new(ReadOnlyVector(vec(line)), species_ref, R_ref)
@@ -76,9 +76,9 @@ function Base.setproperty!(b::Beamline, key::Symbol, value)
       error("Beamline must have a species_ref set before setting E_ref")
     end
     return b.R_ref = E_to_R(species_ref, value)
-  elseif key == :R_ref && !isnullspecies(species_ref) && sign(species_ref.charge) != sign(value)
-    println("Setting R_ref to $(sign(species_ref.charge)*value) to match sign of species_ref charge")
-    return setfield!(b, key, sign(species_ref.charge)*value)
+  elseif key == :R_ref && !isnullspecies(species_ref) && sign(chargeof(species_ref)) != sign(value)
+    println("Setting R_ref to $(sign(chargeof(species_ref))*value) to match sign of species_ref charge")
+    return setfield!(b, key, sign(chargeof(species_ref))*value)
   else
     return setfield!(b, key, value)
   end

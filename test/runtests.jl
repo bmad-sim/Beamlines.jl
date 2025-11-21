@@ -980,9 +980,13 @@ using Test
     @test_throws ErrorException Beamline([ele])
     bl = Beamline(LineElement[], species_ref=Species("electron"), R_ref = 10)
     @test bl.R_ref == -10
+    
+    @test (bl.pc_ref = 0; bl.R_ref) == 0
+    @test (bl.E_ref = Beamlines.massof(Species("electron")); bl.R_ref) == 0
     @test_throws ErrorException Beamline(LineElement[]).pc_ref = 10
     @test_throws ErrorException Beamline(LineElement[]).E_ref = 10
     bl.R_ref = 10
     @test bl.R_ref == -10
 
+    @test_throws ErrorException Beamline(LineElement[]).species_ref
 end
