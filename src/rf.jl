@@ -3,6 +3,7 @@
     voltage::T            = Float32(0.0) # Voltage in V 
     phi0::T               = Float32(0.0) # Phase at reference energy
     const harmon_master::Bool = false    # false = frequency in Hz, true = harmonic number
+    traveling_wave::Bool = false         # Traveling wave or standing wave cavity?
     function RFParams(args...)
       return new{promote_type(typeof.((args[1],args[2],args[3]))...)}(args...)
     end
