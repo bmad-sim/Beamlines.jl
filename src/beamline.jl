@@ -74,7 +74,7 @@ function Base.setproperty!(b::Beamline, key::Symbol, value)
       error("Beamline must have a species_ref set before setting E_ref")
     end
     return b.R_ref = E_to_R(b.species_ref, value)
-  elseif key == :R_ref && !isnullspecies(b.species_ref) && sign(b.species_ref.charge) != sign(value)
+  elseif key == :R_ref && !isnullspecies(getfield(b, :species_ref)) && sign(getfield(b, :species_ref).charge) != sign(value)
     println("Setting R_ref to $(sign(b.species_ref.charge)*value) to match sign of species_ref charge")
     return setfield!(b, key, sign(b.species_ref.charge)*value)
   #=
