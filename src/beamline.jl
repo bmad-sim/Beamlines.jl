@@ -1,6 +1,10 @@
-@kwdef mutable struct Beamline
+abstract type _Lattice end # because stupid forward declaration issue
+
+mutable struct Beamline
   const line::ReadOnlyVector{LineElement, Vector{LineElement}}
   const species_ref::Species
+  lattice_index::Int                   # PRIVATE
+  lattice::Union{Nothing,<:_Lattice}   # PRIVATE
   R_ref # Will be nothing if not specified
 
 
@@ -24,7 +28,7 @@
         R_ref = sign(chargeof(species_ref))*R_ref
       end
     end
-    bl = new(ReadOnlyVector(vec(line)), species_ref, R_ref)
+    bl = new(ReadOnlyVector(vec(line)), species_ref, nothing, -1, R_ref)
     # Check if any are in a Beamline already
     for i in eachindex(bl.line)
       if haskey(getfield(bl.line[i], :pdict), BeamlineParams)
@@ -36,6 +40,9 @@
         end
       end
       # HARD put in because may need to override InheritParams
+      # We don't have a lattice at Beamline construction, so set to null
+      # If this Beamline is used in Lattice construction, a HARD replacement of this 
+      # will be necessary
       getfield(bl.line[i], :pdict)[BeamlineParams] = BeamlineParams(bl, i)
     end
 
@@ -68,17 +75,19 @@ function Base.setproperty!(b::Beamline, key::Symbol, value)
   species_ref = getfield(b, :species_ref)
   if key == :pc_ref
     if isnullspecies(species_ref)
-      error("Beamline must have a species_ref set before setting pc_ref")
+      error("Beamline must have a species_ref set to set pc_ref")
     end
     return b.R_ref = pc_to_R(species_ref, value)
   elseif key == :E_ref
     if isnullspecies(species_ref)
-      error("Beamline must have a species_ref set before setting E_ref")
+      error("Beamline must have a species_ref set to set E_ref")
     end
     return b.R_ref = E_to_R(species_ref, value)
   elseif key == :R_ref && !isnullspecies(species_ref) && sign(chargeof(species_ref)) != sign(value)
     println("Setting R_ref to $(sign(chargeof(species_ref))*value) to match sign of species_ref charge")
     return setfield!(b, key, sign(chargeof(species_ref))*value)
+  elseif key == :lattice || key == :lattice_index
+    error("Field $key of type Beamline is not directly modifiable")
   else
     return setfield!(b, key, value)
   end
@@ -92,7 +101,7 @@ end
 # Make E_ref and R_ref (in beamline) be properties
 # Also make s a property of BeamlineParams
 # Note that because BeamlineParams is immutable, not setting rn
-Base.propertynames(::BeamlineParams) = (:beamline, :beamline_index, :R_ref, :E_ref, :pc_ref, :species_ref, :s, :s_downstream)
+Base.propertynames(::BeamlineParams) = (:beamline, :beamline_index, :s, :s_downstream) #:R_ref, :E_ref, :pc_ref, :species_ref, )
 
 function Base.setproperty!(bp::BeamlineParams, key::Symbol, value)
   setproperty!(bp.beamline, key, value)
@@ -128,8 +137,3 @@ function Base.getproperty(bp::BeamlineParams, key::Symbol)
     return getfield(bp, key)
   end
 end
-
-
-# We could overload getproperty to disallow accessing line
-# directly so elements cannot be removed, but I will deal 
-# with that later.

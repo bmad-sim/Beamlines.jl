@@ -449,6 +449,23 @@ function set_harmon_master!(ele::LineElement, ::Symbol, value::Bool)
   return value
 end
 
+# Generic PreExpansionDirective setter
+function set_ped!(ele::LineElement, sym::Symbol, value)
+  pdict = getfield(ele, :pdict)
+
+  # First we check if the element is in a lattice - if so, then throw error
+  if haskey(pdict, BeamlineParams) && pdict[BeamlineParams].beamline.lattice_index != -1
+    error("Unable to set PreExpansionDirective $sym: LineElement is already in a constructed (expanded) Lattice.")
+  end
+  if !haskey(pdict, PreExpansionParams)
+    pdict[PreExpansionParams] = PreExpansionParams
+  end
+  pep = pdict[PreExpansionParams]
+  ped = PreExpansionDirective(PREDIRECTIVES[sym], value)
+  push!(pep, ped)
+  return value
+end
+
 const VIRTUAL_GETTER_MAP = Dict{Symbol,Function}(
   [key => get_BM_strength for (key, value) in BMULTIPOLE_STRENGTH_MAP]...,
 

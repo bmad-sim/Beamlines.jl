@@ -30,8 +30,9 @@ const PROPERTIES_MAP = Dict{Symbol,Type{<:AbstractParams}}(
 
   :beamline => BeamlineParams,
   :beamline_index => BeamlineParams,
-  :R_ref => BeamlineParams, 
-  :species_ref => BeamlineParams,
+  # Making these NOT accessible at the element level to avoid confusion
+  #:R_ref => BeamlineParams,  
+  #:species_ref => BeamlineParams,
   :s => BeamlineParams,
   :s_downstream => BeamlineParams,
 
@@ -79,6 +80,7 @@ const PARAMS_MAP = Dict{Symbol,Type{<:AbstractParams}}(
   :PatchParams => PatchParams,
   :RFParams => RFParams,
   :ApertureParams => ApertureParams,
+  :PreExpansionParams => PreExpansionParams,
 )
 
 
