@@ -68,12 +68,12 @@ function Base.setproperty!(b::Beamline, key::Symbol, value)
   species_ref = getfield(b, :species_ref)
   if key == :pc_ref
     if isnullspecies(species_ref)
-      error("Beamline must have a species_ref set before setting pc_ref")
+      error("Beamline must have a species_ref set to set pc_ref")
     end
     return b.R_ref = pc_to_R(species_ref, value)
   elseif key == :E_ref
     if isnullspecies(species_ref)
-      error("Beamline must have a species_ref set before setting E_ref")
+      error("Beamline must have a species_ref set to set E_ref")
     end
     return b.R_ref = E_to_R(species_ref, value)
   elseif key == :R_ref && !isnullspecies(species_ref) && sign(chargeof(species_ref)) != sign(value)
@@ -92,7 +92,7 @@ end
 # Make E_ref and R_ref (in beamline) be properties
 # Also make s a property of BeamlineParams
 # Note that because BeamlineParams is immutable, not setting rn
-Base.propertynames(::BeamlineParams) = (:beamline, :beamline_index, :R_ref, :E_ref, :pc_ref, :species_ref, :s, :s_downstream)
+Base.propertynames(::BeamlineParams) = (:beamline, :beamline_index, :s, :s_downstream) #:R_ref, :E_ref, :pc_ref, :species_ref, )
 
 function Base.setproperty!(bp::BeamlineParams, key::Symbol, value)
   setproperty!(bp.beamline, key, value)
