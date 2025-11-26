@@ -449,6 +449,23 @@ function set_harmon_master!(ele::LineElement, ::Symbol, value::Bool)
   return value
 end
 
+function set_ref!(ele::LineElement, sym::Symbol, value)
+  pdict = getfield(ele, :pdict)
+  if haskey(pdict, BeamlineParams)
+    blp = pdict[BeamlineParams]
+    if blp.beamline_index == 1 && !any(t->haskey(getfield(t, :pdict), InheritParams) && getfield(t, :pdict)[InheritParams].parent === ele, blp.beamline.line)
+      setproperty!(blp.beamline, sym, value)
+    else
+      error("Property $sym is a Beamline property, and therefore is only settable 
+            at either the Beamline-level, or the first element in a Beamline granted 
+            that element has no duplicates. Consider setting $sym at the Beamline 
+            level (e.g. beamline.$sym = $value).")
+    end
+  else
+    error("PreExpansionParams not currently implemented")
+  end
+end
+
 const VIRTUAL_GETTER_MAP = Dict{Symbol,Function}(
   [key => get_BM_strength for (key, value) in BMULTIPOLE_STRENGTH_MAP]...,
 
@@ -475,4 +492,17 @@ const VIRTUAL_SETTER_MAP = Dict{Symbol,Function}(
   :rf_frequency => set_cavity_rate!,
   :harmon => set_cavity_rate!,
   :harmon_master => set_harmon_master!,
+
+  # ====
+  # These properties are SETTER virtual properties, but getter regular properties
+  # because they can only be set at the first element in a Beamline. Furthermore, 
+  # if placed in an element NOT in a Beamline, then a PreExpansionParams is created.
+  # Remember that virtual properties always override regular properties.
+  :R_ref => set_ref!,
+  :E_ref => set_ref!,
+  :pc_ref => set_ref!,
+  :dR_ref => set_ref!,
+  :dE_ref => set_ref!,
+  :dpc_ref => set_ref!,
+  # ====
 )
