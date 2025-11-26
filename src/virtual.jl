@@ -457,7 +457,7 @@ function set_ref!(ele::LineElement, sym::Symbol, value)
       setproperty!(blp.beamline, sym, value)
     else
       error("Property $sym is a Beamline property, and therefore is only settable 
-            at either the Beamline-level, or the first element in a Beamline granted 
+            at either the Beamline-level, or the first element in a Beamline only if 
             that element has no duplicates. Consider setting $sym at the Beamline 
             level (e.g. beamline.$sym = $value).")
     end

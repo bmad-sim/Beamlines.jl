@@ -110,15 +110,12 @@ function Base.setproperty!(b::Beamline, key::Symbol, value)
     error("Unable to set key $key: Beamline has set ref_is_relative = $(b.ref_is_relative)")
   end
   species_ref = getfield(b, :species_ref)
+  if  key in (:pc_ref, :dpc_ref, :E_ref, :dE_ref) && isnullspecies(species_ref)
+    error("Beamline must have a species_ref set to set $key")
+  end
   if key in (:pc_ref, :dpc_ref)
-    if isnullspecies(species_ref)
-      error("Beamline must have a species_ref set to set pc_ref")
-    end
     return b.ref = pc_to_R(species_ref, value)
   elseif key in (:E_ref, :dE_ref)
-    if isnullspecies(species_ref)
-      error("Beamline must have a species_ref set to set E_ref")
-    end
     return b.ref = E_to_R(species_ref, value)
   elseif key == :dR_ref
     return setfield!(b, :ref, value)
@@ -145,13 +142,14 @@ end
 Base.propertynames(::BeamlineParams) = (:beamline, :beamline_index, :s, :s_downstream, :R_ref, :E_ref, :pc_ref, :dR_ref, :dE_ref, :dpc_ref, :species_ref)
 
 function Base.setproperty!(bp::BeamlineParams, key::Symbol, value)
+  # With this, calling ele.BeamlineParams
   setproperty!(bp.beamline, key, value)
 end
 
 # Because BeamlineParams contains an abstract type, "replacing" it 
 # is just modifying the field and returning itself
 function replace(bp::BeamlineParams, key::Symbol, value)
-  if key == :R_ref || key == :pc_ref || key == :E_ref
+  if key in (:R_ref, :E_ref, :pc_ref, :dR_ref, :dE_ref, :dpc_ref, :species_ref)
     setproperty!(bp, key, value)
     return bp
   else
@@ -160,8 +158,14 @@ function replace(bp::BeamlineParams, key::Symbol, value)
 end
 
 function Base.getproperty(bp::BeamlineParams, key::Symbol)
-  if key in (:R_ref, :E_ref, :pc_ref, :dR_ref, :dE_ref, :dpc_ref, :species_ref)
+  if key in (:R_ref, :E_ref, :pc_ref, :species_ref)
     return deval(getproperty(bp.beamline, key))
+  elseif key in (:dR_ref, :dE_ref, :dpc_ref)
+    if bp.beamline_index != 1
+      return 0
+    else
+      return deval(getproperty(bp.beamline, key))
+    end
   elseif key in (:s, :s_downstream)
     if key == :s
       n = bp.beamline_index - 1
