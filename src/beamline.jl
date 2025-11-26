@@ -142,8 +142,20 @@ end
 Base.propertynames(::BeamlineParams) = (:beamline, :beamline_index, :s, :s_downstream, :R_ref, :E_ref, :pc_ref, :dR_ref, :dE_ref, :dpc_ref, :species_ref)
 
 function Base.setproperty!(bp::BeamlineParams, key::Symbol, value)
-  # With this, calling ele.BeamlineParams
-  setproperty!(bp.beamline, key, value)
+  # only settable at first element
+  if key in (:R_ref, :E_ref, :pc_ref, :dR_ref, :dE_ref, :dpc_ref)
+    if bp.beamline_index == 1 && !any(t->haskey(getfield(t, :pdict), InheritParams) && getfield(t, :pdict)[InheritParams].parent === ele, bp.beamline.line)
+      setproperty!(blp.beamline, key, value)
+    else
+      error("Property $key is a Beamline property, and therefore is only settable at 
+            either the Beamline-level, or the first element in a Beamline (so long  
+            as that element has no duplicates). Consider setting $key at the Beamline 
+            level (e.g. beamline.$key = $value), or setting this parameter in an element 
+            prior to Lattice construction to automatically generate a separate Beamline.")
+    end
+  else
+    setproperty!(bp.beamline, key, value)
+  end
 end
 
 # Because BeamlineParams contains an abstract type, "replacing" it 

@@ -452,15 +452,7 @@ end
 function set_ref!(ele::LineElement, sym::Symbol, value)
   pdict = getfield(ele, :pdict)
   if haskey(pdict, BeamlineParams)
-    blp = pdict[BeamlineParams]
-    if blp.beamline_index == 1 && !any(t->haskey(getfield(t, :pdict), InheritParams) && getfield(t, :pdict)[InheritParams].parent === ele, blp.beamline.line)
-      setproperty!(blp.beamline, sym, value)
-    else
-      error("Property $sym is a Beamline property, and therefore is only settable 
-            at either the Beamline-level, or the first element in a Beamline only if 
-            that element has no duplicates. Consider setting $sym at the Beamline 
-            level (e.g. beamline.$sym = $value).")
-    end
+    setproperty!(pdict[BeamlineParams], sym, value)
   else
     error("PreExpansionParams not currently implemented")
   end
