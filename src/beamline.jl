@@ -16,6 +16,8 @@ struct _Lattice{T<:Branch}
   end
 end
 
+# The Beamline type is essentially an "expanded" lattice, as
+# in there are no PreExpansionDirectives here anymore.
 @kwdef mutable struct Beamline <: Branch
   const line::ReadOnlyVector{LineElement, Vector{LineElement}}
   const species_ref::Species
@@ -81,6 +83,10 @@ end
     bl = new(ReadOnlyVector(vec(line)), species_ref, ref_is_relative, NULL_LATTICE, -1, ref)
     # Check if any are in a Beamline already
     for i in eachindex(bl.line)
+      #=if haskey(getfield(bl.line[i], :pdict), PreExpansionParams)
+        error("Cannot construct Beamline: element $i contains a PreExpansionDirective, 
+               which may cause discontinuities in a Beamline. Please use the Lattice 
+               constructor instead.")=#
       if haskey(getfield(bl.line[i], :pdict), BeamlineParams)
         if bl.line[i].beamline != bl # Different Beamline - need to error
           error("Cannot construct Beamline: element $i with name $(bl.line[i].name) is already in a Beamline")
@@ -106,6 +112,7 @@ R_to_E(species_ref::Species, R) = @FastGTPSA sqrt((R*C_LIGHT*chargeof(species_re
 E_to_R(species_ref::Species, E) = @FastGTPSA massof(species_ref)*sinh(acosh(E/massof(species_ref)))/C_LIGHT/chargeof(species_ref)  # sqrt(E^2-massof(species_ref)^2)/C_LIGHT/chargeof(species_ref)
 pc_to_R(species_ref::Species, pc) = @FastGTPSA pc/C_LIGHT/chargeof(species_ref)
 R_to_pc(species_ref::Species, R) = @FastGTPSA R*chargeof(species_ref)*C_LIGHT
+
 
 function Base.getproperty(b::Beamline, key::Symbol)
   if (key in (:R_ref, :E_ref, :pc_ref) && b.ref_is_relative)
@@ -274,6 +281,85 @@ function Base.getproperty(bp::BeamlineParams, key::Symbol)
 end
 
 
-# We could overload getproperty to disallow accessing line
-# directly so elements cannot be removed, but I will deal 
-# with that later.
+# InitialBeamlineParams which stores things before making a Beamline
+# This allows the behavior of e.g. setting the first element's E_ref, etc
+# This will then get destroyed when constructing a Beamline
+
+# Tricky part here is if e.g. someone says E_ref = x BEFORE specifying a species
+# In the Beamline, Species is a constant and cannot be changed, and so you either 
+# have it or you don't (known from kwarg in ctor)
+
+# With the LineElement the kwargs are evaluated in order. Therefore we have this problem
+
+# How to remedy it? well there are a couple of ways
+# 1 let anything be the independent variable at this stage
+# 2 force people to give species first
+# 3 could actually store the symbols for each set and then just take the last-set one
+
+# we go with 3
+
+# This must NOT be added to PARAMS_MAP, because users should not be able 
+# to freely put this in, that could corrupt the state
+
+# This is only put in by the virtual setters for :E_ref, :species_ref, :dR_ref, etc
+# It is then removed upon Beamline construction.
+mutable struct InitialBeamlineParams
+  species_ref::Species
+  ref_meaning::Symbol
+  ref
+end
+
+function Base.setproperty!(ibp::InitialBeamlineParams, key::Symbol, value)
+  if key in (:E_ref, :R_ref, :pc_ref, :dE_ref, :dR_ref, :dpc_ref)
+     setfield!(ibp, :ref, value)
+     setfield!(ibp, :ref_meaning, key)
+  else
+    setfield!(ibp, key, value)
+  end
+  return value
+end
+
+function Base.getproperty(ibp::InitialBeamlineParams, key)
+  if (key in (:dE_ref, :dR_ref, :dpc_ref) && !(ibp.ref_meaning in (:dE_ref, :dR_ref, :dpc_ref))) ||
+    (key in (:E_ref, :R_ref, :pc_ref) && !(ibp.ref_meaning in (:E_ref, :R_ref, :pc_ref)))
+    error("Unable to get property $key: InitialBeamlineParams has stored $(ibp.ref_meaning), and
+            so property $key depends on an upstream Lattice which has not been constructed yet.")
+  elseif key in (:E_ref, :dE_ref) && ibp.ref_meaning in (:E_ref, :dE_ref) ||
+    key in (:R_ref, :dR_ref) && ibp.ref_meaning in (:R_ref, :dR_ref) ||
+    key in (:pc_ref, :dpc_ref) && ibp.ref_meaning in (:pc_ref, :dpc_ref)
+    return getfield(ibp, :ref)
+  elseif key in (:E_ref, :R_ref, :pc_ref, :dE_ref, :dR_ref, :dpc_ref) # Conversion required
+    species_ref = getfield(ibp, :species_ref)
+    if isnullspecies(species_ref)
+      error("Unable to get property $key: property depends on species_ref, but species_ref has not been set")
+    end
+    ref = ibp.ref
+    if key in (:E_ref, :dE_ref)
+      if ibp.ref_meaning in (:R_ref, :dR_ref)
+        return R_to_E(species_ref, ref)
+      else
+        return pc_to_E(species_ref, ref)
+      end
+    elseif key in (:R_ref, :dR_ref)
+      if ibp.ref_meaning in (:E_ref, :dE_ref)
+        return E_to_R(species_ref, ref)
+      else
+        return pc_to_R(species_ref, ref)
+      end
+    else
+      if ibp.ref_meaning in (:R_ref, :dR_ref)
+        return R_to_pc(species_ref, ref)
+      else
+        return E_to_pc(species_ref, ref)
+      end
+    end
+  elseif key == :species_ref
+    species_ref = getfield(ibp, :species_ref)
+    if isnullspecies(species_ref)
+      error("Unable to get species_ref: species_ref of the InitialBeamlineParams has not been set")
+    end
+    return species_ref 
+  else
+    return getfield(ibp, key)
+  end
+end

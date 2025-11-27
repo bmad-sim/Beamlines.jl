@@ -458,6 +458,8 @@ function set_ref!(ele::LineElement, sym::Symbol, value)
   end
 end
 
+function set_species! end
+
 const VIRTUAL_GETTER_MAP = Dict{Symbol,Function}(
   [key => get_BM_strength for (key, value) in BMULTIPOLE_STRENGTH_MAP]...,
 
@@ -485,16 +487,11 @@ const VIRTUAL_SETTER_MAP = Dict{Symbol,Function}(
   :harmon => set_cavity_rate!,
   :harmon_master => set_harmon_master!,
 
-  # ====
-  # These properties are SETTER virtual properties, but getter regular properties
-  # because they can only be set at the first element in a Beamline. Furthermore, 
-  # if placed in an element NOT in a Beamline, then a PreExpansionParams is created.
-  # Remember that virtual properties always override regular properties.
+  :species_ref => set_species!,
   :R_ref => set_ref!,
   :E_ref => set_ref!,
   :pc_ref => set_ref!,
   :dR_ref => set_ref!,
   :dE_ref => set_ref!,
   :dpc_ref => set_ref!,
-  # ====
 )
