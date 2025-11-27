@@ -108,7 +108,58 @@ pc_to_R(species_ref::Species, pc) = @FastGTPSA pc/C_LIGHT/chargeof(species_ref)
 R_to_pc(species_ref::Species, R) = @FastGTPSA R*chargeof(species_ref)*C_LIGHT
 
 function Base.getproperty(b::Beamline, key::Symbol)
-  if (key in (:R_ref, :E_ref, :pc_ref) && b.ref_is_relative) || (key in (:dR_ref, :dE_ref, :dpc_ref) && !b.ref_is_relative)
+  if (key in (:R_ref, :E_ref, :pc_ref) && b.ref_is_relative)
+    if getfield(b, :lattice_index) == -1
+      error("Unable to get property $key: because this Beamline has ref_is_relative = true, 
+             the property $key must be dependent on an upstream Beamline in a Lattice, but 
+             the Beamline is not in a Lattice.")
+    elseif getfield(b, :lattice_index) == 1
+      # This assumes if relative, then initial energy is zero
+      # Probably should include sign check here for consistency
+      # e.g. negative energy, momenta is NOT allowed ever
+      # For now won't worry about it, perhaps we can put a check here,
+      # or in setproperty! for Beamline to check if first beamline
+      # in a Lattice.
+      if key == :R_ref
+        return b.dR_ref
+      elseif key == :E_ref
+        return b.dE_ref
+      else # :pc_ref
+        return b.dpc_ref
+      end
+    else
+      if key == :R_ref
+        return b.dR_ref + getproperty(b.lattice.beamlines[b.lattice_index-1], :R_ref)
+      elseif key == :E_ref
+        return b.dE_ref + getproperty(b.lattice.beamlines[b.lattice_index-1], :E_ref)
+      else # :pc_ref
+        return b.dpc_ref + getproperty(b.lattice.beamlines[b.lattice_index-1], :pc_ref)
+      end
+    end
+  elseif (key in (:dR_ref, :dE_ref, :dpc_ref) && !b.ref_is_relative)
+    if getfield(b, :lattice_index) == -1
+      # Maybe an error is not necessary here (i.e. could assume initial is zero)
+      # but will leave it in for now
+      error("Unable to get property $key: because this Beamline has ref_is_relative = false, 
+             the property $key must be dependent on an upstream Beamline in a Lattice, but 
+             the Beamline is not in a Lattice.")
+    elseif getfield(b, :lattice_index) == 1
+      if key == :dR_ref
+        return b.R_ref
+      elseif key == :dE_ref
+        return b.E_ref
+      else # :pc_ref
+        return b.pc_ref
+      end
+    else
+      if key == :dR_ref
+        return b.R_ref - getproperty(b.lattice.beamlines[b.lattice_index-1], :R_ref)
+      elseif key == :dE_ref
+        return b.E_ref - getproperty(b.lattice.beamlines[b.lattice_index-1], :E_ref)
+      else # :dpc_ref
+        return b.pc_ref - getproperty(b.lattice.beamlines[b.lattice_index-1], :pc_ref)
+      end
+    end
     error("Unable to get property $key: Beamline has set ref_is_relative = $(b.ref_is_relative)")
   end
   if key in (:E_ref, :dE_ref)
@@ -172,7 +223,7 @@ function Base.setproperty!(bp::BeamlineParams, key::Symbol, value)
   # only settable at first element
   if key in (:R_ref, :E_ref, :pc_ref, :dR_ref, :dE_ref, :dpc_ref)
     if bp.beamline_index == 1 && !any(t->haskey(getfield(t, :pdict), InheritParams) && getfield(t, :pdict)[InheritParams].parent === ele, bp.beamline.line)
-      setproperty!(blp.beamline, key, value)
+      setproperty!(bp.beamline, key, value)
     else
       error("Property $key is a Beamline property, and therefore is only settable at 
             either the Beamline-level, or the first element in a Beamline (so long  
