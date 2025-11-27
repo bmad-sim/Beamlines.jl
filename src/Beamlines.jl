@@ -32,6 +32,7 @@ export AbstractParams,
        Controller,
        Patch,
        set!,
+       Lattice,
 
        deepcopy_no_beamline,
        
@@ -48,7 +49,8 @@ using GTPSA,
       OrderedCollections,
       MacroTools,
       EnumX,
-      ReadOnlyArrays
+      ReadOnlyArrays,
+      DataStructures
 
 export Species
 

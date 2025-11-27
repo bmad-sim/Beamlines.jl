@@ -1,7 +1,27 @@
-@kwdef mutable struct Beamline
+abstract type Branch end # Only subtype is Beamline
+
+struct _Lattice{T<:Branch}
+  beamlines::Vector{T}
+  function _Lattice{T}(beamlines::Vector{T}) where {T}
+    lat = new(beamlines)
+    for i in eachindex(beamlines)
+      bl = beamlines[i]
+      if getfield(bl, :lattice_index) != -1
+        error("Beamline $i is already in another Lattice!")
+      end
+      setfield!(bl, :lattice, lat)
+      setfield!(bl, :lattice_index, i)
+    end 
+    return lat
+  end
+end
+
+@kwdef mutable struct Beamline <: Branch
   const line::ReadOnlyVector{LineElement, Vector{LineElement}}
   const species_ref::Species
   const ref_is_relative::Bool
+  lattice::_Lattice{Beamline} # This should be HARD to change, not allowed easily
+  lattice_index::Int          # This should be HARD to change, not allowed easily
   ref # Will be nothing if not specified
 
   # If ref_is_relative = true, means R_ref here is previous 
@@ -58,7 +78,7 @@
         ref = R_ref
       end
     end
-    bl = new(ReadOnlyVector(vec(line)), species_ref, ref_is_relative, ref)
+    bl = new(ReadOnlyVector(vec(line)), species_ref, ref_is_relative, NULL_LATTICE, -1, ref)
     # Check if any are in a Beamline already
     for i in eachindex(bl.line)
       if haskey(getfield(bl.line[i], :pdict), BeamlineParams)
@@ -77,7 +97,10 @@
   end
 end
 
-Base.propertynames(::Beamline) = (:line, :ref_is_relative, :ref, :R_ref, :E_ref, :pc_ref, :dR_ref, :dE_ref, :dpc_ref, :species_ref)
+const Lattice = _Lattice{Beamline}
+const NULL_LATTICE = Lattice(Beamline[])
+
+Base.propertynames(::Beamline) = (:line, :ref_is_relative, :ref, :lattice, :lattice_index, :R_ref, :E_ref, :pc_ref, :dR_ref, :dE_ref, :dpc_ref, :species_ref)
 
 R_to_E(species_ref::Species, R) = @FastGTPSA sqrt((R*C_LIGHT*chargeof(species_ref))^2 + massof(species_ref)^2)
 E_to_R(species_ref::Species, E) = @FastGTPSA massof(species_ref)*sinh(acosh(E/massof(species_ref)))/C_LIGHT/chargeof(species_ref)  # sqrt(E^2-massof(species_ref)^2)/C_LIGHT/chargeof(species_ref)
@@ -86,7 +109,7 @@ R_to_pc(species_ref::Species, R) = @FastGTPSA R*chargeof(species_ref)*C_LIGHT
 
 function Base.getproperty(b::Beamline, key::Symbol)
   if (key in (:R_ref, :E_ref, :pc_ref) && b.ref_is_relative) || (key in (:dR_ref, :dE_ref, :dpc_ref) && !b.ref_is_relative)
-    error("Unable to get key $key: Beamline has set ref_is_relative = $(b.ref_is_relative)")
+    error("Unable to get property $key: Beamline has set ref_is_relative = $(b.ref_is_relative)")
   end
   if key in (:E_ref, :dE_ref)
     return R_to_E(b.species_ref, b.ref)
@@ -101,13 +124,15 @@ function Base.getproperty(b::Beamline, key::Symbol)
     error("Unable to get $key: ref of the Beamline has not been set")
   elseif key == :species_ref && isnullspecies(field)
     error("Unable to get species_ref: species_ref of the Beamline has not been set")
+  elseif key in (:lattice, :lattice_index) && (field == -1 || field === NULL_LATTICE)
+    error("Unable to get $key: Beamline is not in a Lattice")
   end
   return field
 end
 
 function Base.setproperty!(b::Beamline, key::Symbol, value)
   if (key in (:R_ref, :E_ref, :pc_ref) && b.ref_is_relative) || (key in (:dR_ref, :dE_ref, :dpc_ref) && !b.ref_is_relative)
-    error("Unable to set key $key: Beamline has set ref_is_relative = $(b.ref_is_relative)")
+    error("Unable to set property $key: Beamline has set ref_is_relative = $(b.ref_is_relative)")
   end
   species_ref = getfield(b, :species_ref)
   if  key in (:pc_ref, :dpc_ref, :E_ref, :dE_ref) && isnullspecies(species_ref)
@@ -126,6 +151,8 @@ function Base.setproperty!(b::Beamline, key::Symbol, value)
     else
       return setfield!(b, :ref, value)
     end
+  elseif key in (:lattice, :lattice_index)
+    error("Unable to set property $key: this field is protected")
   else
     return setfield!(b, key, value)
   end
@@ -139,7 +166,7 @@ end
 # Make E_ref and R_ref (in beamline) be properties
 # Also make s a property of BeamlineParams
 # Note that because BeamlineParams is immutable, not setting rn
-Base.propertynames(::BeamlineParams) = (:beamline, :beamline_index, :s, :s_downstream, :R_ref, :E_ref, :pc_ref, :dR_ref, :dE_ref, :dpc_ref, :species_ref)
+Base.propertynames(::BeamlineParams) = (:beamline, :beamline_index, :s, :s_downstream, :R_ref, :E_ref, :pc_ref, :dR_ref, :dE_ref, :dpc_ref, :species_ref, :ref, :lattice, :lattice_index)
 
 function Base.setproperty!(bp::BeamlineParams, key::Symbol, value)
   # only settable at first element
@@ -161,16 +188,16 @@ end
 # Because BeamlineParams contains an abstract type, "replacing" it 
 # is just modifying the field and returning itself
 function replace(bp::BeamlineParams, key::Symbol, value)
-  if key in (:R_ref, :E_ref, :pc_ref, :dR_ref, :dE_ref, :dpc_ref, :species_ref)
-    setproperty!(bp, key, value)
-    return bp
-  else
-    error("BeamlineParams property $key cannot be modified")
-  end
+  #if key in (:R_ref, :E_ref, :pc_ref, :dR_ref, :dE_ref, :dpc_ref, :species_ref)
+  setproperty!(bp, key, value)
+  return bp
+  #else
+  #  error("BeamlineParams property $key cannot be modified")
+  #end
 end
 
 function Base.getproperty(bp::BeamlineParams, key::Symbol)
-  if key in (:R_ref, :E_ref, :pc_ref, :species_ref)
+  if key in (:R_ref, :E_ref, :pc_ref, :species_ref, :lattice, :lattice_index, :ref)
     return deval(getproperty(bp.beamline, key))
   elseif key in (:dR_ref, :dE_ref, :dpc_ref)
     if bp.beamline_index != 1
