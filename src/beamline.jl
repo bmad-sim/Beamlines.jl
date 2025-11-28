@@ -80,15 +80,35 @@ end
         ref = R_ref
       end
     end
+
+    ibp = haskey(getfield(first(line), :pdict), InitialBeamlineParams) ? getfield(first(line), :pdict)[InitialBeamlineParams] : nothing
+    if !isnothing(ibp)
+      if isnothing(ref)
+        ref_is_relative = ibp.ref_meaning in (:dE_ref, :dR_ref, :dpc_ref) ? true : false
+      end
+      if isnullspecies(species_ref)
+        species_ref = ibp.species_ref
+      end
+    end
     bl = new(ReadOnlyVector(vec(line)), species_ref, ref_is_relative, NULL_LATTICE, -1, ref)
+    if !isnothing(ibp)
+      setproperty!(bl, ibp.ref_meaning, ibp.ref)
+      delete!(getfield(bl.line[1], :pdict), InitialBeamlineParams)
+    end
+
     # Check if any are in a Beamline already
     for i in eachindex(bl.line)
-      #=if haskey(getfield(bl.line[i], :pdict), PreExpansionParams)
-        error("Cannot construct Beamline: element $i contains a PreExpansionDirective, 
-               which may cause discontinuities in a Beamline. Please use the Lattice 
-               constructor instead.")=#
+      if haskey(getfield(bl.line[i], :pdict), InitialBeamlineParams)
+        reverse_bl_construction!(bl, i)
+        error("Cannot construct Beamline: element $i contains an InitialBeamlineParams 
+               which can only be placed in the first element of a Beamline. To include 
+               reference energy/species changes in the middle of an accelerator, use the 
+               Lattice constructor instead which will automatically construct separate 
+               Beamlines for each InitialBeamlineParams.")
+      end
       if haskey(getfield(bl.line[i], :pdict), BeamlineParams)
         if bl.line[i].beamline != bl # Different Beamline - need to error
+          reverse_bl_construction!(bl, i)
           error("Cannot construct Beamline: element $i with name $(bl.line[i].name) is already in a Beamline")
         else # Duplicate element
           # .parent overrides ReadOnlyArray
@@ -103,6 +123,16 @@ end
   end
 end
 
+function reverse_bl_construction!(bl::Beamline, idx)
+  for i in idx:-1:1
+    ele = bl.line[i]
+    if !isnothing(ele.BeamlineParams) && ele.BeamlineParams.beamline === bl
+      ele.BeamlineParams = nothing
+    end
+  end
+  return
+end
+
 const Lattice = _Lattice{Beamline}
 const NULL_LATTICE = Lattice(Beamline[])
 
@@ -112,7 +142,8 @@ R_to_E(species_ref::Species, R) = @FastGTPSA sqrt((R*C_LIGHT*chargeof(species_re
 E_to_R(species_ref::Species, E) = @FastGTPSA massof(species_ref)*sinh(acosh(E/massof(species_ref)))/C_LIGHT/chargeof(species_ref)  # sqrt(E^2-massof(species_ref)^2)/C_LIGHT/chargeof(species_ref)
 pc_to_R(species_ref::Species, pc) = @FastGTPSA pc/C_LIGHT/chargeof(species_ref)
 R_to_pc(species_ref::Species, R) = @FastGTPSA R*chargeof(species_ref)*C_LIGHT
-
+E_to_pc(species_ref::Species, E) = @FastGTPSA massof(species_ref)*sinh(acosh(E/massof(species_ref)))
+pc_to_E(species_ref::Species, pc) = @FastGTPSA sqrt((pc)^2 + massof(species_ref)^2)
 
 function Base.getproperty(b::Beamline, key::Symbol)
   if (key in (:R_ref, :E_ref, :pc_ref) && b.ref_is_relative)
@@ -303,10 +334,10 @@ end
 
 # This is only put in by the virtual setters for :E_ref, :species_ref, :dR_ref, etc
 # It is then removed upon Beamline construction.
-mutable struct InitialBeamlineParams
-  species_ref::Species
-  ref_meaning::Symbol
-  ref
+@kwdef mutable struct InitialBeamlineParams <: AbstractParams
+  species_ref::Species = Species()
+  ref_meaning::Symbol  = :R_ref
+  ref                  = nothing
 end
 
 function Base.setproperty!(ibp::InitialBeamlineParams, key::Symbol, value)
@@ -319,7 +350,7 @@ function Base.setproperty!(ibp::InitialBeamlineParams, key::Symbol, value)
   return value
 end
 
-function Base.getproperty(ibp::InitialBeamlineParams, key)
+function Base.getproperty(ibp::InitialBeamlineParams, key::Symbol)
   if (key in (:dE_ref, :dR_ref, :dpc_ref) && !(ibp.ref_meaning in (:dE_ref, :dR_ref, :dpc_ref))) ||
     (key in (:E_ref, :R_ref, :pc_ref) && !(ibp.ref_meaning in (:E_ref, :R_ref, :pc_ref)))
     error("Unable to get property $key: InitialBeamlineParams has stored $(ibp.ref_meaning), and

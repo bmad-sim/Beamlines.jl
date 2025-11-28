@@ -449,16 +449,30 @@ function set_harmon_master!(ele::LineElement, ::Symbol, value::Bool)
   return value
 end
 
-function set_ref!(ele::LineElement, sym::Symbol, value)
+function set_bl_params!(ele::LineElement, sym::Symbol, value)
   pdict = getfield(ele, :pdict)
   if haskey(pdict, BeamlineParams)
     setproperty!(pdict[BeamlineParams], sym, value)
   else
-    error("PreExpansionParams not currently implemented")
+    if !haskey(pdict, InitialBeamlineParams)
+      pdict[InitialBeamlineParams] = InitialBeamlineParams()
+    end
+    ibp = pdict[InitialBeamlineParams]
+    setproperty!(ibp, sym, value)
   end
+  return value
 end
 
-function set_species! end
+function get_bl_params(ele::LineElement, sym::Symbol)
+  pdict = getfield(ele, :pdict)
+  if haskey(pdict, BeamlineParams)
+    return getproperty(pdict[BeamlineParams], sym)
+  elseif !haskey(pdict, InitialBeamlineParams)
+    return nothing
+  else
+    return getproperty(pdict[InitialBeamlineParams], sym)
+  end
+end
 
 const VIRTUAL_GETTER_MAP = Dict{Symbol,Function}(
   [key => get_BM_strength for (key, value) in BMULTIPOLE_STRENGTH_MAP]...,
@@ -471,6 +485,14 @@ const VIRTUAL_GETTER_MAP = Dict{Symbol,Function}(
 
   :rf_frequency => get_cavity_rate,
   :harmon => get_cavity_rate,
+
+  :species_ref => get_bl_params,
+  :R_ref => get_bl_params,
+  :E_ref => get_bl_params,
+  :pc_ref => get_bl_params,
+  :dR_ref => get_bl_params,
+  :dE_ref => get_bl_params,
+  :dpc_ref => get_bl_params,
 )
 
 const VIRTUAL_SETTER_MAP = Dict{Symbol,Function}(
@@ -487,11 +509,11 @@ const VIRTUAL_SETTER_MAP = Dict{Symbol,Function}(
   :harmon => set_cavity_rate!,
   :harmon_master => set_harmon_master!,
 
-  :species_ref => set_species!,
-  :R_ref => set_ref!,
-  :E_ref => set_ref!,
-  :pc_ref => set_ref!,
-  :dR_ref => set_ref!,
-  :dE_ref => set_ref!,
-  :dpc_ref => set_ref!,
+  :species_ref => set_bl_params!,
+  :R_ref => set_bl_params!,
+  :E_ref => set_bl_params!,
+  :pc_ref => set_bl_params!,
+  :dR_ref => set_bl_params!,
+  :dE_ref => set_bl_params!,
+  :dpc_ref => set_bl_params!,
 )
