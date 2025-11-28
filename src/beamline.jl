@@ -81,7 +81,7 @@ end
       end
     end
 
-    ibp = haskey(getfield(first(line), :pdict), InitialBeamlineParams) ? getfield(first(line), :pdict)[InitialBeamlineParams] : nothing
+    ibp = length(line) > 0 && haskey(getfield(first(line), :pdict), InitialBeamlineParams) ? getfield(first(line), :pdict)[InitialBeamlineParams] : nothing
     if !isnothing(ibp)
       if isnothing(ref)
         ref_is_relative = ibp.ref_meaning in (:dE_ref, :dR_ref, :dpc_ref) ? true : false
