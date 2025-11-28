@@ -49,8 +49,7 @@ using GTPSA,
       OrderedCollections,
       MacroTools,
       EnumX,
-      ReadOnlyArrays,
-      DataStructures
+      ReadOnlyArrays
 
 export Species
 
