@@ -990,4 +990,42 @@ using Test
     @test bl.R_ref == -10
 
     @test_throws ErrorException Beamline(LineElement[]).species_ref
+
+    # Get unset property
+    @test isnothing(LineElement().x1_limit)
+
+    # Test dE_ref, dR_ref, dpc_ref:
+    bl1 = Beamline(LineElement[]; E_ref=10e9, species_ref=Species("electron"))
+    bl2 = Beamline(LineElement[]; dE_ref=-3e9, species_ref=Species("proton"))
+    lat = Lattice([bl1, bl2])
+    #=
+    @test_throws ErrorException Beamline([LineElement()]; dE_ref=10)
+    @test_throws ErrorException Beamline([LineElement()]; dE_ref=10, R_ref=2)
+    @test_throws ErrorException Beamline([LineElement()]; E_ref=10, dpc_ref=12)
+    bl = Beamline([LineElement(), LineElement()]; R_ref=-59.52872449027632, species_ref=Species("electron"))
+    @test bl.species_ref == Species("electron")
+    @test bl.R_ref == -59.52872449027632 
+    @test bl.pc_ref ≈ 1.7846262612447e10
+    @test bl.E_ref ≈ 1.784626264386055e10
+    @test sqrt(bl.E_ref^2-bl.pc_ref^2) ≈ Beamlines.massof(bl.species_ref)
+    bl = Beamline([LineElement(), LineElement()]; pc_ref=1.7846262612447e10, species_ref=Species("electron"))
+    @test bl.species_ref == Species("electron")
+    @test bl.R_ref ≈ -59.52872449027632
+    @test bl.pc_ref ≈ 1.7846262612447e10
+    @test bl.E_ref ≈ 1.784626264386055e10
+    @test sqrt(bl.E_ref^2-bl.pc_ref^2) ≈ Beamlines.massof(bl.species_ref)
+    bl = Beamline([LineElement(), LineElement()]; E_ref=1.784626264386055e10, species_ref=Species("electron"))
+    @test bl.species_ref == Species("electron")
+    @test bl.R_ref ≈ -59.52872449027632
+    @test bl.pc_ref ≈ 1.7846262612447e10
+    @test bl.E_ref ≈ 1.784626264386055e10
+    =#
+    # InitialBeamlineParams tests
+    #=
+    bl = Beamline([LineElement(), LineElement()]; E_ref=1.784626264386055e10, species_ref=Species("electron"))
+    @test bl.species_ref == Species("electron")
+    @test bl.R_ref ≈ -59.52872449027632
+    @test bl.pc_ref ≈ 1.7846262612447e10
+    @test bl.E_ref ≈ 1.784626264386055e10
+    =#
 end

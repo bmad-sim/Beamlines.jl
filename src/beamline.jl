@@ -11,7 +11,7 @@ struct _Lattice{T<:Branch}
       end
       setfield!(bl, :lattice, lat)
       setfield!(bl, :lattice_index, i)
-    end 
+    end
     return lat
   end
 end
@@ -36,7 +36,7 @@ end
   # Base.Vector should be allowed.
   function Beamline(
     line;
-    species_ref=Species(),  
+    species_ref::Species=Species(),  
     R_ref=nothing, 
     E_ref=nothing, 
     pc_ref=nothing,
@@ -44,56 +44,33 @@ end
     dE_ref=nothing, 
     dpc_ref=nothing,
   )
-    c = count(t->!isnothing(t), (R_ref, E_ref, pc_ref, dR_ref, dE_ref, dpc_ref)) <= 1 || error("Only one of R_ref, E_ref, pc_ref, dR_ref, dE_ref, and dpc_ref can be specified")
-    ref_is_relative = false
-    ref = nothing
-    if !isnothing(E_ref)
-      if isnullspecies(species_ref)
-        error("If E_ref is specified, then a species_ref must also be specified")
-      end
-      ref = E_to_R(species_ref, E_ref)
-    elseif !isnothing(dE_ref)
-      if isnullspecies(species_ref)
-        error("If dE_ref is specified, then a species_ref must also be specified")
-      end
-      ref = E_to_R(species_ref, dE_ref)
-      ref_is_relative = true
-    elseif !isnothing(pc_ref)
-      if isnullspecies(species_ref)
-        error("If pc_ref is specified, then a species_ref must also be specified")
-      end
-      ref = pc_to_R(species_ref, pc_ref)
-    elseif !isnothing(dpc_ref)
-      if isnullspecies(species_ref)
-        error("If dpc_ref is specified, then a species_ref must also be specified")
-      end
-      ref = pc_to_R(species_ref, dpc_ref)
-      ref_is_relative = true
-    elseif !isnothing(dR_ref)
-      ref = dR_ref
-      ref_is_relative = true
-    elseif !isnothing(R_ref) 
-      if !isnullspecies(species_ref) && sign(chargeof(species_ref)) != sign(R_ref)
-        println("Setting R_ref to $(sign(chargeof(species_ref))*R_ref) to match sign of species_ref charge")
-        ref = sign(chargeof(species_ref))*R_ref
-      else
-        ref = R_ref
-      end
+    c = count(t->!isnothing(t), (R_ref, E_ref, pc_ref, dR_ref, dE_ref, dpc_ref))
+    if c > 1
+      error("Only one of R_ref, E_ref, pc_ref, dR_ref, dE_ref, and dpc_ref can be specified")
     end
-
+    ref_is_relative = any(t->!isnothing(t), (dR_ref, dE_ref, dpc_ref)) ? true : false
     ibp = length(line) > 0 && haskey(getfield(first(line), :pdict), InitialBeamlineParams) ? getfield(first(line), :pdict)[InitialBeamlineParams] : nothing
     if !isnothing(ibp)
-      if isnothing(ref)
+      if c == 0 # By default Beamline ctor will override InitialBeamlineParams setting
+        # So only set if Beamline ctor does not have it specified
         ref_is_relative = ibp.ref_meaning in (:dE_ref, :dR_ref, :dpc_ref) ? true : false
       end
       if isnullspecies(species_ref)
         species_ref = ibp.species_ref
       end
     end
-    bl = new(ReadOnlyVector(vec(line)), species_ref, ref_is_relative, NULL_LATTICE, -1, ref)
+    bl = new(ReadOnlyVector(vec(line)), species_ref, ref_is_relative, NULL_LATTICE, -1, nothing)
+    if c == 1
+      idx = findfirst(t->!isnothing(t), (R_ref, E_ref, pc_ref, dR_ref, dE_ref, dpc_ref))
+      sym = (:R_ref, :E_ref, :pc_ref, :dR_ref, :dE_ref, :dpc_ref)[idx]
+      val = (R_ref, E_ref, pc_ref, dR_ref, dE_ref, dpc_ref)[idx]
+      setproperty!(bl, sym, val)
+    end
     if !isnothing(ibp)
-      setproperty!(bl, ibp.ref_meaning, ibp.ref)
-      delete!(getfield(bl.line[1], :pdict), InitialBeamlineParams)
+      if c == 0 # Only set if Beamline kwarg not set
+        setproperty!(bl, ibp.ref_meaning, ibp.ref)
+      end
+      delete!(getfield(bl.line[1], :pdict), InitialBeamlineParams) # always delete it
     end
 
     # Check if any are in a Beamline already
@@ -137,13 +114,15 @@ const Lattice = _Lattice{Beamline}
 const NULL_LATTICE = Lattice(Beamline[])
 
 Base.propertynames(::Beamline) = (:line, :ref_is_relative, :ref, :lattice, :lattice_index, :R_ref, :E_ref, :pc_ref, :dR_ref, :dE_ref, :dpc_ref, :species_ref)
+ 
 
-R_to_E(species_ref::Species, R) = @FastGTPSA sqrt((R*C_LIGHT*chargeof(species_ref))^2 + massof(species_ref)^2)
-E_to_R(species_ref::Species, E) = @FastGTPSA massof(species_ref)*sinh(acosh(E/massof(species_ref)))/C_LIGHT/chargeof(species_ref)  # sqrt(E^2-massof(species_ref)^2)/C_LIGHT/chargeof(species_ref)
+# Sign is included to ensure that values could be dE_ref, dR_ref, for example
+R_to_E(species_ref::Species, R) = @FastGTPSA sign(R)*sign(chargeof(species_ref))*sqrt((R*C_LIGHT*chargeof(species_ref))^2 + massof(species_ref)^2)
+E_to_R(species_ref::Species, E) = @FastGTPSA sign(E)*massof(species_ref)*sinh(acosh(abs(E)/massof(species_ref)))/C_LIGHT/chargeof(species_ref)  # sqrt(E^2-massof(species_ref)^2)/C_LIGHT/chargeof(species_ref)
 pc_to_R(species_ref::Species, pc) = @FastGTPSA pc/C_LIGHT/chargeof(species_ref)
 R_to_pc(species_ref::Species, R) = @FastGTPSA R*chargeof(species_ref)*C_LIGHT
-E_to_pc(species_ref::Species, E) = @FastGTPSA massof(species_ref)*sinh(acosh(E/massof(species_ref)))
-pc_to_E(species_ref::Species, pc) = @FastGTPSA sqrt((pc)^2 + massof(species_ref)^2)
+E_to_pc(species_ref::Species, E) = @FastGTPSA sign(E)*massof(species_ref)*sinh(acosh(abs(E)/massof(species_ref)))
+pc_to_E(species_ref::Species, pc) = @FastGTPSA sign(pc)*sqrt((pc)^2 + massof(species_ref)^2)
 
 function Base.getproperty(b::Beamline, key::Symbol)
   if (key in (:R_ref, :E_ref, :pc_ref) && b.ref_is_relative)
@@ -167,7 +146,14 @@ function Base.getproperty(b::Beamline, key::Symbol)
       end
     else
       if key == :R_ref
-        return b.dR_ref + getproperty(b.lattice.beamlines[b.lattice_index-1], :R_ref)
+        # For R_ref, we need to ensure the sign is consistent with current Beamline's
+        # species. For null species, we can just ignore charge sign changes
+        species_ref = b.species_ref
+        if isnullspecies(species_ref)
+          return b.dR_ref + getproperty(b.lattice.beamlines[b.lattice_index-1], :R_ref)
+        else
+          return b.dR_ref + sign(chargeof(species_ref))*abs(getproperty(b.lattice.beamlines[b.lattice_index-1], :R_ref))
+        end
       elseif key == :E_ref
         return b.dE_ref + getproperty(b.lattice.beamlines[b.lattice_index-1], :E_ref)
       else # :pc_ref
@@ -191,32 +177,32 @@ function Base.getproperty(b::Beamline, key::Symbol)
       end
     else
       if key == :dR_ref
-        return b.R_ref - getproperty(b.lattice.beamlines[b.lattice_index-1], :R_ref)
+        return getproperty(b.lattice.beamlines[b.lattice_index-1], :R_ref) -  b.R_ref
       elseif key == :dE_ref
-        return b.E_ref - getproperty(b.lattice.beamlines[b.lattice_index-1], :E_ref)
+        return getproperty(b.lattice.beamlines[b.lattice_index-1], :E_ref) -  b.E_ref
       else # :dpc_ref
-        return b.pc_ref - getproperty(b.lattice.beamlines[b.lattice_index-1], :pc_ref)
+        return getproperty(b.lattice.beamlines[b.lattice_index-1], :pc_ref) - b.pc_ref
       end
     end
     error("Unable to get property $key: Beamline has set ref_is_relative = $(b.ref_is_relative)")
-  end
-  if key in (:E_ref, :dE_ref)
+  elseif key in (:E_ref, :dE_ref)
     return R_to_E(b.species_ref, b.ref)
   elseif key in (:pc_ref, :dpc_ref)
     return R_to_pc(b.species_ref, b.ref)
   elseif key in (:R_ref, :dR_ref)
     return b.ref
+  else
+    field = deval(getfield(b, key))
+    if key == :ref && isnothing(field)
+      #@warn "R_ref has not been set: using default value of NaN"
+      error("Unable to get $key: ref of the Beamline has not been set")
+    elseif key == :species_ref && isnullspecies(field)
+      error("Unable to get species_ref: species_ref of the Beamline has not been set")
+    elseif key in (:lattice, :lattice_index) && (field == -1 || field === NULL_LATTICE)
+      error("Unable to get $key: Beamline is not in a Lattice")
+    end
+    return field
   end
-  field = deval(getfield(b, key))
-  if key == :ref && isnothing(field)
-    #@warn "R_ref has not been set: using default value of NaN"
-    error("Unable to get $key: ref of the Beamline has not been set")
-  elseif key == :species_ref && isnullspecies(field)
-    error("Unable to get species_ref: species_ref of the Beamline has not been set")
-  elseif key in (:lattice, :lattice_index) && (field == -1 || field === NULL_LATTICE)
-    error("Unable to get $key: Beamline is not in a Lattice")
-  end
-  return field
 end
 
 function Base.setproperty!(b::Beamline, key::Symbol, value)
