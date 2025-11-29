@@ -1126,6 +1126,17 @@ using Test
     @test bl2.pc_ref - bl1.pc_ref ≈ bl2.dpc_ref
     @test bl2.E_ref - bl1.E_ref ≈ bl2.dE_ref
     @test bl2.R_ref - bl1.R_ref ≈ bl2.dR_ref
+
+    @test_throws ErrorException Beamline(LineElement[]; pc_ref=1, dR_ref=2)
+    @test_throws ErrorException Beamline(LineElement[]).lattice
+    @test (bl = Beamline(LineElement[]; E_ref=10); lat = Lattice([bl]); bl.dE_ref) == 10
+    @test_throws ErrorException Beamline(LineElement[]).lattice_index = 1
+    @test_throws ErrorException Beamline(LineElement[]).lattice = Beamlines.NULL_LATTICE
+    @test_throws ErrorException Beamline(LineElement[]).ref_meaning = Beamlines.RefMeaning.R_ref
+    
+    bl = Beamline(LineElement[])
+    lat = Lattice([bl])
+    @test_throws ErrorException Lattice([bl])
 #=
     bl = Beamline([ele])
     @test_throws ErrorException ele.species_ref = Species("proton")
