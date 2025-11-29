@@ -1215,7 +1215,7 @@ using Test
     ele1 = LineElement()
     bl1 = Beamline([ele1])
     @test_throws ErrorException Lattice([ele1])
-    @test_throws ErrorException Lattice(LineElement[]; E_ref=10e9, pc_ref=3e9)
+    @test_throws ErrorException Lattice(LineElement[]; E_ref0=10e9, pc_ref0=3e9)
 
 #=
     bl = Beamline([ele])
