@@ -1,9 +1,9 @@
 abstract type Branch end # Only subtype is Beamline
 
 struct _Lattice{T<:Branch}
-  beamlines::Vector{T}
-  function _Lattice{T}(beamlines::Vector{T}) where {T}
-    lat = new(beamlines)
+  beamlines::ReadOnlyVector{T,Vector{T}}
+  function _Lattice{T}(beamlines::Vector{T}) where {T<:Branch}
+    lat = new(ReadOnlyVector(vec(beamlines)))
     for i in eachindex(beamlines)
       bl = beamlines[i]
       if getfield(bl, :lattice_index) != -1
@@ -142,6 +142,55 @@ end
 
 const Lattice = _Lattice{Beamline}
 const NULL_LATTICE = Lattice(Beamline[])
+
+function Lattice(
+  line::Vector{LineElement};
+  species_ref0::Species=Species(),
+  E_ref0=nothing,
+  R_ref0=nothing,
+  pc_ref0=nothing,
+)
+  kwargs = (R_ref0, E_ref0, pc_ref0)
+  kwarg_syms = (:R_ref, :E_ref, :pc_ref)
+  c = count(t->!isnothing(t), kwargs)
+  if c > 1
+    error("Only one of E_ref0, pc_ref0, R_ref0 can be specified")
+  end
+  kwarg_idx = findfirst(t->!isnothing(t), kwargs)
+  kwarg_val = isnothing(kwarg_idx) ? nothing : kwargs[kwarg_idx]
+  kwarg_sym = isnothing(kwarg_idx) ? :R_ref : kwarg_syms[kwarg_idx] 
+
+  # Check if any elements already in Beamline
+  if any(t->haskey(getfield(t, :pdict), BeamlineParams), line)
+    error("Unable to construct Lattice using Lattice(::Vector{LineElement}) constructor:
+           at least one LineElement is already in a Beamline. Please use the 
+           Lattice(::Vector{Beamline}) constructor instead.")
+  end
+  # Determine all indices with InitialBeamlineParams
+  idxs = findall(t->haskey(getfield(t, :pdict), InitialBeamlineParams), line)
+  # If none, then only single Beamline
+  if length(idxs) == 0
+    return Lattice([Beamline(line; species_ref=species_ref0, kwarg_sym=>kwarg_val)])
+  end
+
+  n_beamlines = length(idxs)
+  beamlines = Vector{Beamline}(undef, n_beamlines)
+  for i in 1:n_beamlines
+    idx0 = idxs[i]
+    if i == n_beamlines
+      idxf = length(line)
+    else
+      idxf = idxs[i+1]-1
+    end
+
+    if i == 1
+      beamlines[i] = Beamline(line[idx0:idxf]; species_ref=species_ref0, kwarg_sym=>kwarg_val)
+    else
+      beamlines[i] = Beamline(line[idx0:idxf])
+    end
+  end
+  return Lattice(beamlines)
+end
 
 Base.propertynames(::Beamline) = (:line, :ref_meaning, :ref, :lattice, :lattice_index, :R_ref, :E_ref, :pc_ref, :dR_ref, :dE_ref, :dpc_ref, :species_ref)
  

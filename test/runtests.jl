@@ -1144,7 +1144,69 @@ using Test
     lat = Lattice([bl])
     @test_throws ErrorException Lattice([bl])
 
-    @test Lattice(Beamline(LineElement[]; dR_ref=10.)).beamlines[1].R_ref == 10.
+    @test Lattice([Beamline(LineElement[]; dR_ref=10.)]).beamlines[1].R_ref == 10.
+
+    # Lattice LineElement ctor:
+    ele1 = LineElement(E_ref=10e9, species_ref=Species("electron"))
+    ele1a = LineElement()
+    ele2 = LineElement(dE_ref=-3e9, species_ref=Species("proton"))
+    ele2a = LineElement()
+    ele2b = LineElement()
+    lat = Lattice([ele1, ele1a, ele2, ele2a, ele2b])
+    @test all(lat.beamlines[1].line .=== [ele1, ele1a])
+    @test all(lat.beamlines[2].line .=== [ele2, ele2a, ele2b])
+    bl1 = ele1.beamline
+    bl2 = ele2.beamline
+    @test bl2.E_ref == 7e9
+    @test bl2.species_ref == Species("proton")
+    @test bl2.dE_ref == -3e9
+    @test bl1.dE_ref == 10e9
+    @test bl2.R_ref - bl1.R_ref ≈ bl2.dR_ref
+    @test bl2.E_ref - bl1.E_ref ≈ bl2.dE_ref
+    @test bl2.pc_ref - bl1.pc_ref ≈ bl2.dpc_ref
+    @test bl2.R_ref ≈ Beamlines.E_to_R(bl2.species_ref, bl2.E_ref)
+    @test bl2.pc_ref ≈ Beamlines.E_to_pc(bl2.species_ref, bl2.E_ref)
+    bl2.dpc_ref = -2e9
+    bl1.R_ref = -40
+    @test bl2.dpc_ref == -2e9
+    @test bl1.R_ref == -40
+    @test bl2.pc_ref - bl1.pc_ref ≈ bl2.dpc_ref
+    @test bl2.E_ref - bl1.E_ref ≈ bl2.dE_ref
+    @test bl2.R_ref - bl1.R_ref ≈ bl2.dR_ref
+    bl2.dR_ref = -5
+    bl1.pc_ref = 9e9
+    @test bl2.pc_ref - bl1.pc_ref ≈ bl2.dpc_ref
+    @test bl2.E_ref - bl1.E_ref ≈ bl2.dE_ref
+    @test bl2.R_ref - bl1.R_ref ≈ bl2.dR_ref
+    bl2.E_ref = 10e9
+    @test bl2.E_ref == 10e9
+    @test bl2.pc_ref - bl1.pc_ref ≈ bl2.dpc_ref
+    @test bl2.E_ref - bl1.E_ref ≈ bl2.dE_ref
+    @test bl2.R_ref - bl1.R_ref ≈ bl2.dR_ref
+
+
+    # Check that InitialBeamlineParams is overridden:
+    ele1 = LineElement(E_ref=10e9, species_ref=Species("electron"))
+    ele1a = LineElement()
+    lat = Lattice([ele1, ele1a]; species_ref0=Species("proton"), E_ref0=20e9)
+    @test all(lat.beamlines[1].line .=== [ele1, ele1a])
+    bl1 = ele1.beamline
+    @test bl1.E_ref == 20e9
+    @test bl1.species_ref == Species("proton")
+
+    ele1 = LineElement(E_ref=10e9, species_ref=Species("electron"))
+    ele1a = LineElement()
+    ele2 = LineElement(dE_ref=-3e9, species_ref=Species("proton"))
+    ele2a = LineElement()
+    ele2b = LineElement()
+    lat = Lattice([ele1, ele1a, ele2, ele2a, ele2b]; species_ref0=Species("proton"), E_ref0=20e9)
+    @test all(lat.beamlines[1].line .=== [ele1, ele1a])
+    @test all(lat.beamlines[2].line .=== [ele2, ele2a, ele2b])
+    bl1 = ele1.beamline
+    bl2 = ele2.beamline
+    @test bl1.E_ref == 20e9
+    @test bl1.species_ref == Species("proton")
+
 #=
     bl = Beamline([ele])
     @test_throws ErrorException ele.species_ref = Species("proton")
