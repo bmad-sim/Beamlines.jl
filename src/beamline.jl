@@ -307,6 +307,8 @@ end
 # Because BeamlineParams contains an abstract type, "replacing" it 
 # is just modifying the field and returning itself
 # Unreachable? need to check coverage
+# looks unreachable, commenting out for now
+#=
 function replace(bp::BeamlineParams, key::Symbol, value)
   #if key in (:R_ref, :E_ref, :pc_ref, :dR_ref, :dE_ref, :dpc_ref, :species_ref)
   setproperty!(bp, key, value)
@@ -315,6 +317,7 @@ function replace(bp::BeamlineParams, key::Symbol, value)
   #  error("BeamlineParams property $key cannot be modified")
   #end
 end
+=#
 
 function Base.getproperty(bp::BeamlineParams, key::Symbol)
   if key in (:R_ref, :E_ref, :pc_ref, :species_ref, :lattice, :lattice_index, :ref)

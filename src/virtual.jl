@@ -468,7 +468,7 @@ function get_bl_params(ele::LineElement, sym::Symbol)
   if haskey(pdict, BeamlineParams)
     return getproperty(pdict[BeamlineParams], sym)
   elseif !haskey(pdict, InitialBeamlineParams)
-    return nothing
+    return error("Unable to get $sym: $sym has not been set")
   else
     return getproperty(pdict[InitialBeamlineParams], sym)
   end

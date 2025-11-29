@@ -995,6 +995,8 @@ using Test
 
     # Get unset property
     @test isnothing(LineElement().x1_limit)
+    # Get write-only property
+    @test_throws ErrorException LineElement(angle=1.0).angle
 
     # Test dR etc
     bl = Beamline(LineElement[]; dR_ref=-59.52872449027632, species_ref=Species("electron"))
@@ -1058,6 +1060,72 @@ using Test
     @test ele.R_ref ≈ -59.52872449027632
     @test ele.pc_ref ≈ 1.7846262612447e10
     @test ele.E_ref ≈ 1.784626264386055e10
+
+    # Get before setting anything
+    @test_throws ErrorException LineElement().E_ref
+    @test_throws ErrorException LineElement().species_ref
+    @test_throws ErrorException LineElement(E_ref=18e9).species_ref
+    @test_throws ErrorException LineElement(species_ref=Species("electron")).R_ref
+
+     # Only valid at first element
+    bl = Beamline([LineElement(), LineElement()], E_ref=10e9, species_ref=Species("electron"))
+    @test_throws ErrorException bl.line[2].E_ref = 2e9
+    bl.line[1].E_ref = 2e9
+    @test bl.line[1].E_ref == 2e9
+    @test bl.line[2].E_ref == 2e9
+    @test bl.line[2].dR_ref == 0
+    @test bl.line[2].dE_ref == 0
+    @test bl.line[2].dpc_ref == 0
+    @test_throws ErrorException bl.line[1].dR_ref
+    @test_throws ErrorException bl.line[1].dE_ref
+    @test_throws ErrorException bl.line[1].dpc_ref
+    @test_throws ErrorException Beamline([LineElement(), LineElement(species_ref=Species("electron"))])
+    @test_throws ErrorException Beamline([LineElement(), LineElement(R_ref=-39.)])
+    @test_throws ErrorException Beamline([LineElement(), LineElement(E_ref=10e9, species_ref=Species("electron"))])
+
+    # Overriding InitialBeamlineParams at Beamline level
+    ele = LineElement(species_ref=Species("electron"), pc_ref=1.0)
+    bl = Beamline([ele]; species_ref=Species("proton"), pc_ref=2.0)
+    @test ele.species_ref == Species("proton")
+    @test ele.pc_ref == 2.0
+
+    # Lattices now
+    bl1 = Beamline(LineElement[]; E_ref=10e9, species_ref=Species("electron"))
+    bl2 = Beamline(LineElement[]; dE_ref=-3e9, species_ref=Species("proton"))
+    @test_throws ErrorException bl1.dE_ref
+    @test_throws ErrorException bl2.dpc_ref
+    @test_throws ErrorException bl2.dR_ref
+    @test bl2.dE_ref == -3e9
+    lat = Lattice([bl1, bl2])
+    @test bl2.E_ref == 7e9
+    @test bl2.species_ref == Species("proton")
+    @test bl2.dE_ref == -3e9
+    @test bl1.dE_ref == 10e9
+    @test bl2.R_ref - bl1.R_ref ≈ bl2.dR_ref
+    @test bl2.E_ref - bl1.E_ref ≈ bl2.dE_ref
+    @test bl2.pc_ref - bl1.pc_ref ≈ bl2.dpc_ref
+    @test bl2.R_ref ≈ Beamlines.E_to_R(bl2.species_ref, bl2.E_ref)
+    @test bl2.pc_ref ≈ Beamlines.E_to_pc(bl2.species_ref, bl2.E_ref)
+
+    bl2.dpc_ref = -2e9
+    bl1.R_ref = -40
+    @test bl2.dpc_ref == -2e9
+    @test bl1.R_ref == -40
+    @test bl2.pc_ref - bl1.pc_ref ≈ bl2.dpc_ref
+    @test bl2.E_ref - bl1.E_ref ≈ bl2.dE_ref
+    @test bl2.R_ref - bl1.R_ref ≈ bl2.dR_ref
+
+    bl2.dR_ref = -5
+    bl1.pc_ref = 9e9
+    @test bl2.pc_ref - bl1.pc_ref ≈ bl2.dpc_ref
+    @test bl2.E_ref - bl1.E_ref ≈ bl2.dE_ref
+    @test bl2.R_ref - bl1.R_ref ≈ bl2.dR_ref
+
+    bl2.E_ref = 10e9
+    @test bl2.E_ref == 10e9
+    @test bl2.pc_ref - bl1.pc_ref ≈ bl2.dpc_ref
+    @test bl2.E_ref - bl1.E_ref ≈ bl2.dE_ref
+    @test bl2.R_ref - bl1.R_ref ≈ bl2.dR_ref
 #=
     bl = Beamline([ele])
     @test_throws ErrorException ele.species_ref = Species("proton")
@@ -1085,20 +1153,10 @@ using Test
     @test_throws ErrorException Beamline([LineElement(), LineElement(R_ref=-39.)])
     @test_throws ErrorException Beamline([LineElement(), LineElement(E_ref=10e9, species_ref=Species("electron"))])
 
-    # Overriding InitialBeamlineParams at Beamline level
-    ele = LineElement(species_ref=Species("electron"), pc_ref=1.0)
-    bl = Beamline([ele]; species_ref=Species("proton"), pc_ref=2.0)
-    @test ele.species_ref == Species("proton")
-    @test ele.pc_ref == 2.0
+
     =#
 #=
-    bl1 = Beamline(LineElement[]; E_ref=10e9, species_ref=Species("electron"))
-    bl2 = Beamline(LineElement[]; dE_ref=-3e9, species_ref=Species("proton"))
-    lat = Lattice([bl1, bl2])
 
-    bl1 = Beamline(LineElement[]; E_ref=10e9, species_ref=Species("electron"))
-    bl2 = Beamline(LineElement[]; dE_ref=-3e9, species_ref=Species("proton"))
-    lat = Lattice([bl1, bl2])
     =#
     #=
     @test_throws ErrorException Beamline([LineElement()]; dE_ref=10)
