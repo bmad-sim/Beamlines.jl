@@ -1207,6 +1207,16 @@ using Test
     @test bl1.E_ref == 20e9
     @test bl1.species_ref == Species("proton")
 
+
+    lat = Lattice([LineElement(), LineElement()]; species_ref0=Species("proton"), E_ref0=10e9)
+    @test lat.beamlines[1].E_ref == 10e9
+    @test lat.beamlines[1].species_ref == Species("proton")
+
+    ele1 = LineElement()
+    bl1 = Beamline([ele1])
+    @test_throws ErrorException Lattice([ele1])
+    @test_throws ErrorException Lattice(LineElement[]; E_ref=10e9, pc_ref=3e9)
+
 #=
     bl = Beamline([ele])
     @test_throws ErrorException ele.species_ref = Species("proton")
