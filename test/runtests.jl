@@ -1143,6 +1143,8 @@ using Test
     bl = Beamline(LineElement[])
     lat = Lattice([bl])
     @test_throws ErrorException Lattice([bl])
+
+    @test Lattice(Beamline(LineElement[]; dR_ref=10.)).beamlines[1].R_ref == 10.
 #=
     bl = Beamline([ele])
     @test_throws ErrorException ele.species_ref = Species("proton")
