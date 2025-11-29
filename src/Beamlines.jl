@@ -32,6 +32,7 @@ export AbstractParams,
        Controller,
        Patch,
        set!,
+       Lattice,
 
        deepcopy_no_beamline,
        

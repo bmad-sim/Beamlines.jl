@@ -212,6 +212,38 @@ qf.Kn1 = 0.1
 # second instance
 qf2 = fodo.line[5]
 qf2.Kn1 == 0.1 # true
+
+# A Beamline has a single E_ref, R_ref, or pc_ref, and 
+# a single Species. One could also specify a single 
+# dE_ref, dR_ref, dpc_ref wrt the previous Beamline, granted 
+# the Beamlines are in a Lattice
+bl1 = Beamline(LineElement[]; E_ref=10e9, species_ref=Species("proton"))
+bl2 = Beamline(LineElement[]; dE_ref=-3e9, species_ref=Species("electron"))
+lat = Lattice([bl1, bl2])
+
+# In this case, bl1.E_ref=10e9, bl2.E_ref=7e9
+# Whichever of E_ref, R_ref, pc_ref, dE_ref, dR_ref, or dpc_ref is 
+# entered LAST is the independent variable
+
+# One could also put this information in the FIRST element of a Beamline:
+ele1 = LineElement(E_ref=10e9, species_ref=Species("proton"))
+ele2 = LineElement()
+bl1 = Beamline([ele1, ele2])
+bl1.E_ref == 10e9 # true
+bl1.species_ref == Species("proton") # true
+
+# To ease construction of Lattices, one can alternatively use the 
+# Lattice(::Vector{LineElement}) constructor, which will automatically
+ele1 = LineElement(E_ref=10e9, species_ref=Species("electron"))
+ele1a = LineElement()
+ele2 = LineElement(dE_ref=-3e9, species_ref=Species("proton"))
+ele2a = LineElement()
+ele2b = LineElement()
+lat = Lattice([ele1, ele1a, ele2, ele2a, ele2b])
+all(lat.beamlines[1].line .=== [ele1, ele1a]) # true
+all(lat.beamlines[2].line .=== [ele2, ele2a, ele2b]) # true
+ele1.E_ref == 10e9 # true
+ele2.E_ref == 7e9 # true
 ```
 
 # Acknowledgements

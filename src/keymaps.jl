@@ -30,8 +30,17 @@ const PROPERTIES_MAP = Dict{Symbol,Type{<:AbstractParams}}(
 
   :beamline => BeamlineParams,
   :beamline_index => BeamlineParams,
+  #= These guys now virtual for InitialBeamlineParams
   :R_ref => BeamlineParams, 
+  :E_ref => BeamlineParams, 
+  :pc_ref => BeamlineParams, 
+  :dR_ref => BeamlineParams, 
+  :dE_ref => BeamlineParams, 
+  :dpc_ref => BeamlineParams, 
   :species_ref => BeamlineParams,
+  =#
+  :lattice => BeamlineParams,
+  :lattice_index => BeamlineParams,
   :s => BeamlineParams,
   :s_downstream => BeamlineParams,
 
@@ -80,11 +89,3 @@ const PARAMS_MAP = Dict{Symbol,Type{<:AbstractParams}}(
   :RFParams => RFParams,
   :ApertureParams => ApertureParams,
 )
-
-
-
-# Maybe we can do some trickery with FunctionWrappers
-# but that will require us to Kow the return type...
-
-# This solution is MUCH faster than AL
-# AND no bookkeeper :)

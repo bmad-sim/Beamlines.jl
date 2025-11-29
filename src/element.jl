@@ -166,7 +166,9 @@ function Base.getproperty(ele::LineElement, key::Symbol)
       # If there is the parameter group, then the property 100% exists, don't worry about InheritParams
       return deval(getproperty(getindex(pdict, PROPERTIES_MAP[key]), key))
     elseif haskey(pdict, InheritParams)
-        return getproperty(get_parent(pdict), key)
+      return getproperty(get_parent(pdict), key)
+    else
+      return nothing
     end
   end
 

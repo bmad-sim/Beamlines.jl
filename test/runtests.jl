@@ -951,9 +951,6 @@ using Test
     @test Beamlines.deval(ele.RFParams) ≈ RFParams(bo + 27, bo + 28, bo + 29, false, false)
 
     # Species addition
-    @test_throws ErrorException Beamline([LineElement()]; E_ref=10)
-    @test_throws ErrorException Beamline([LineElement()]; E_ref=10, R_ref=2)
-    @test_throws ErrorException Beamline([LineElement()]; E_ref=10, pc_ref=12)
     bl = Beamline([LineElement(), LineElement()]; R_ref=-59.52872449027632, species_ref=Species("electron"))
     @test bl.species_ref == Species("electron")
     @test bl.R_ref == -59.52872449027632
@@ -971,23 +968,315 @@ using Test
     @test bl.R_ref ≈ -59.52872449027632
     @test bl.pc_ref ≈ 1.7846262612447e10
     @test bl.E_ref ≈ 1.784626264386055e10
-    @test abs(bl.pc_ref*sinh(acosh(bl.E_ref/bl.pc_ref)) - Beamlines.massof(bl.species_ref)) < 0.02
+    @test abs(bl.pc_ref*sinh(acosh(bl.E_ref/bl.pc_ref)) - Beamlines.massof(bl.species_ref)) < 0.41 # Round off error here
 
-    @test_throws ErrorException Beamline(LineElement[], pc_ref=10)
-    @test_throws ErrorException Beamline(LineElement[], E_ref=10)
+    @test_throws ErrorException bl.dR_ref
+    @test_throws ErrorException bl.dE_ref
+    @test_throws ErrorException bl.dpc_ref
+    @test bl.line[1].E_ref == bl.E_ref
+    @test bl.line[1].R_ref == bl.R_ref
+    @test bl.line[1].pc_ref == bl.pc_ref
+    @test bl.line[2].E_ref == bl.E_ref
+    @test bl.line[2].R_ref == bl.R_ref
+    @test bl.line[2].pc_ref == bl.pc_ref
+
     @test Beamline(LineElement[], species_ref=Species("electron"), R_ref = 10).R_ref == -10
     ele = LineElement()
     bl1 = Beamline([ele])
     @test_throws ErrorException Beamline([ele])
     bl = Beamline(LineElement[], species_ref=Species("electron"), R_ref = 10)
     @test bl.R_ref == -10
-    
     @test (bl.pc_ref = 0; bl.R_ref) == 0
     @test (bl.E_ref = Beamlines.massof(Species("electron")); bl.R_ref) == 0
-    @test_throws ErrorException Beamline(LineElement[]).pc_ref = 10
-    @test_throws ErrorException Beamline(LineElement[]).E_ref = 10
     bl.R_ref = 10
     @test bl.R_ref == -10
 
     @test_throws ErrorException Beamline(LineElement[]).species_ref
+
+    # Get unset property
+    @test isnothing(LineElement().x1_limit)
+    # Get write-only property
+    @test_throws ErrorException LineElement(angle=1.0).angle
+
+    # Test dR etc
+    bl = Beamline(LineElement[]; dR_ref=-59.52872449027632, species_ref=Species("electron"))
+    @test bl.species_ref == Species("electron")
+    @test bl.dR_ref == -59.52872449027632
+    @test_throws ErrorException bl.dpc_ref
+    @test_throws ErrorException bl.dE_ref
+    @test_throws ErrorException bl.R_ref
+    @test_throws ErrorException bl.E_ref
+    @test_throws ErrorException bl.pc_ref
+    bl = Beamline(LineElement[]; dpc_ref=1.7846262612447e10, species_ref=Species("electron"))
+    @test bl.species_ref == Species("electron")
+    @test bl.dpc_ref == 1.7846262612447e10
+    @test_throws ErrorException bl.dR_ref
+    @test_throws ErrorException bl.dE_ref
+    @test_throws ErrorException bl.R_ref
+    @test_throws ErrorException bl.E_ref
+    @test_throws ErrorException bl.pc_ref
+    bl = Beamline(LineElement[]; dE_ref=1.784626264386055e10, species_ref=Species("electron"))
+    @test bl.species_ref == Species("electron")
+    @test bl.dE_ref == 1.784626264386055e10
+    @test_throws ErrorException bl.dpc_ref
+    @test_throws ErrorException bl.dR_ref
+    @test_throws ErrorException bl.E_ref 
+    @test_throws ErrorException bl.R_ref
+    @test_throws ErrorException bl.pc_ref
+
+    # InitialBeamlineParams
+    ele = LineElement(species_ref=Species("electron"))
+    @test_throws ErrorException ele.InitialBeamlineParams
+    @test_throws ErrorException ele.InitialBeamlineParams = Beamlines.InitialBeamlineParams()
+    @test Beamline([ele]).species_ref == Species("electron")
+    ele = LineElement(species_ref=Species("electron"), dR_ref=-59.52872449027632)
+    @test ele.dR_ref == -59.52872449027632
+    @test_throws ErrorException ele.dpc_ref
+    @test_throws ErrorException ele.dE_ref 
+    ele.dpc_ref = 1.7846262612447e10
+    @test ele.dpc_ref == 1.7846262612447e10
+    @test_throws ErrorException ele.dR_ref
+    @test_throws ErrorException ele.dE_ref
+    ele.dE_ref = 1.784626264386055e10
+    @test ele.dE_ref == 1.784626264386055e10
+    @test_throws ErrorException ele.dR_ref 
+    @test_throws ErrorException ele.dpc_ref
+    ele.species_ref = Species("proton")
+    @test ele.species_ref == Species("proton")
+    @test ele.dE_ref == 1.784626264386055e10
+    @test_throws ErrorException ele.dR_ref 
+    @test_throws ErrorException ele.dpc_ref
+    ele.E_ref = ele.dE_ref
+    ele.species_ref = Species("electron")
+    @test ele.species_ref == Species("electron")
+    @test ele.R_ref ≈ -59.52872449027632
+    @test ele.pc_ref ≈ 1.7846262612447e10
+    @test ele.E_ref ≈ 1.784626264386055e10
+    ele.pc_ref = 1.7846262612447e10
+    @test ele.R_ref ≈ -59.52872449027632
+    @test ele.pc_ref ≈ 1.7846262612447e10
+    @test ele.E_ref ≈ 1.784626264386055e10
+    ele.R_ref = -59.52872449027632
+    @test ele.R_ref ≈ -59.52872449027632
+    @test ele.pc_ref ≈ 1.7846262612447e10
+    @test ele.E_ref ≈ 1.784626264386055e10
+
+    # Get before setting anything
+    @test_throws ErrorException LineElement().E_ref
+    @test_throws ErrorException LineElement().species_ref
+    @test_throws ErrorException LineElement(E_ref=18e9).species_ref
+    @test_throws ErrorException LineElement(species_ref=Species("electron")).R_ref
+
+     # Only valid at first element
+    bl = Beamline([LineElement(), LineElement()], E_ref=10e9, species_ref=Species("electron"))
+    @test_throws ErrorException bl.line[2].E_ref = 2e9
+    bl.line[1].E_ref = 2e9
+    @test bl.line[1].E_ref == 2e9
+    @test bl.line[2].E_ref == 2e9
+    @test bl.line[2].dR_ref == 0
+    @test bl.line[2].dE_ref == 0
+    @test bl.line[2].dpc_ref == 0
+    @test_throws ErrorException bl.line[1].dR_ref
+    @test_throws ErrorException bl.line[1].dE_ref
+    @test_throws ErrorException bl.line[1].dpc_ref
+    @test_throws ErrorException Beamline([LineElement(), LineElement(species_ref=Species("electron"))])
+    @test_throws ErrorException Beamline([LineElement(), LineElement(R_ref=-39.)])
+    @test_throws ErrorException Beamline([LineElement(), LineElement(E_ref=10e9, species_ref=Species("electron"))])
+
+    # Overriding InitialBeamlineParams at Beamline level
+    ele = LineElement(species_ref=Species("electron"), pc_ref=1.0)
+    bl = Beamline([ele]; species_ref=Species("proton"), pc_ref=2.0)
+    @test ele.species_ref == Species("proton")
+    @test ele.pc_ref == 2.0
+    # set thru first element
+    ele.pc_ref = 3.0
+    @test ele.pc_ref == 3.0
+    # last cov
+    bl.ref = 4.0
+    @test bl.ref == 4.0
+
+    # Lattices now
+    bl1 = Beamline(LineElement[]; E_ref=10e9, species_ref=Species("electron"))
+    bl2 = Beamline(LineElement[]; dE_ref=-3e9, species_ref=Species("proton"))
+    @test_throws ErrorException bl1.dE_ref
+    @test_throws ErrorException bl2.dpc_ref
+    @test_throws ErrorException bl2.dR_ref
+    @test bl2.dE_ref == -3e9
+    lat = Lattice([bl1, bl2])
+    @test bl2.E_ref == 7e9
+    @test bl2.species_ref == Species("proton")
+    @test bl2.dE_ref == -3e9
+    @test bl1.dE_ref == 10e9
+    @test bl2.R_ref - bl1.R_ref ≈ bl2.dR_ref
+    @test bl2.E_ref - bl1.E_ref ≈ bl2.dE_ref
+    @test bl2.pc_ref - bl1.pc_ref ≈ bl2.dpc_ref
+    @test bl2.R_ref ≈ Beamlines.E_to_R(bl2.species_ref, bl2.E_ref)
+    @test bl2.pc_ref ≈ Beamlines.E_to_pc(bl2.species_ref, bl2.E_ref)
+
+    bl2.dpc_ref = -2e9
+    bl1.R_ref = -40
+    @test bl2.dpc_ref == -2e9
+    @test bl1.R_ref == -40
+    @test bl2.pc_ref - bl1.pc_ref ≈ bl2.dpc_ref
+    @test bl2.E_ref - bl1.E_ref ≈ bl2.dE_ref
+    @test bl2.R_ref - bl1.R_ref ≈ bl2.dR_ref
+
+    bl2.dR_ref = -5
+    bl1.pc_ref = 9e9
+    @test bl2.pc_ref - bl1.pc_ref ≈ bl2.dpc_ref
+    @test bl2.E_ref - bl1.E_ref ≈ bl2.dE_ref
+    @test bl2.R_ref - bl1.R_ref ≈ bl2.dR_ref
+
+    bl2.E_ref = 10e9
+    @test bl2.E_ref == 10e9
+    @test bl2.pc_ref - bl1.pc_ref ≈ bl2.dpc_ref
+    @test bl2.E_ref - bl1.E_ref ≈ bl2.dE_ref
+    @test bl2.R_ref - bl1.R_ref ≈ bl2.dR_ref
+
+    @test_throws ErrorException Beamline(LineElement[]; pc_ref=1, dR_ref=2)
+    @test_throws ErrorException Beamline(LineElement[]).lattice
+    @test (bl = Beamline(LineElement[]; E_ref=10); lat = Lattice([bl]); bl.dE_ref) == 10
+    @test_throws ErrorException Beamline(LineElement[]).lattice_index = 1
+    @test_throws ErrorException Beamline(LineElement[]).lattice = Beamlines.NULL_LATTICE
+    @test_throws ErrorException Beamline(LineElement[]).ref_meaning = Beamlines.RefMeaning.R_ref
+    
+    bl = Beamline(LineElement[])
+    lat = Lattice([bl])
+    @test_throws ErrorException Lattice([bl])
+
+    @test Lattice([Beamline(LineElement[]; dR_ref=10.)]).beamlines[1].R_ref == 10.
+
+    # Lattice LineElement ctor:
+    ele1 = LineElement(E_ref=10e9, species_ref=Species("electron"))
+    ele1a = LineElement()
+    ele2 = LineElement(dE_ref=-3e9, species_ref=Species("proton"))
+    ele2a = LineElement()
+    ele2b = LineElement()
+    lat = Lattice([ele1, ele1a, ele2, ele2a, ele2b])
+    @test all(lat.beamlines[1].line .=== [ele1, ele1a])
+    @test all(lat.beamlines[2].line .=== [ele2, ele2a, ele2b])
+    bl1 = ele1.beamline
+    bl2 = ele2.beamline
+    @test bl2.E_ref == 7e9
+    @test bl2.species_ref == Species("proton")
+    @test bl2.dE_ref == -3e9
+    @test bl1.dE_ref == 10e9
+    @test bl2.R_ref - bl1.R_ref ≈ bl2.dR_ref
+    @test bl2.E_ref - bl1.E_ref ≈ bl2.dE_ref
+    @test bl2.pc_ref - bl1.pc_ref ≈ bl2.dpc_ref
+    @test bl2.R_ref ≈ Beamlines.E_to_R(bl2.species_ref, bl2.E_ref)
+    @test bl2.pc_ref ≈ Beamlines.E_to_pc(bl2.species_ref, bl2.E_ref)
+    bl2.dpc_ref = -2e9
+    bl1.R_ref = -40
+    @test bl2.dpc_ref == -2e9
+    @test bl1.R_ref == -40
+    @test bl2.pc_ref - bl1.pc_ref ≈ bl2.dpc_ref
+    @test bl2.E_ref - bl1.E_ref ≈ bl2.dE_ref
+    @test bl2.R_ref - bl1.R_ref ≈ bl2.dR_ref
+    bl2.dR_ref = -5
+    bl1.pc_ref = 9e9
+    @test bl2.pc_ref - bl1.pc_ref ≈ bl2.dpc_ref
+    @test bl2.E_ref - bl1.E_ref ≈ bl2.dE_ref
+    @test bl2.R_ref - bl1.R_ref ≈ bl2.dR_ref
+    bl2.E_ref = 10e9
+    @test bl2.E_ref == 10e9
+    @test bl2.pc_ref - bl1.pc_ref ≈ bl2.dpc_ref
+    @test bl2.E_ref - bl1.E_ref ≈ bl2.dE_ref
+    @test bl2.R_ref - bl1.R_ref ≈ bl2.dR_ref
+
+
+    # Check that InitialBeamlineParams is overridden:
+    ele1 = LineElement(E_ref=10e9, species_ref=Species("electron"))
+    ele1a = LineElement()
+    lat = Lattice([ele1, ele1a]; species_ref0=Species("proton"), E_ref0=20e9)
+    @test all(lat.beamlines[1].line .=== [ele1, ele1a])
+    bl1 = ele1.beamline
+    @test bl1.E_ref == 20e9
+    @test bl1.species_ref == Species("proton")
+
+    ele1 = LineElement(E_ref=10e9, species_ref=Species("electron"))
+    ele1a = LineElement()
+    ele2 = LineElement(dE_ref=-3e9, species_ref=Species("proton"))
+    ele2a = LineElement()
+    ele2b = LineElement()
+    lat = Lattice([ele1, ele1a, ele2, ele2a, ele2b]; species_ref0=Species("proton"), E_ref0=20e9)
+    @test all(lat.beamlines[1].line .=== [ele1, ele1a])
+    @test all(lat.beamlines[2].line .=== [ele2, ele2a, ele2b])
+    bl1 = ele1.beamline
+    bl2 = ele2.beamline
+    @test bl1.E_ref == 20e9
+    @test bl1.species_ref == Species("proton")
+
+
+    lat = Lattice([LineElement(), LineElement()]; species_ref0=Species("proton"), E_ref0=10e9)
+    @test lat.beamlines[1].E_ref == 10e9
+    @test lat.beamlines[1].species_ref == Species("proton")
+
+    ele1 = LineElement()
+    bl1 = Beamline([ele1])
+    @test_throws ErrorException Lattice([ele1])
+    @test_throws ErrorException Lattice(LineElement[]; E_ref0=10e9, pc_ref0=3e9)
+
+#=
+    bl = Beamline([ele])
+    @test_throws ErrorException ele.species_ref = Species("proton")
+    @test bl.R_ref ≈ -59.52872449027632
+    @test bl.pc_ref ≈ 1.7846262612447e10
+    @test bl.E_ref ≈ 1.784626264386055e10
+    @test_throws ErrorException bl.dR_ref
+    @test_throws ErrorException bl.dE_ref
+    @test_throws ErrorException bl.dpc_ref
+    @test !haskey(getfield(ele, :pdict), Beamlines.InitialBeamlineParams)
+
+    # Only valid at first element
+    bl = Beamline([LineElement(), LineElement()], E_ref=10e9, species_ref=Species("electron"))
+    @test_throws ErrorException bl.line[2].E_ref = 2e9
+    bl.line[1].E_ref = 2e9
+    @test bl.line[1].E_ref ≈ 2e9
+    @test bl.line[2].E_ref ≈ 2e9
+    @test bl.line[2].dR_ref == 0
+    @test bl.line[2].dE_ref == 0
+    @test bl.line[2].dpc_ref == 0
+    @test_throws ErrorException bl.line[1].dR_ref
+    @test_throws ErrorException bl.line[1].dE_ref
+    @test_throws ErrorException bl.line[1].dpc_ref
+    @test_throws ErrorException Beamline([LineElement(), LineElement(species_ref=Species("electron"))])
+    @test_throws ErrorException Beamline([LineElement(), LineElement(R_ref=-39.)])
+    @test_throws ErrorException Beamline([LineElement(), LineElement(E_ref=10e9, species_ref=Species("electron"))])
+
+
+    =#
+#=
+
+    =#
+    #=
+    @test_throws ErrorException Beamline([LineElement()]; dE_ref=10)
+    @test_throws ErrorException Beamline([LineElement()]; dE_ref=10, R_ref=2)
+    @test_throws ErrorException Beamline([LineElement()]; E_ref=10, dpc_ref=12)
+    bl = Beamline([LineElement(), LineElement()]; R_ref=-59.52872449027632, species_ref=Species("electron"))
+    @test bl.species_ref == Species("electron")
+    @test bl.R_ref == -59.52872449027632 
+    @test bl.pc_ref ≈ 1.7846262612447e10
+    @test bl.E_ref ≈ 1.784626264386055e10
+    @test sqrt(bl.E_ref^2-bl.pc_ref^2) ≈ Beamlines.massof(bl.species_ref)
+    bl = Beamline([LineElement(), LineElement()]; pc_ref=1.7846262612447e10, species_ref=Species("electron"))
+    @test bl.species_ref == Species("electron")
+    @test bl.R_ref ≈ -59.52872449027632
+    @test bl.pc_ref ≈ 1.7846262612447e10
+    @test bl.E_ref ≈ 1.784626264386055e10
+    @test sqrt(bl.E_ref^2-bl.pc_ref^2) ≈ Beamlines.massof(bl.species_ref)
+    bl = Beamline([LineElement(), LineElement()]; E_ref=1.784626264386055e10, species_ref=Species("electron"))
+    @test bl.species_ref == Species("electron")
+    @test bl.R_ref ≈ -59.52872449027632
+    @test bl.pc_ref ≈ 1.7846262612447e10
+    @test bl.E_ref ≈ 1.784626264386055e10
+    =#
+    # InitialBeamlineParams tests
+    #=
+    bl = Beamline([LineElement(), LineElement()]; E_ref=1.784626264386055e10, species_ref=Species("electron"))
+    @test bl.species_ref == Species("electron")
+    @test bl.R_ref ≈ -59.52872449027632
+    @test bl.pc_ref ≈ 1.7846262612447e10
+    @test bl.E_ref ≈ 1.784626264386055e10
+    =#
 end
