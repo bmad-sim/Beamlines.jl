@@ -1088,6 +1088,12 @@ using Test
     bl = Beamline([ele]; species_ref=Species("proton"), pc_ref=2.0)
     @test ele.species_ref == Species("proton")
     @test ele.pc_ref == 2.0
+    # set thru first element
+    ele.pc_ref = 3.0
+    @test ele.pc_ref == 3.0
+    # last cov
+    bl.ref = 4.0
+    @test bl.ref == 4.0
 
     # Lattices now
     bl1 = Beamline(LineElement[]; E_ref=10e9, species_ref=Species("electron"))
