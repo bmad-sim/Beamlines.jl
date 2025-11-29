@@ -82,7 +82,7 @@ end
     ibp = length(line) > 0 && haskey(getfield(first(line), :pdict), InitialBeamlineParams) ? getfield(first(line), :pdict)[InitialBeamlineParams] : nothing
     if !isnothing(ibp)
       if isnullspecies(species_ref)
-        species_ref = ibp.species_ref
+        species_ref = getfield(ibp, :species_ref)
       end
     end
 
@@ -114,7 +114,7 @@ end
 
     # Now at end set the stuff (in case construction needed to be reversed due to error)
     if !isnothing(ibp)
-      setproperty!(bl, refmeaning_to_sym(ibp.ref_meaning), ibp.ref)
+      setproperty!(bl, refmeaning_to_sym(ibp.ref_meaning), getfield(ibp, :ref))
       delete!(getfield(bl.line[1], :pdict), InitialBeamlineParams) # always delete it
     end
 
@@ -264,11 +264,13 @@ function Base.setproperty!(b::Beamline, key::Symbol, value)
     setfield!(b, :ref_meaning, sym_to_refmeaning(key))
     return setfield!(b, :ref, value)
   elseif key == :R_ref
-    species_ref = b.species_ref
+    species_ref = getfield(b, :species_ref)
     if !isnothing(value) && !isnullspecies(species_ref) && sign(chargeof(species_ref)) != sign(value)
       println("Setting R_ref to $(sign(chargeof(species_ref))*value) to match sign of species_ref charge")
+      setfield!(b, :ref_meaning, sym_to_refmeaning(key))
       return setfield!(b, :ref, sign(chargeof(species_ref))*value)
     else
+      setfield!(b, :ref_meaning, sym_to_refmeaning(key))
       return setfield!(b, :ref, value)
     end
   else
@@ -289,12 +291,11 @@ Base.propertynames(::BeamlineParams) = (:beamline, :beamline_index, :s, :s_downs
 function Base.setproperty!(bp::BeamlineParams, key::Symbol, value)
   # only settable at first element
   if key in (:R_ref, :E_ref, :pc_ref, :dR_ref, :dE_ref, :dpc_ref)
-    if bp.beamline_index == 1 && !any(t->haskey(getfield(t, :pdict), InheritParams) && getfield(t, :pdict)[InheritParams].parent === ele, bp.beamline.line)
+    if bp.beamline_index == 1 # && !any(t->haskey(getfield(t, :pdict), InheritParams) && getfield(t, :pdict)[InheritParams].parent === ele, bp.beamline.line)
       return setproperty!(bp.beamline, key, value)
     else
       error("Property $key is a Beamline property, and therefore is only settable at 
-            either the Beamline-level, or the first element in a Beamline (so long  
-            as that element has no duplicates). Consider setting $key at the Beamline 
+            at the first element in a Beamline Consider setting $key at the Beamline 
             level (e.g. beamline.$key = $value), or setting this parameter in an element 
             prior to Lattice construction to automatically generate a separate Beamline.")
     end
@@ -305,6 +306,7 @@ end
 
 # Because BeamlineParams contains an abstract type, "replacing" it 
 # is just modifying the field and returning itself
+# Unreachable? need to check coverage
 function replace(bp::BeamlineParams, key::Symbol, value)
   #if key in (:R_ref, :E_ref, :pc_ref, :dR_ref, :dE_ref, :dpc_ref, :species_ref)
   setproperty!(bp, key, value)
@@ -344,35 +346,16 @@ end
 # InitialBeamlineParams which stores things before making a Beamline
 # This allows the behavior of e.g. setting the first element's E_ref, etc
 # This will then get destroyed when constructing a Beamline
-
-# Tricky part here is if e.g. someone says E_ref = x BEFORE specifying a species
-# In the Beamline, Species is a constant and cannot be changed, and so you either 
-# have it or you don't (known from kwarg in ctor)
-
-# With the LineElement the kwargs are evaluated in order. Therefore we have this problem
-
-# How to remedy it? well there are a couple of ways
-# 1 let anything be the independent variable at this stage
-# 2 force people to give species first
-# 3 could actually store the symbols for each set and then just take the last-set one
-
-# we go with 3
-
-# This must NOT be added to PARAMS_MAP, because users should not be able 
-# to freely put this in, that could corrupt the state
-
-# This is only put in by the virtual setters for :E_ref, :species_ref, :dR_ref, etc
-# It is then removed upon Beamline construction.
 @kwdef mutable struct InitialBeamlineParams <: AbstractParams
-  species_ref::Species = Species()
-  ref_meaning::Symbol  = :R_ref
-  ref                  = nothing
+  species_ref::Species       = Species()
+  ref_meaning::RefMeaning.T  = RefMeaning.R_ref
+  ref                        = nothing
 end
 
 function Base.setproperty!(ibp::InitialBeamlineParams, key::Symbol, value)
   if key in (:E_ref, :R_ref, :pc_ref, :dE_ref, :dR_ref, :dpc_ref)
-     setfield!(ibp, :ref, value)
-     setfield!(ibp, :ref_meaning, key)
+    setfield!(ibp, :ref_meaning, sym_to_refmeaning(key))
+    setfield!(ibp, :ref, value)
   else
     setfield!(ibp, key, value)
   end
@@ -380,46 +363,42 @@ function Base.setproperty!(ibp::InitialBeamlineParams, key::Symbol, value)
 end
 
 function Base.getproperty(ibp::InitialBeamlineParams, key::Symbol)
-  if (key in (:dE_ref, :dR_ref, :dpc_ref) && !(ibp.ref_meaning in (:dE_ref, :dR_ref, :dpc_ref))) ||
-    (key in (:E_ref, :R_ref, :pc_ref) && !(ibp.ref_meaning in (:E_ref, :R_ref, :pc_ref)))
-    error("Unable to get property $key: InitialBeamlineParams has stored $(ibp.ref_meaning), and
-            so property $key depends on an upstream Lattice which has not been constructed yet.")
-  elseif key in (:E_ref, :dE_ref) && ibp.ref_meaning in (:E_ref, :dE_ref) ||
-    key in (:R_ref, :dR_ref) && ibp.ref_meaning in (:R_ref, :dR_ref) ||
-    key in (:pc_ref, :dpc_ref) && ibp.ref_meaning in (:pc_ref, :dpc_ref)
-    return getfield(ibp, :ref)
-  elseif key in (:E_ref, :R_ref, :pc_ref, :dE_ref, :dR_ref, :dpc_ref) # Conversion required
-    species_ref = getfield(ibp, :species_ref)
-    if isnullspecies(species_ref)
-      error("Unable to get property $key: property depends on species_ref, but species_ref has not been set")
+  if key in (:ref, :species_ref, :ref_meaning)
+    field = deval(getfield(ibp, key))
+    if key == :ref && isnothing(field)
+      error("Unable to get ref: ref of the Beamline has not been set")
+    elseif key == :species_ref && isnullspecies(field)
+      error("Unable to get species_ref: species_ref of the Beamline has not been set")
     end
-    ref = ibp.ref
-    if key in (:E_ref, :dE_ref)
-      if ibp.ref_meaning in (:R_ref, :dR_ref)
-        return R_to_E(species_ref, ref)
+    return field
+  else
+    ref_meaning = refmeaning_to_sym(ibp.ref_meaning)
+    if key == ref_meaning
+      return ibp.ref
+    elseif key in (:R_ref, :E_ref, :pc_ref) && ref_meaning in (:R_ref, :E_ref, :pc_ref)
+      if key == :E_ref
+        if ref_meaning == :pc_ref
+          return pc_to_E(ibp.species_ref, ibp.ref)
+        else
+          return R_to_E(ibp.species_ref, ibp.ref)
+        end
+      elseif key == :pc_ref
+        if ref_meaning == :E_ref
+          return E_to_pc(ibp.species_ref, ibp.ref)
+        else
+          return R_to_pc(ibp.species_ref, ibp.ref)
+        end
       else
-        return pc_to_E(species_ref, ref)
-      end
-    elseif key in (:R_ref, :dR_ref)
-      if ibp.ref_meaning in (:E_ref, :dE_ref)
-        return E_to_R(species_ref, ref)
-      else
-        return pc_to_R(species_ref, ref)
+        if ref_meaning == :pc_ref
+          return pc_to_R(ibp.species_ref, ibp.ref)
+        else
+          return E_to_R(ibp.species_ref, ibp.ref)
+        end
       end
     else
-      if ibp.ref_meaning in (:R_ref, :dR_ref)
-        return R_to_pc(species_ref, ref)
-      else
-        return E_to_pc(species_ref, ref)
-      end
+      error("Unable to get property $key: InitialBeamlineParams has stored $(ibp.ref_meaning), and
+            so property $key depends on an upstream Lattice which has not been constructed yet.")
     end
-  elseif key == :species_ref
-    species_ref = getfield(ibp, :species_ref)
-    if isnullspecies(species_ref)
-      error("Unable to get species_ref: species_ref of the InitialBeamlineParams has not been set")
-    end
-    return species_ref 
-  else
-    return getfield(ibp, key)
   end
+  error("This error is unreachable. If reached, submit an issue to Beamlines")
 end
