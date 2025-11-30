@@ -1,6 +1,20 @@
+"""
+    struct BMultipoleParams{T,N} <: AbstractParams
+
+Structure holding the magnetic multipole components of a lattice element. 
+
+## Fields
+
+• `n::SizedVector{N,T,Vector{T}}`     # Vector of normal multipole components. \\
+• `s::SizedVector{N,T,Vector{T}}`     # Vector of skew multipole components. \\
+• `tilt::SizedVector{N,T,Vector{T}}`  # Vector of tilt components. \\
+• `order::SVector{N,Int}`             # Vector of the order of the components. \\
+• `normalized::SVector{N,Bool}`       # Vector of whether a multipole is normalized or not. \\
+• `integrated::SVector{N,Bool}`       # Vector of whether a multipole is integrated or not. \\
+"""
 @kwdef struct BMultipoleParams{T,N} <: AbstractParams
-  n::SizedVector{N,T,Vector{T}}    = SizedVector{0,Float32,Vector{Float32}}()
-  s::SizedVector{N,T,Vector{T}}    = SizedVector{0,Float32,Vector{Float32}}()
+  n::SizedVector{N,T,Vector{T}}    = SizedVector{0,Float32,Vector{Float32}}()   # Normal component
+  s::SizedVector{N,T,Vector{T}}    = SizedVector{0,Float32,Vector{Float32}}()   # Skew
   tilt::SizedVector{N,T,Vector{T}} = SizedVector{0,Float32,Vector{Float32}}()
   order::SVector{N,Int}            = SVector{0,Int}()
   normalized::SVector{N,Bool}      = SVector{0,Bool}()
