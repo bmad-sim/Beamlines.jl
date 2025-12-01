@@ -11,6 +11,9 @@ export AbstractParams,
        BendParams,
        InheritParams,
        ApertureParams,
+       MapParams,
+       FourPotentialParams,
+       MetaParams,
        ApertureAt,
        ApertureShape,
        RFParams,
@@ -81,8 +84,10 @@ include("control.jl")
 include("alignment.jl")
 include("patch.jl")
 include("aperture.jl")
+include("misc.jl")
 include("keymaps.jl")
 include("macros.jl")
+
 include("bits/bitsparams.jl")
 include("bits/bitstracking.jl")
 include("bits/bitsline.jl")

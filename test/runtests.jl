@@ -1217,66 +1217,57 @@ using Test
     @test_throws ErrorException Lattice([ele1])
     @test_throws ErrorException Lattice(LineElement[]; E_ref0=10e9, pc_ref0=3e9)
 
-#=
-    bl = Beamline([ele])
-    @test_throws ErrorException ele.species_ref = Species("proton")
-    @test bl.R_ref ≈ -59.52872449027632
-    @test bl.pc_ref ≈ 1.7846262612447e10
-    @test bl.E_ref ≈ 1.784626264386055e10
-    @test_throws ErrorException bl.dR_ref
-    @test_throws ErrorException bl.dE_ref
-    @test_throws ErrorException bl.dpc_ref
-    @test !haskey(getfield(ele, :pdict), Beamlines.InitialBeamlineParams)
+    # MapParams
+    f = (x,px,y,py,z,pz,q0,q1,q2,q3)->(1,2,3,4,5,6,7,8,9,10)
+    g = (x,px,y,py,z,pz,q0,q1,q2,q3)->(11,12,13,14,15,16,17,18,19,20)
+    ele1 = LineElement(transport_map=f)
+    ele2 = LineElement(transport_map=f)
+    @test !isnothing(ele1.MapParams)
+    @test ele1.MapParams isa MapParams{typeof(f)}
+    @test ele1.transport_map == f
+    @test ele2.transport_map == f
+    @test ele1 ≈ ele2
+    ele1.transport_map = g
+    ele2.transport_map = g
+    @test ele1.MapParams isa MapParams{typeof(g)}
+    @test ele1.transport_map == g
+    @test ele2.transport_map == g
+    @test ele1 ≈ ele2
 
-    # Only valid at first element
-    bl = Beamline([LineElement(), LineElement()], E_ref=10e9, species_ref=Species("electron"))
-    @test_throws ErrorException bl.line[2].E_ref = 2e9
-    bl.line[1].E_ref = 2e9
-    @test bl.line[1].E_ref ≈ 2e9
-    @test bl.line[2].E_ref ≈ 2e9
-    @test bl.line[2].dR_ref == 0
-    @test bl.line[2].dE_ref == 0
-    @test bl.line[2].dpc_ref == 0
-    @test_throws ErrorException bl.line[1].dR_ref
-    @test_throws ErrorException bl.line[1].dE_ref
-    @test_throws ErrorException bl.line[1].dpc_ref
-    @test_throws ErrorException Beamline([LineElement(), LineElement(species_ref=Species("electron"))])
-    @test_throws ErrorException Beamline([LineElement(), LineElement(R_ref=-39.)])
-    @test_throws ErrorException Beamline([LineElement(), LineElement(E_ref=10e9, species_ref=Species("electron"))])
+    # FourPotentialParams
+    f = (x,y,s,t)->(1,2,3,4)
+    g = (x,y,s,t)->(5,6,7,8)
+    ele1 = LineElement(four_potential=f)
+    ele2 = LineElement(four_potential=f)
+    @test !isnothing(ele1.FourPotentialParams)
+    @test ele1.FourPotentialParams isa FourPotentialParams{typeof(f)}
+    @test ele1.four_potential == f
+    @test ele2.four_potential == f
+    @test ele1 ≈ ele2
+    ele1.four_potential = g
+    ele2.four_potential = g
+    @test ele1.FourPotentialParams isa FourPotentialParams{typeof(g)}
+    @test ele1.four_potential == g
+    @test ele2.four_potential == g
+    @test ele1 ≈ ele2
 
+    # MetaParams
+    alias = "matt"
+    label = "the matt"
+    description = "this is a matt"
+    ele = LineElement(alias=alias, label=label, description=description)
+    @test ele.alias == alias
+    @test ele.label == label
+    @test ele.description == description
 
-    =#
-#=
-
-    =#
-    #=
-    @test_throws ErrorException Beamline([LineElement()]; dE_ref=10)
-    @test_throws ErrorException Beamline([LineElement()]; dE_ref=10, R_ref=2)
-    @test_throws ErrorException Beamline([LineElement()]; E_ref=10, dpc_ref=12)
-    bl = Beamline([LineElement(), LineElement()]; R_ref=-59.52872449027632, species_ref=Species("electron"))
-    @test bl.species_ref == Species("electron")
-    @test bl.R_ref == -59.52872449027632 
-    @test bl.pc_ref ≈ 1.7846262612447e10
-    @test bl.E_ref ≈ 1.784626264386055e10
-    @test sqrt(bl.E_ref^2-bl.pc_ref^2) ≈ Beamlines.massof(bl.species_ref)
-    bl = Beamline([LineElement(), LineElement()]; pc_ref=1.7846262612447e10, species_ref=Species("electron"))
-    @test bl.species_ref == Species("electron")
-    @test bl.R_ref ≈ -59.52872449027632
-    @test bl.pc_ref ≈ 1.7846262612447e10
-    @test bl.E_ref ≈ 1.784626264386055e10
-    @test sqrt(bl.E_ref^2-bl.pc_ref^2) ≈ Beamlines.massof(bl.species_ref)
-    bl = Beamline([LineElement(), LineElement()]; E_ref=1.784626264386055e10, species_ref=Species("electron"))
-    @test bl.species_ref == Species("electron")
-    @test bl.R_ref ≈ -59.52872449027632
-    @test bl.pc_ref ≈ 1.7846262612447e10
-    @test bl.E_ref ≈ 1.784626264386055e10
-    =#
-    # InitialBeamlineParams tests
-    #=
-    bl = Beamline([LineElement(), LineElement()]; E_ref=1.784626264386055e10, species_ref=Species("electron"))
-    @test bl.species_ref == Species("electron")
-    @test bl.R_ref ≈ -59.52872449027632
-    @test bl.pc_ref ≈ 1.7846262612447e10
-    @test bl.E_ref ≈ 1.784626264386055e10
-    =#
+    alias = "david"
+    label = "the david"
+    description = "this is a david"
+    ele.alias = alias
+    ele.label = label
+    ele.description = description
+    @test ele.alias == alias
+    @test ele.label == label
+    @test ele.description == description
+    @test ele ≈ LineElement()
 end

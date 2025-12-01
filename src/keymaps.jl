@@ -77,6 +77,13 @@ const PROPERTIES_MAP = Dict{Symbol,Type{<:AbstractParams}}(
   :phi0 => RFParams,
   :harmon_master => RFParams,
   :traveling_wave => RFParams,
+
+  :transport_map => MapParams,
+  :four_potential => FourPotentialParams,
+  
+  :alias => MetaParams,
+  :label => MetaParams,
+  :description => MetaParams,
 )
 
 const PARAMS_MAP = Dict{Symbol,Type{<:AbstractParams}}(
@@ -88,4 +95,7 @@ const PARAMS_MAP = Dict{Symbol,Type{<:AbstractParams}}(
   :PatchParams => PatchParams,
   :RFParams => RFParams,
   :ApertureParams => ApertureParams,
+  :MapParams => MapParams,
+  :FourPotentialParams => FourPotentialParams,
+  :MetaParams => MetaParams,
 )
