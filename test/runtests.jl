@@ -1270,4 +1270,6 @@ using Test
     @test ele.label == label
     @test ele.description == description
     @test ele ≈ LineElement()
+
+    @test ele.MetaParams ≈ MetaParams()
 end
