@@ -65,12 +65,12 @@ end
 function Base.isapprox(a::LineElement, b::LineElement)
   l = flattened_pdict(a)
   r = flattened_pdict(b)
-  L_l = length(l) - (haskey(l, BeamlineParams) ? 1 : 0)
-  L_r = length(r) - (haskey(r, BeamlineParams) ? 1 : 0)
+  L_l = length(l) - (haskey(l, BeamlineParams) ? 1 : 0) - (haskey(l, MetaParams) ? 1 : 0)
+  L_r = length(r) - (haskey(r, BeamlineParams) ? 1 : 0) - (haskey(r, MetaParams) ? 1 : 0)
   L_l != L_r && return false
   anymissing = false
   for pair in l
-      if pair[1] == BeamlineParams
+      if pair[1] == BeamlineParams || pair[1] == MetaParams
         continue
       end
 
