@@ -1,5 +1,5 @@
 @kwdef struct MapParams{F<:Function} <: AbstractParams
-  transport_map::F = (x, px, y, py, z, pz, q0, q1, q2, q3) -> (x, px, y, py, z, pz, q0, q1, q2, q3)
+  transport_map::F = (v, q=nothing) -> (v, q)
 end
 
 Base.isapprox(a::MapParams, b::MapParams) = a.transport_map == b.transport_map
