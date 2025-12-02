@@ -1218,8 +1218,8 @@ using Test
     @test_throws ErrorException Lattice(LineElement[]; E_ref0=10e9, pc_ref0=3e9)
 
     # MapParams
-    f = (x,px,y,py,z,pz,q0,q1,q2,q3)->(1,2,3,4,5,6,7,8,9,10)
-    g = (x,px,y,py,z,pz,q0,q1,q2,q3)->(11,12,13,14,15,16,17,18,19,20)
+    f = (v,q=nothing)->((1,2,3,4,5,6),(7,8,9,10))
+    g = (v,q=nothing)->((11,12,13,14,15,16),(17,18,19,20))
     ele1 = LineElement(transport_map=f)
     ele2 = LineElement(transport_map=f)
     @test !isnothing(ele1.MapParams)
