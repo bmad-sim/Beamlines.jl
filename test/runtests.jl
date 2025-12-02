@@ -882,6 +882,24 @@ using Test
     @test_throws ErrorException cav.RFParams.dx_rot = 1.0
     @test_throws ErrorException cav.RFParams.harmon = 120
     
+    # Basic Crab RF frequency mode
+    cav = CrabCavity(rf_frequency=352e6, voltage=1e6)
+    @test isactive(cav.RFParams)
+    cav.voltage = 0
+    @test !isactive(cav.RFParams)
+    cav.voltage=1e6
+    @test isactive(cav.RFParams)
+    @test cav.harmon_master == false && cav.rf_frequency == 352e6
+    @test_throws ErrorException cav.harmon
+    cav.rf_frequency = 500e6 + 1e3im
+    @test cav.traveling_wave == false
+    @test eltype(cav.RFParams) == ComplexF64
+    @test eltype(typeof(cav.RFParams)) == ComplexF64
+    cav.RFParams.rf_frequency = 210.1e6
+    @test_throws ErrorException cav.RFParams.dx_rot
+    @test_throws ErrorException cav.RFParams.dx_rot = 1.0
+    @test_throws ErrorException cav.RFParams.harmon = 120
+    
 
     # Harmonic number mode and mode switching
     cav2 = RFCavity()
