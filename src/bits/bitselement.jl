@@ -148,10 +148,12 @@ function BitsLineElement(bbl::BitsBeamline, idx::Integer=1)
     if i <= length(params) && params[i] >= UInt8(67)  && params[i] < UInt8(71) # bendparams!
       id = params[i]
       if isnan(bp.g_ref)
-        @reset bp.g_ref = zero(eltype(BP))
-        @reset bp.tilt_ref = zero(eltype(BP))
-        @reset bp.e1 = zero(eltype(BP))
-        @reset bp.e2 = zero(eltype(BP))
+        @reset bp.g_ref     = zero(eltype(BP))
+        @reset bp.tilt_ref  = zero(eltype(BP))
+        @reset bp.e1        = zero(eltype(BP))
+        @reset bp.e2        = zero(eltype(BP))
+        @reset bp.edge_int1 = zero(eltype(BP))
+        @reset bp.edge_int2 = zero(eltype(BP))
       end
 
       i, v = readval(i, params, eltype(BP))

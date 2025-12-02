@@ -257,9 +257,11 @@ function _set_bend_g!(ele::LineElement, bp::BendParams{S}, bm::BMultipoleParams,
   T = promote_type(S, typeof(value))
   if T != S || bp.g_ref != value
     bp = BendParams(
-      g_ref    = T(value),
-      e1       = T(bp.e1),
-      e2       = T(bp.e2)
+      g_ref     = T(value),
+      e1        = T(bp.e1),
+      e2        = T(bp.e2),
+      edge_int1 = T(bp.edge_int1),
+      edge_int2 = T(bp.edge_int2)
     )
     ele.BendParams = bp
   end

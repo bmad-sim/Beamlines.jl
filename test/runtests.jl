@@ -54,16 +54,18 @@ using Test
     @test ele.e1 == e1
     @test ele.e2 == e2
 
-    bp = BendParams(1.0im, 2.0im, 3.0im, 4.0im)
+    bp = BendParams(1.0im, 2.0im, 3.0im, 4.0im, 5.0im, 6.0im)
     @test eltype(bp) == ComplexF64
     @test eltype(typeof(bp)) == ComplexF64
-    @test bp ≈ BendParams(1.0im, 2.0im, 3.0im, 4.0im)
+    @test bp ≈ BendParams(1.0im, 2.0im, 3.0im, 4.0im, 5.0im, 6.0im)
     ele.BendParams = bp
     @test ele.BendParams === bp
     @test ele.g_ref == 1.0im
     @test ele.tilt_ref == 2.0im
     @test ele.e1 == 3.0im
     @test ele.e2 == 4.0im
+    @test ele.edge_int1 == 5.0im
+    @test ele.edge_int2 == 6.0im
 
     ele.g_ref = 0.2
     @test ele.g_ref == 0.2
@@ -907,23 +909,25 @@ using Test
     dbo = DefExpr(()->bo)
 
     ele = LineElement(
-      x_offset = dbo,
-      y_offset = dbo + 1,
-      z_offset = dbo + 2,
-      x_rot    = dbo + 3,
-      y_rot    = dbo + 4,
-      tilt     = dbo + 5,
-      x1_limit = dbo + 6,
-      x2_limit = dbo + 7,
-      y1_limit = dbo + 8,
-      y2_limit = dbo + 9,
-      g_ref    = dbo + 13,
-      tilt_ref = dbo + 14,
-      e1       = dbo + 15,
-      e2       = dbo + 16 ,
-      Kn1   = dbo + 17,
-      Bn2L  = dbo + 18,
-      tilt3 = dbo + 19,
+      x_offset  = dbo,
+      y_offset  = dbo + 1,
+      z_offset  = dbo + 2,
+      x_rot     = dbo + 3,
+      y_rot     = dbo + 4,
+      tilt      = dbo + 5,
+      x1_limit  = dbo + 6,
+      x2_limit  = dbo + 7,
+      y1_limit  = dbo + 8,
+      y2_limit  = dbo + 9,
+      g_ref     = dbo + 13,
+      tilt_ref  = dbo + 14,
+      e1        = dbo + 15,
+      e2        = dbo + 16,
+      edge_int1 = dbo + 30,
+      edge_int2 = dbo + 31,
+      Kn1    = dbo + 17,
+      Bn2L   = dbo + 18,
+      tilt3  = dbo + 19,
       dt     = dbo + 20,
       dx     = dbo + 21,
       dy     = dbo + 22,
@@ -939,7 +943,7 @@ using Test
     bo = 2.34
     @test Beamlines.deval(ele.AlignmentParams) ≈ AlignmentParams(bo, bo + 1, bo + 2, bo + 3, bo + 4, bo + 5)
     @test Beamlines.deval(ele.ApertureParams ) ≈ ApertureParams(bo + 6, bo + 7, bo + 8, bo + 9, ApertureShape.Elliptical, ApertureAt.Entrance, true, true)
-    @test Beamlines.deval(ele.BendParams) ≈ BendParams(bo + 13, bo + 14, bo + 15,bo + 16)
+    @test Beamlines.deval(ele.BendParams) ≈ BendParams(bo + 13, bo + 14, bo + 15,bo + 16, b0+30, b0+31)
     n = Beamlines.SizedVector{3}([bo+17, bo+18, 0])
     s = zero(n)
     tilt = Beamlines.SizedVector{3}([0, 0, bo+19])
