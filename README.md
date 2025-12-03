@@ -177,25 +177,6 @@ c3.dx = dx
 qf.Kn1
 qd.Kn1
 
-# Beamlines.jl also provides functionality to convert the Beamline to a
-# compressed, fully isbits type. This may be useful in cases where the 
-# Beamline is mostly static and you would like to put the entire line on 
-# a GPU, for example.
-qf = Quadrupole(Kn1L=0.18, L=0.5)
-d1 = Drift(L=1.6)
-qd = Quadrupole(Kn1L=-qf.Kn1L, L=0.5)
-d2 = Drift(L=1.6)
-
-bl = Beamline([qf, d1, qd, d2])
-bbl = BitsBeamline(bl) # Fully immutable, isbits compressed type
-
-# A warning will be issued if the size is >64KB (CUDA constant memory)
-sizeof(bbl) 
-
-# Convert back:
-bl2 = Beamline(bbl)
-all(bl.line .≈ bl2.line) # true
-
 # Duplicate elements are allowed. In this case, the first element 
 # instance is used as the "parent", and all duplicates parameters 
 # are pulled directly from the parent
