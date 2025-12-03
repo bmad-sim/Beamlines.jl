@@ -39,7 +39,7 @@ export AbstractParams,
 
        deepcopy_no_beamline,
        
-       BitsBeamline, 
+       # BitsBeamline, 
 
        SciBmadStandard,
 
@@ -88,10 +88,13 @@ include("misc.jl")
 include("keymaps.jl")
 include("macros.jl")
 
-include("bits/bitsparams.jl")
-include("bits/bitstracking.jl")
-include("bits/bitsline.jl")
-include("bits/bitselement.jl")
+# BitsBeamline is no longer supported
+# Support may continue in the future with 
+# developer support
+# include("bits/bitsparams.jl")
+# include("bits/bitstracking.jl")
+# include("bits/bitsline.jl")
+# include("bits/bitselement.jl")
 
 
 end
