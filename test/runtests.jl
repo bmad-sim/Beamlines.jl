@@ -894,7 +894,7 @@ using Test
     @test_throws ErrorException cav.harmon
     cav.rf_frequency = 500e6 + 1e3im
     @test cav.traveling_wave == false
-    @test cav.is_crabcavity = false
+    @test cav.is_crabcavity == false
     @test eltype(cav.RFParams) == ComplexF64
     @test eltype(typeof(cav.RFParams)) == ComplexF64
     cav.RFParams.rf_frequency = 210.1e6
