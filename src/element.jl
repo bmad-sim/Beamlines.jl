@@ -97,7 +97,7 @@ Kicker(; kwargs...)     = LineElement(; kind="Kicker", kwargs...)
 HKicker(; kwargs...)    = LineElement(; kind="HKicker", kwargs...)
 VKicker(; kwargs...)    = LineElement(; kind="VKicker", kwargs...)
 RFCavity(; kwargs...)   = LineElement(; kind="RFCavity", kwargs...)
-CrabCavity(; kwargs...) = LineElement(; kind="CrabCavity", kwargs...)
+CrabCavity(; kwargs...) = LineElement(; kind="CrabCavity", is_crabcavity = true, kwargs...)
 Patch(; kwargs...)      = LineElement(; kind="Patch", kwargs...)
 
 

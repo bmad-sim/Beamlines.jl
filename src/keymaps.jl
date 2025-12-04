@@ -77,6 +77,7 @@ const PROPERTIES_MAP = Dict{Symbol,Type{<:AbstractParams}}(
   :phi0 => RFParams,
   :harmon_master => RFParams,
   :traveling_wave => RFParams,
+  :is_crabcavity => RFParams,
 
   :transport_map => MapParams,
   :four_potential => FourPotentialParams,
