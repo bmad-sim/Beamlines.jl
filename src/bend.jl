@@ -3,8 +3,8 @@
   tilt_ref::T     = Float32(0.0)
   e1::T           = Float32(0.0)   # Edge 1 angle as SBend from g_ref (e.g. e1 = 0.0 for SBend)
   e2::T           = Float32(0.0)   # Edge 2 angle as SBend from g_ref (e.g. e2 = 0.0 for SBend)
-  edge_int1       = Float32(0.0)   # Edge 1 integral. Equal to fint * hgap in Bmad
-  edge_int2       = Float32(0.0)   # Edge 2 integral. Equal to fint * hgap in Bmad
+  edge_int1::T    = Float32(0.0)   # Edge 1 integral. Equal to fint * hgap in Bmad
+  edge_int2::T    = Float32(0.0)   # Edge 2 integral. Equal to fint * hgap in Bmad
   function BendParams(g_ref, tilt_ref, e1, e2, edge_int1, edge_int2)
     return new{promote_type(typeof(g_ref),typeof(tilt_ref),typeof(e1),typeof(e2))}(g_ref, tilt_ref, e1, e2, edge_int1, edge_int2)
   end
