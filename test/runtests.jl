@@ -937,12 +937,14 @@ using Test
       rf_frequency = dbo + 27,
       voltage = dbo + 28,
       phi0 = dbo + 29,
+      edge_int1 = dbo + 30,
+      edge_int2 = dbo + 31,
     )
 
     bo = 2.34
     @test Beamlines.deval(ele.AlignmentParams) ≈ AlignmentParams(bo, bo + 1, bo + 2, bo + 3, bo + 4, bo + 5)
     @test Beamlines.deval(ele.ApertureParams ) ≈ ApertureParams(bo + 6, bo + 7, bo + 8, bo + 9, ApertureShape.Elliptical, ApertureAt.Entrance, true, true)
-    ## @test Beamlines.deval(ele.BendParams) ≈ BendParams(bo + 13, bo + 14, bo + 15,bo + 16)
+    @test Beamlines.deval(ele.BendParams) ≈ BendParams(bo + 13, bo + 14, bo + 15, bo + 16, bo + 30, bo + 31)
     n = Beamlines.SizedVector{3}([bo+17, bo+18, 0])
     s = zero(n)
     tilt = Beamlines.SizedVector{3}([0, 0, bo+19])
