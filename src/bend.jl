@@ -13,9 +13,13 @@ end
 Base.eltype(::BendParams{T}) where {T} = T
 Base.eltype(::Type{BendParams{T}}) where {T} = T
 
-Base.isapprox(a::BendParams, b::BendParams) = a.g_ref ≈ b.g_ref && a.tilt_ref ≈ b.tilt_ref && 
-                                              a.e1 ≈ b.e1 && a.e2 ≈ b.e2 && a.edge_int1 ≈ b.edge_int1 && a.edge_int2 ≈ b.edge_int2
-#Base.getproperty(a::BendParams, key::Symbol) = deval(getfield(a, key))
+function Base.isapprox(a::BendParams, b::BendParams)
+  return a.g_ref ≈ b.g_ref && 
+         a.tilt_ref ≈ b.tilt_ref && 
+         a.e1 ≈ b.e1 && 
+         a.e2 ≈ b.e2 && 
+         a.edge_int1 ≈ b.edge_int1 && 
+         a.edge_int2 ≈ b.edge_int2
 
 function deval(a::BendParams{<:DefExpr})
   return BendParams(
