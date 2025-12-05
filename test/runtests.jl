@@ -54,16 +54,18 @@ using Test
     @test ele.e1 == e1
     @test ele.e2 == e2
 
-    bp = BendParams(1.0im, 2.0im, 3.0im, 4.0im)
+    bp = BendParams(1.0im, 2.0im, 3.0im, 4.0im, 5.0im, 6.0im)
     @test eltype(bp) == ComplexF64
     @test eltype(typeof(bp)) == ComplexF64
-    @test bp ≈ BendParams(1.0im, 2.0im, 3.0im, 4.0im)
+    @test bp ≈ BendParams(1.0im, 2.0im, 3.0im, 4.0im, 5.0im, 6.0im)
     ele.BendParams = bp
     @test ele.BendParams === bp
     @test ele.g_ref == 1.0im
     @test ele.tilt_ref == 2.0im
     @test ele.e1 == 3.0im
     @test ele.e2 == 4.0im
+    @test ele.edge_int1 == 5.0im
+    @test ele.edge_int2 == 6.0im
 
     ele.g_ref = 0.2
     @test ele.g_ref == 0.2
@@ -935,12 +937,14 @@ using Test
       rf_frequency = dbo + 27,
       voltage = dbo + 28,
       phi0 = dbo + 29,
+      edge_int1 = dbo + 30,
+      edge_int2 = dbo + 31,
     )
 
     bo = 2.34
     @test Beamlines.deval(ele.AlignmentParams) ≈ AlignmentParams(bo, bo + 1, bo + 2, bo + 3, bo + 4, bo + 5)
     @test Beamlines.deval(ele.ApertureParams ) ≈ ApertureParams(bo + 6, bo + 7, bo + 8, bo + 9, ApertureShape.Elliptical, ApertureAt.Entrance, true, true)
-    @test Beamlines.deval(ele.BendParams) ≈ BendParams(bo + 13, bo + 14, bo + 15,bo + 16)
+    @test Beamlines.deval(ele.BendParams) ≈ BendParams(bo + 13, bo + 14, bo + 15, bo + 16, bo + 30, bo + 31)
     n = Beamlines.SizedVector{3}([bo+17, bo+18, 0])
     s = zero(n)
     tilt = Beamlines.SizedVector{3}([0, 0, bo+19])
