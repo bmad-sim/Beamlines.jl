@@ -896,7 +896,7 @@ using Test
     @test cav.harmon_master == false && cav.rf_frequency == 352e6
     @test_throws ErrorException cav.harmon
     cav.rf_frequency = 500e6 + 1e3im
-    @test cav.zero_phase = PhaseReference.Accelerating
+    @test cav.zero_phase == PhaseReference.Accelerating
     @test cav.traveling_wave == false
     @test cav.is_crabcavity == false
     @test eltype(cav.RFParams) == ComplexF64
@@ -975,7 +975,7 @@ using Test
     integrated = Beamlines.SA[false, true, true]
     @test Beamlines.deval(ele.BMultipoleParams) ≈ BMultipoleParams(n, s, tilt, order, normalized, integrated)
     @test Beamlines.deval(ele.PatchParams) ≈ PatchParams(bo + 20, bo + 21, bo + 22, bo + 23, bo + 24, bo + 25, bo + 26)
-    @test Beamlines.deval(ele.RFParams) ≈ RFParams(bo + 27, bo + 28, bo + 29, PhaseReference.Accelerating, false, false, false)
+    @test Beamlines.deval(ele.RFParams) ≈ RFParams(bo + 27, bo + 28, bo + 29, false, PhaseReference.Accelerating, false, false)
 
     # Species addition
     bl = Beamline([LineElement(), LineElement()]; R_ref=-59.52872449027632, species_ref=Species("electron"))
