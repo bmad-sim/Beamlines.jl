@@ -20,6 +20,7 @@ function Base.isapprox(a::BendParams, b::BendParams)
          a.e2 ≈ b.e2 && 
          a.edge_int1 ≈ b.edge_int1 && 
          a.edge_int2 ≈ b.edge_int2
+end
 
 function deval(a::BendParams{<:DefExpr})
   return BendParams(
