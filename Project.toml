@@ -1,6 +1,6 @@
 name = "Beamlines"
 uuid = "5bb90b03-0719-46b8-8ce4-1ef3afd3cd4b"
-version = "0.7.2"
+version = "0.7.1"
 authors = ["Matt Signorelli <mgs255@cornell.edu> and contributors"]
 
 [deps]
