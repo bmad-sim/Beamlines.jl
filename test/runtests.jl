@@ -64,8 +64,8 @@ using Test
     @test ele.tilt_ref == 2.0im
     @test ele.e1 == 3.0im
     @test ele.e2 == 4.0im
-    @test ele.edge_int1 == 5.0im
-    @test ele.edge_int2 == 6.0im
+    @test ele.edge1_int == 5.0im
+    @test ele.edge2_int == 6.0im
 
     ele.g_ref = 0.2
     @test ele.g_ref == 0.2
@@ -959,8 +959,8 @@ using Test
       rf_frequency = dbo + 27,
       voltage = dbo + 28,
       phi0 = dbo + 29,
-      edge_int1 = dbo + 30,
-      edge_int2 = dbo + 31,
+      edge1_int = dbo + 30,
+      edge2_int = dbo + 31,
     )
 
     bo = 2.34

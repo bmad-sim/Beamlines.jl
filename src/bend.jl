@@ -3,10 +3,10 @@
   tilt_ref::T     = Float32(0.0)
   e1::T           = Float32(0.0)   # Edge 1 angle as SBend from g_ref (e.g. e1 = 0.0 for SBend)
   e2::T           = Float32(0.0)   # Edge 2 angle as SBend from g_ref (e.g. e2 = 0.0 for SBend)
-  edge_int1::T    = Float32(0.0)   # Edge 1 integral. Equal to fint * hgap in Bmad
-  edge_int2::T    = Float32(0.0)   # Edge 2 integral. Equal to fint * hgap in Bmad
-  function BendParams(g_ref, tilt_ref, e1, e2, edge_int1, edge_int2)
-    return new{promote_type(typeof(g_ref),typeof(tilt_ref),typeof(e1),typeof(e2),typeof(edge_int1),typeof(edge_int2))}(g_ref, tilt_ref, e1, e2, edge_int1, edge_int2)
+  edge1_int::T    = Float32(0.0)   # Edge 1 integral. Equal to fint * hgap in Bmad
+  edge2_int::T    = Float32(0.0)   # Edge 2 integral. Equal to fint * hgap in Bmad
+  function BendParams(g_ref, tilt_ref, e1, e2, edge1_int, edge2_int)
+    return new{promote_type(typeof(g_ref),typeof(tilt_ref),typeof(e1),typeof(e2),typeof(edge1_int),typeof(edge2_int))}(g_ref, tilt_ref, e1, e2, edge1_int, edge2_int)
   end
 end
 
@@ -18,8 +18,8 @@ function Base.isapprox(a::BendParams, b::BendParams)
          a.tilt_ref ≈ b.tilt_ref && 
          a.e1 ≈ b.e1 && 
          a.e2 ≈ b.e2 && 
-         a.edge_int1 ≈ b.edge_int1 && 
-         a.edge_int2 ≈ b.edge_int2
+         a.edge1_int ≈ b.edge1_int && 
+         a.edge2_int ≈ b.edge2_int
 end
 
 function deval(a::BendParams{<:DefExpr})
@@ -28,8 +28,8 @@ function deval(a::BendParams{<:DefExpr})
     deval(a.tilt_ref),
     deval(a.e1),     
     deval(a.e2),       
-    deval(a.edge_int1),     
-    deval(a.edge_int2),       
+    deval(a.edge1_int),
+    deval(a.edge2_int),
   )
 end
 

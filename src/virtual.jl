@@ -260,8 +260,8 @@ function _set_bend_g!(ele::LineElement, bp::BendParams{S}, bm::BMultipoleParams,
       g_ref     = T(value),
       e1        = T(bp.e1),
       e2        = T(bp.e2),
-      edge_int1 = T(bp.edge_int1),
-      edge_int2 = T(bp.edge_int2)
+      edge1_int = T(bp.edge1_int),
+      edge2_int = T(bp.edge2_int)
     )
     ele.BendParams = bp
   end

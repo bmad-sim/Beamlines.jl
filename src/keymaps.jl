@@ -48,8 +48,8 @@ const PROPERTIES_MAP = Dict{Symbol,Type{<:AbstractParams}}(
   :tilt_ref => BendParams,
   :e1 => BendParams,
   :e2 => BendParams,
-  :edge_int1 => BendParams,
-  :edge_int2 => BendParams,
+  :edge1_int => BendParams,
+  :edge2_int => BendParams,
 
   :x_offset => AlignmentParams,
   :y_offset => AlignmentParams,
