@@ -870,8 +870,10 @@ using Test
     cav = RFCavity(rf_frequency=352e6, voltage=1e6)
     @test isactive(cav.RFParams)
     cav.voltage = 0
+    cav.rf_frequency = 0
     @test !isactive(cav.RFParams)
     cav.voltage=1e6
+    cav.rf_frequency=352e6
     @test isactive(cav.RFParams)
     @test cav.harmon_master == false && cav.rf_frequency == 352e6
     @test_throws ErrorException cav.harmon
@@ -890,7 +892,7 @@ using Test
     cav = CrabCavity(rf_frequency=352e6, voltage=1e6)
     @test isactive(cav.RFParams)
     cav.voltage = 0
-    @test !isactive(cav.RFParams)
+    @test isactive(cav.RFParams)
     cav.voltage=1e6
     @test isactive(cav.RFParams)
     @test cav.harmon_master == false && cav.rf_frequency == 352e6

@@ -85,7 +85,7 @@ function Base.setproperty!(c::RFParams{T}, key::Symbol, value) where {T}
   error("RFParams does not have property $key")
 end
 
-isactive(rf::RFParams) = !(rf.voltage == 0)
+isactive(rf::RFParams) = !(rf.voltage == 0 && rf.rate == 0)
 
 
 # Note that it is currently impossible to derive harmonic number from frequency
