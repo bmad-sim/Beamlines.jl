@@ -58,13 +58,6 @@ Base.$t(d::DefExpr) = DefExpr(()-> ($t)(d()))
 end
 end
 
-for t = (:unit, :sincu, :sinhc, :sinhcu, :asinc, :asincu, :asinhc, :asinhcu, :erf, 
-         :erfc, :erfcx, :erfi, :wf, :rect)
-@eval begin
-GTPSA.$t(d::DefExpr) = DefExpr(()-> ($t)(d()))
-end
-end
-
 Base.promote_rule(::Type{DefExpr{T}}, ::Type{U}) where {T,U<:Number} = DefExpr{promote_type(T,U)}
 Base.promote_rule(::Type{DefExpr{T}}, ::Type{DefExpr{U}}) where {T,U<:Number} = DefExpr{promote_type(T,U)}
 

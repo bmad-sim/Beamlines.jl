@@ -22,18 +22,6 @@ function Base.isapprox(a::BendParams, b::BendParams)
          a.edge2_int ≈ b.edge2_int
 end
 
-function deval(a::BendParams{<:DefExpr})
-  return BendParams(
-    deval(a.g_ref),  
-    deval(a.tilt_ref),
-    deval(a.e1),     
-    deval(a.e2),       
-    deval(a.edge1_int),
-    deval(a.edge2_int),
-  )
-end
-
-
 # Note that here the reference energy is really needed to compute anything
 # other than the above so there is no more work to do here. Must define 
 # virtual properties for the rest of them.

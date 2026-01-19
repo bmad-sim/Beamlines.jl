@@ -47,8 +47,7 @@ export AbstractParams,
 
        @eles
 
-using GTPSA, 
-      Accessors, 
+using Accessors, 
       AtomicAndPhysicalConstants,
       StaticArrays, 
       OrderedCollections,
@@ -59,7 +58,6 @@ using GTPSA,
 export Species
 
 using FunctionWrappers: FunctionWrapper
-import GTPSA: sincu, sinhc, sinhcu, asinc, asincu, asinhc, asinhcu
 
 # Note that LineElement and parameter structs have three things:
 # 1) Fields: These are actual fields within a struct, e.g. pdict in LineElement
@@ -75,6 +73,7 @@ import GTPSA: sincu, sinhc, sinhcu, asinc, asincu, asinhc, asinhcu
 # For example, the s position of an element can be PROPERTY of the BeamlineParams 
 # struct as one can sum the lengths of each preceding element in the Beamline.
 
+include("scalarize.jl")
 include("defexpr.jl")
 include("element.jl")
 include("beamline.jl")

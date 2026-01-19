@@ -30,19 +30,4 @@ function Base.isapprox(a::ApertureParams, b::ApertureParams)
          a.aperture_active           ==  b.aperture_active
 end
 
-# Base.getproperty(a::ApertureParams, key::Symbol) = deval(getfield(a, key))
-
-function deval(a::ApertureParams{<:DefExpr})
-  return ApertureParams(
-    deval(a.x1_limit),
-    deval(a.x2_limit),
-    deval(a.y1_limit),
-    deval(a.y2_limit),
-    deval(a.aperture_shape),
-    deval(a.aperture_at),
-    deval(a.aperture_shifts_with_body),
-    deval(a.aperture_active),
-  )
-end
-
 isactive(ap::ApertureParams) = ap.aperture_active
