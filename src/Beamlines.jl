@@ -45,7 +45,9 @@ export AbstractParams,
 
        SciBmadStandard,
 
-       @eles
+       @eles,
+
+       scalarize
 
 using Accessors, 
       AtomicAndPhysicalConstants,
