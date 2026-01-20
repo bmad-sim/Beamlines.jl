@@ -195,7 +195,11 @@ function Base.getproperty(ele::LineElement, key::Symbol)
     elseif haskey(pdict, InheritParams)
       return getproperty(get_parent(pdict), key)
     else
-      return nothing
+      # DEFAULT VALUE!
+      # Default value will be done by constructing the parameter group 
+      # and then just extracting the particular property.
+      # This ensures that if a default is changed elsewhere, it is handled properly
+      return getproperty(PROPERTIES_MAP[key](), key)
     end
   end
 

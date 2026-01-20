@@ -66,7 +66,9 @@ function Base.getproperty(b::BMultipoleParams{T}, key::Symbol) where {T}
     if ord in b.order
       return b.tilt[o2i(b,ord)]
     else
-      error("Unable to get $key: BMultipoleParams $b does not have a multipole of order $ord")
+      # Default now
+      return 0f0
+      #error("Unable to get $key: BMultipoleParams $b does not have a multipole of order $ord")
     end
   end
   error("BMultipoleParams $b does not have property $key")

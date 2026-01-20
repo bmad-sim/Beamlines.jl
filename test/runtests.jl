@@ -1021,8 +1021,6 @@ using ForwardDiff, GTPSA, ReverseDiff
 
     @test_throws ErrorException Beamline(LineElement[]).species_ref
 
-    # Get unset property
-    @test isnothing(LineElement().x1_limit)
     # Get write-only property
     @test_throws ErrorException LineElement(angle=1.0).angle
 
