@@ -24,7 +24,6 @@ end
 Base.eltype(::RFParams{T}) where {T} = T
 Base.eltype(::Type{RFParams{T}}) where {T} = T
 
-
 function Base.isapprox(a::RFParams, b::RFParams) 
     return  a.rate           ≈  b.rate && 
             a.voltage        ≈  b.voltage && 
@@ -43,18 +42,6 @@ function Base.hasproperty(c::RFParams, key::Symbol)
   else
     return false
   end
-end
-
-function deval(a::RFParams{<:DefExpr})
-  return RFParams(
-    deval(a.rate),
-    deval(a.voltage),
-    deval(a.phi0),
-    deval(a.harmon_master),
-    deval(a.zero_phase),
-    deval(a.traveling_wave),
-    deval(a.is_crabcavity),
-  )
 end
 
 function Base.getproperty(c::RFParams, key::Symbol)

@@ -1,6 +1,7 @@
 using Beamlines
 using Beamlines: isactive
 using Test
+using ForwardDiff, GTPSA, ReverseDiff
 
 @testset "Beamlines.jl" begin
     L = 5.0f0
@@ -1299,4 +1300,56 @@ using Test
     @test ele ≈ LineElement()
 
     @test ele.MetaParams ≈ MetaParams()
+
+    # Scalarize
+    d1 = Descriptor(1,1)
+    t = TPS(3)
+    t[1] = 4
+    adnums = (ForwardDiff.Dual(1.,2.), t, ReverseDiff.TrackedReal(5.,6.))
+    nums = [1., 3., 5.]
+    for (adnum,num) in zip(adnums,nums)
+      @test scalarize(AlignmentParams(x_offset=adnum)).x_offset == num
+      @test scalarize(ApertureParams(x1_limit=adnum)).x1_limit == num
+      @test scalarize(BendParams(g_ref=adnum)).g_ref == num
+      @test scalarize(BMultipoleParams([adnum], [adnum], [0], [0], [true], [false])).n == [num]
+      @test scalarize(PatchParams(dt=adnum)).dt == num
+      @test scalarize(RFParams(rate=adnum)).rate == num
+    end
+
+    qf = Quadrupole(Kn1=0.36, L=0.5)
+    d = Drift(L=5.0)
+    qd = Quadrupole(Kn1=-0.36, L=0.5)
+    fodo = Beamline([qf, d, qd, d])
+    lat = Lattice([fodo])
+
+    for (adnum,num) in zip(adnums,nums)
+      qf.Kn1 = adnum
+      scalarize!(qf)
+      @test qf.Kn1 isa Float64 
+      @test eltype(qf.BMultipoleParams) == Float64
+      @test qf.Kn1 == num
+      d.L = adnum
+      scalarize!(d)
+      @test d.L isa Float64
+      @test d.L == num
+      # Also check inheritance:
+      @test fodo.line[4].L isa Float64
+      @test fodo.line[4].L == num
+
+      qf.Kn1 = adnum
+      d.L = adnum
+      fodo.ref = adnum
+      scalarize!(lat)
+      @test fodo.ref isa Float64
+      @test d.L isa Float64
+      @test qf.Kn1 isa Float64
+      @test qf.Kn1 == num
+      # Also check inheritance:
+      @test fodo.line[4].L isa Float64
+      @test fodo.line[4].L == num
+      @test fodo.ref isa Float64
+      @test fodo.ref == num
+    end
+
+    # Finally 
 end

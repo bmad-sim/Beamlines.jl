@@ -147,18 +147,6 @@ function Base.isapprox(a::BMultipoleParams, b::BMultipoleParams)
          all(a.integrated .≈ b.integrated)
 end
 
-function deval(a::BMultipoleParams{<:DefExpr})
-  return BMultipoleParams(
-    deval.(a.n),         
-    deval.(a.s),       
-    deval.(a.tilt),         
-    deval.(a.order),     
-    deval.(a.normalized),
-    deval.(a.integrated),
-  )
-end
-
-
 # To go from SoA to AoS:
 struct BMultipole{T}
   n::T

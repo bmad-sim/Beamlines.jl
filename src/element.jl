@@ -2,6 +2,34 @@ abstract type AbstractParams end
 isactive(::AbstractParams) = true
 isactive(::Nothing) = false
 
+@generated function deval(a::AbstractParams)
+    apply = [
+      begin
+        # This is so deval never allocates another array unless is a DefExpr to deval
+        if type <: AbstractArray && (eltype(type) <: DefExpr || isabstracttype(eltype(type)))
+          :(deval.(getproperty(a, $(QuoteNode(name)))))
+        else
+          :(deval(getproperty(a, $(QuoteNode(name)))))
+        end 
+      end for (type,name) in zip(fieldtypes(a),fieldnames(a))
+    ]
+    base_type = Base.typename(a).wrapper
+    return quote
+        ($base_type)($(apply...))
+    end
+end
+
+@generated function scalarize(a::AbstractParams)
+  # scalarize may allocate array if override is provided that broadcasts
+  # ReverseDiff has a type TrackArray so we do have to treat it separately
+  # rather than acting on each element
+  apply = [:(scalarize(getproperty(a, $(QuoteNode(name))))) for name in fieldnames(a)]
+  base_type = Base.typename(a).wrapper
+  return quote
+      ($base_type)($(apply...))
+  end
+end
+
 # By making the key the AbstractParams type name, we always have a consistent internal definition
 const ParamDict = Dict{Type{<:AbstractParams}, AbstractParams}
 Base.setindex!(h::ParamDict, v, key) = error("Incorrect key/value types for ParamDict")
@@ -110,8 +138,6 @@ struct SciBmadStandard end
   kind           = ""
   name            = ""
 end
-
-Base.getproperty(a::UniversalParams, key::Symbol) = deval(getfield(a, key))
 
 function Base.isapprox(a::UniversalParams, b::UniversalParams)
   return a.tracking_method == b.tracking_method &&

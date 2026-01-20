@@ -45,10 +45,12 @@ export AbstractParams,
 
        SciBmadStandard,
 
-       @eles
+       @eles,
 
-using GTPSA, 
-      Accessors, 
+       scalarize,
+       scalarize!
+
+using Accessors, 
       AtomicAndPhysicalConstants,
       StaticArrays, 
       OrderedCollections,
@@ -59,7 +61,6 @@ using GTPSA,
 export Species
 
 using FunctionWrappers: FunctionWrapper
-import GTPSA: sincu, sinhc, sinhcu, asinc, asincu, asinhc, asinhcu
 
 # Note that LineElement and parameter structs have three things:
 # 1) Fields: These are actual fields within a struct, e.g. pdict in LineElement
@@ -78,6 +79,7 @@ import GTPSA: sincu, sinhc, sinhcu, asinc, asincu, asinhc, asinhcu
 include("defexpr.jl")
 include("element.jl")
 include("beamline.jl")
+include("scalarize.jl")
 include("multipole.jl")
 include("rf.jl")
 include("bend.jl")
