@@ -24,6 +24,9 @@ ele.BMultipoleParams        # Goes to InheritParams to get parent
 
 function get_BM_strength(ele::LineElement, key::Symbol)
   b = ele.BMultipoleParams
+  if isnothing(b)
+    return 0f0
+  end
   return @noinline _get_BM_strength(ele, b, key)
 end
 
@@ -234,7 +237,7 @@ end
 function get_bend_g(ele::LineElement, ::Symbol)
   bp = ele.BendParams
   if isnothing(bp)
-    error("Unable to get g: LineElement does not contain BendParams")
+    return 0f0 #error("Unable to get g: LineElement does not contain BendParams")
   end
   return bp.g_ref
 end
@@ -391,6 +394,9 @@ end
 
 function get_cavity_rate(ele::LineElement, key::Symbol)
   c = ele.RFParams
+  if isnothing(c)
+    return 0f0
+  end
   return @noinline _get_cavity_rate(c, key)
 end
 
