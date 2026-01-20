@@ -47,7 +47,8 @@ export AbstractParams,
 
        @eles,
 
-       scalarize
+       scalarize,
+       scalarize!
 
 using Accessors, 
       AtomicAndPhysicalConstants,
@@ -75,10 +76,10 @@ using FunctionWrappers: FunctionWrapper
 # For example, the s position of an element can be PROPERTY of the BeamlineParams 
 # struct as one can sum the lengths of each preceding element in the Beamline.
 
-include("scalarize.jl")
 include("defexpr.jl")
 include("element.jl")
 include("beamline.jl")
+include("scalarize.jl")
 include("multipole.jl")
 include("rf.jl")
 include("bend.jl")

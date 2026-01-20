@@ -6,7 +6,7 @@ isactive(::Nothing) = false
     apply = [
       begin
         # This is so deval never allocates another array unless is a DefExpr to deval
-        if type <: AbstractArray && eltype(type) <: DefExpr
+        if type <: AbstractArray && (eltype(type) <: DefExpr || isabstracttype(eltype(type)))
           :(deval.(getproperty(a, $(QuoteNode(name)))))
         else
           :(deval(getproperty(a, $(QuoteNode(name)))))
