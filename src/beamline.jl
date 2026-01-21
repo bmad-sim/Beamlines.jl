@@ -211,7 +211,12 @@ function Base.getproperty(b::Beamline, key::Symbol)
       #@warn "R_ref has not been set: using default value of NaN"
       error("Unable to get $key: ref of the Beamline has not been set")
     elseif key == :species_ref && isnullspecies(field)
-      error("Unable to get species_ref: species_ref of the Beamline has not been set")
+      latidx = getfield(b, :lattice_index)
+      if latidx == -1 || latidx == 1
+        error("Unable to get species_ref: species_ref of the Beamline has not been set")
+      else
+        return getfield(b, :lattice).beamlines[latidx-1].species_ref
+      end
     elseif key in (:lattice, :lattice_index) && (field == -1 || field === NULL_LATTICE)
       error("Unable to get $key: Beamline is not in a Lattice")
     end
