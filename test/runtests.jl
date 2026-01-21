@@ -1349,5 +1349,10 @@ using ForwardDiff, GTPSA, ReverseDiff
       @test fodo.ref == num
     end
 
-    # Finally 
+    # test inherit species lattice
+    q2 = Drift(L = 1, dE_ref=1e6)
+    m2 = Marker(E_ref = 10e9, species_ref=Species("electron"))
+    lat2 = Lattice([m2, q2])
+    @test q2.species_ref == m2.species_ref
+    @test lat2.beamlines[1].species_ref == lat2.beamlines[2].species_ref
 end
