@@ -30,6 +30,17 @@ end
   end
 end
 
+# Default parameter group show:
+function Base.show(io::IO, a::AbstractParams)
+  fields = fieldnames(typeof(a))
+  width = maximum(length, String.(fields))
+  println(io, nameof(typeof(a)))
+  for field in fields
+    println(io, " ", rpad(String(field), width), " = ", getproperty(a, field))
+  end
+  return
+end
+
 # By making the key the AbstractParams type name, we always have a consistent internal definition
 const ParamDict = Dict{Type{<:AbstractParams}, AbstractParams}
 Base.setindex!(h::ParamDict, v, key) = error("Incorrect key/value types for ParamDict")
@@ -71,6 +82,50 @@ struct LineElement
     return ele
   end
 end
+
+# Element show
+function Base.show(io::IO, ele::LineElement)
+  print(io, "LineElement:")
+  pdict = getfield(ele, :pdict)
+  ks = collect(keys(pdict))
+  vs = collect(values(pdict))
+  idxs = sortperm(String.(Symbol.(ks))) # Sort alphabetically
+
+  # Put it all in a matrix, 2 columns
+  pgs = Matrix{Any}(nothing, 3, div(length(vs), 3, RoundUp))
+
+  idx = 1
+  # However, always put UniversalParams and BeamlinesParams
+  # first if they exist
+  if UniversalParams in keys(pdict)
+    pgs[idx] = pdict[UniversalParams]
+    idx += 1
+  end
+
+  if BeamlineParams in keys(pdict)
+    pgs[idx] = pdict[BeamlineParams]
+    idx += 1
+  end
+
+  for v in vs[idxs]
+    if !(v in pgs)
+      pgs[idx] = v
+      idx += 1
+    end
+  end
+
+  pretty_table(io, permutedims(pgs);
+    show_column_labels=false,
+    line_breaks=true,
+    alignment=:l,
+    table_format = TextTableFormat(borders = text_table_borders__borderless),
+    new_line_at_end=false,
+    formatters=[(v, i, j)-> isnothing(v) ? "" : v]
+  )
+
+  return
+end
+
 
 function flattened_pdict(ele::LineElement, p=ParamDict())
   curpdict = getfield(ele, :pdict)

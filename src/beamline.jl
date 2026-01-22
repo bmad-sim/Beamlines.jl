@@ -337,6 +337,39 @@ struct BeamlineParams <: AbstractParams
   beamline_index::Int
 end
 
+function Base.show(io::IO, bp::BeamlineParams)
+  println(io, typeof(bp))
+  width = length(" beamline_index")
+  println(io, rpad(" beamline_index", width), " = ", bp.beamline_index)
+
+  name = "Inferred"
+  try 
+    species_ref = bp.beamline.species_ref
+    name = species_ref.name
+  catch
+  end
+  println(io, rpad(" species_ref", width), " = ", name)
+
+  ref = "Not Set"
+  try
+    ref = bp.beamline.ref
+  catch
+  end
+  ref_meaning = " " * String(refmeaning_to_sym(bp.beamline.ref_meaning))
+  println(io, rpad(ref_meaning, width), " = ", ref)
+
+  println()
+
+#=
+  width = maximum(length, String.(fields))
+  println(io, nameof(typeof(a)))
+  for field in fields
+    println(io, "  ", rpad(String(field), width), " = ", getproperty(a, field))
+  end
+  =#
+  return
+end
+
 # Make E_ref and R_ref (in beamline) be properties
 # Also make s a property of BeamlineParams
 # Note that because BeamlineParams is immutable, not setting rn
