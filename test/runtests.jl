@@ -218,8 +218,8 @@ using ForwardDiff, GTPSA, ReverseDiff
     bl = Beamline([a,ele])
     @test bl.line[1] === a
     @test bl.line[2] === ele
-    @test_throws ErrorException bl.R_ref
-    @test_throws ErrorException a.R_ref
+    @test_throws ErrorException bl.p_over_q_ref
+    @test_throws ErrorException a.p_over_q_ref
 
     @test a.beamline_index == 1
     @test a.beamline === bl
@@ -227,13 +227,13 @@ using ForwardDiff, GTPSA, ReverseDiff
     @test ele.beamline_index == 2
     @test ele.beamline === bl
 
-    bl.R_ref = 5.0
+    bl.p_over_q_ref = 5.0
     @test a.Kn1 == 2.0f0/5.0
     @test a.Kn1L == 0.5f0*2.0f0/5.0
-    @test a.R_ref == 5.0
-    a.R_ref = 6.0
-    @test a.R_ref == 6.0
-    a.R_ref = 5.0
+    @test a.p_over_q_ref == 5.0
+    a.p_over_q_ref = 6.0
+    @test a.p_over_q_ref == 6.0
+    a.p_over_q_ref = 5.0
     @test eltype(a.BMultipoleParams) == Float32
     a.Kn1 = 123 # should cause promotion
     @test eltype(a.BMultipoleParams) == Float64
@@ -435,7 +435,7 @@ using ForwardDiff, GTPSA, ReverseDiff
     bl = Beamline([deepcopy_no_beamline(a), 
                    deepcopy_no_beamline(ele), 
                    deepcopy_no_beamline(a), 
-                   deepcopy_no_beamline(ele)], R_ref=60.0)
+                   deepcopy_no_beamline(ele)], p_over_q_ref=60.0)
     foreach(t->t.field_master=true, bl.line)
     bbl = BitsBeamline(bl)
     bl2 = Beamline(bbl)
@@ -583,7 +583,7 @@ using ForwardDiff, GTPSA, ReverseDiff
     d = Drift(L=1)
     qd = Quadrupole(Kn1=-0.36, L=0.5)
 
-    fodo = Beamline([qf, d, qd, d, qf, d, qd, d], R_ref=60)
+    fodo = Beamline([qf, d, qd, d, qf, d, qd, d], p_over_q_ref=60)
     @test qf === fodo.line[1]
     @test d === fodo.line[2]
     @test qd === fodo.line[3]
@@ -687,28 +687,28 @@ using ForwardDiff, GTPSA, ReverseDiff
       @test dc() ≈ 0.5
       @test dd() ≈ 0.5 && typeof(dd()) == ComplexF64
 
-      local R_ref = 60.
+      local p_over_q_ref = 60.
       local Kn1 = 0.36
       local L = 0.5
       qf = Quadrupole(Kn1=DefExpr(()->Kn1), L=DefExpr(()->L))
       d = Drift(L=1)
       qd = Quadrupole(Kn1=DefExpr(()->-qf.Kn1), L=DefExpr(()->L))
 
-      fodo = Beamline([qf, d, qd, d], R_ref=DefExpr(()->R_ref))
+      fodo = Beamline([qf, d, qd, d], p_over_q_ref=DefExpr(()->p_over_q_ref))
 
-      @test fodo.R_ref == R_ref
-      @test qf.R_ref == R_ref
+      @test fodo.p_over_q_ref == p_over_q_ref
+      @test qf.p_over_q_ref == p_over_q_ref
 
-      R_ref = 40.
-      @test fodo.R_ref == R_ref
-      @test qf.R_ref == R_ref
+      p_over_q_ref = 40.
+      @test fodo.p_over_q_ref == p_over_q_ref
+      @test qf.p_over_q_ref == p_over_q_ref
 
       @test qf.Kn1L ≈ Kn1*L
       @test qd.Kn1L ≈ -Kn1*L
-      @test qf.Bn1L ≈ Kn1*R_ref*L
-      @test qd.Bn1L ≈ -Kn1*R_ref*L
-      @test qf.Bn1 ≈ Kn1*R_ref
-      @test qd.Bn1 ≈ -Kn1*R_ref
+      @test qf.Bn1L ≈ Kn1*p_over_q_ref*L
+      @test qd.Bn1L ≈ -Kn1*p_over_q_ref*L
+      @test qf.Bn1 ≈ Kn1*p_over_q_ref
+      @test qd.Bn1 ≈ -Kn1*p_over_q_ref
       @test qf.L ≈ L
       @test qd.L ≈ L
       @test fodo.line[end].s_downstream ≈ 3
@@ -719,34 +719,34 @@ using ForwardDiff, GTPSA, ReverseDiff
       
       @test qf.Kn1L ≈ Kn1*L
       @test qd.Kn1L ≈ -Kn1*L
-      @test qf.Bn1L ≈ Kn1*R_ref*L
-      @test qd.Bn1L ≈ -Kn1*R_ref*L
-      @test qf.Bn1 ≈ Kn1*R_ref
-      @test qd.Bn1 ≈ -Kn1*R_ref
+      @test qf.Bn1L ≈ Kn1*p_over_q_ref*L
+      @test qd.Bn1L ≈ -Kn1*p_over_q_ref*L
+      @test qf.Bn1 ≈ Kn1*p_over_q_ref
+      @test qd.Bn1 ≈ -Kn1*p_over_q_ref
   
       Kn1 = 0.2
       @test qf.Kn1L ≈ Kn1*L
       @test qd.Kn1L ≈ -Kn1*L
-      @test qf.Bn1L ≈ Kn1*R_ref*L
-      @test qd.Bn1L ≈ -Kn1*R_ref*L
-      @test qf.Bn1 ≈ Kn1*R_ref
-      @test qd.Bn1 ≈ -Kn1*R_ref
+      @test qf.Bn1L ≈ Kn1*p_over_q_ref*L
+      @test qd.Bn1L ≈ -Kn1*p_over_q_ref*L
+      @test qf.Bn1 ≈ Kn1*p_over_q_ref
+      @test qd.Bn1 ≈ -Kn1*p_over_q_ref
 
-      R_ref = 3*im
+      p_over_q_ref = 3*im
       @test qf.Kn1L ≈ Kn1*L
       @test qd.Kn1L ≈ -Kn1*L
-      @test qf.Bn1L ≈ Kn1*R_ref*L
-      @test qd.Bn1L ≈ -Kn1*R_ref*L
-      @test qf.Bn1 ≈ Kn1*R_ref
-      @test qd.Bn1 ≈ -Kn1*R_ref
+      @test qf.Bn1L ≈ Kn1*p_over_q_ref*L
+      @test qd.Bn1L ≈ -Kn1*p_over_q_ref*L
+      @test qf.Bn1 ≈ Kn1*p_over_q_ref
+      @test qd.Bn1 ≈ -Kn1*p_over_q_ref
 
       Kn1 = 4*im
       @test qf.Kn1L ≈ Kn1*L
       @test qd.Kn1L ≈ -Kn1*L
-      @test qf.Bn1L ≈ Kn1*R_ref*L
-      @test qd.Bn1L ≈ -Kn1*R_ref*L
-      @test qf.Bn1 ≈ Kn1*R_ref
-      @test qd.Bn1 ≈ -Kn1*R_ref
+      @test qf.Bn1L ≈ Kn1*p_over_q_ref*L
+      @test qd.Bn1L ≈ -Kn1*p_over_q_ref*L
+      @test qf.Bn1 ≈ Kn1*p_over_q_ref
+      @test qd.Bn1 ≈ -Kn1*p_over_q_ref
     end
 
     # CFunction
@@ -770,28 +770,28 @@ using ForwardDiff, GTPSA, ReverseDiff
       @test dc() ≈ 0.5
       @test dd() ≈ 0.5 && typeof(dd()) == ComplexF64
       
-      local R_ref::Float64 = 60.
+      local p_over_q_ref::Float64 = 60.
       local Kn1::Float64 = 0.36
       local L::Float64 = 0.5
       qf = Quadrupole(Kn1=DefExpr(()->Kn1), L=DefExpr(()->L))
       d = Drift(L=1)
       qd = Quadrupole(Kn1=DefExpr(()->-qf.Kn1), L=DefExpr(()->L))
 
-      fodo = Beamline([qf, d, qd, d], R_ref=DefExpr(()->R_ref))
+      fodo = Beamline([qf, d, qd, d], p_over_q_ref=DefExpr(()->p_over_q_ref))
 
-      @test fodo.R_ref == R_ref
-      @test qf.R_ref == R_ref
+      @test fodo.p_over_q_ref == p_over_q_ref
+      @test qf.p_over_q_ref == p_over_q_ref
 
-      R_ref = 40.
-      @test fodo.R_ref == R_ref
-      @test qf.R_ref == R_ref
+      p_over_q_ref = 40.
+      @test fodo.p_over_q_ref == p_over_q_ref
+      @test qf.p_over_q_ref == p_over_q_ref
 
       @test qf.Kn1L ≈ Kn1*L
       @test qd.Kn1L ≈ -Kn1*L
-      @test qf.Bn1L ≈ Kn1*R_ref*L
-      @test qd.Bn1L ≈ -Kn1*R_ref*L
-      @test qf.Bn1 ≈ Kn1*R_ref
-      @test qd.Bn1 ≈ -Kn1*R_ref
+      @test qf.Bn1L ≈ Kn1*p_over_q_ref*L
+      @test qd.Bn1L ≈ -Kn1*p_over_q_ref*L
+      @test qf.Bn1 ≈ Kn1*p_over_q_ref
+      @test qd.Bn1 ≈ -Kn1*p_over_q_ref
       @test qf.L ≈ L
       @test qd.L ≈ L
       @test fodo.line[end].s_downstream ≈ 3
@@ -802,34 +802,34 @@ using ForwardDiff, GTPSA, ReverseDiff
       
       @test qf.Kn1L ≈ Kn1*L
       @test qd.Kn1L ≈ -Kn1*L
-      @test qf.Bn1L ≈ Kn1*R_ref*L
-      @test qd.Bn1L ≈ -Kn1*R_ref*L
-      @test qf.Bn1 ≈ Kn1*R_ref
-      @test qd.Bn1 ≈ -Kn1*R_ref
+      @test qf.Bn1L ≈ Kn1*p_over_q_ref*L
+      @test qd.Bn1L ≈ -Kn1*p_over_q_ref*L
+      @test qf.Bn1 ≈ Kn1*p_over_q_ref
+      @test qd.Bn1 ≈ -Kn1*p_over_q_ref
   
       Kn1 = 0.2
       @test qf.Kn1L ≈ Kn1*L
       @test qd.Kn1L ≈ -Kn1*L
-      @test qf.Bn1L ≈ Kn1*R_ref*L
-      @test qd.Bn1L ≈ -Kn1*R_ref*L
-      @test qf.Bn1 ≈ Kn1*R_ref
-      @test qd.Bn1 ≈ -Kn1*R_ref
+      @test qf.Bn1L ≈ Kn1*p_over_q_ref*L
+      @test qd.Bn1L ≈ -Kn1*p_over_q_ref*L
+      @test qf.Bn1 ≈ Kn1*p_over_q_ref
+      @test qd.Bn1 ≈ -Kn1*p_over_q_ref
 
-      R_ref = 3.0
+      p_over_q_ref = 3.0
       @test qf.Kn1L ≈ Kn1*L
       @test qd.Kn1L ≈ -Kn1*L
-      @test qf.Bn1L ≈ Kn1*R_ref*L
-      @test qd.Bn1L ≈ -Kn1*R_ref*L
-      @test qf.Bn1 ≈ Kn1*R_ref
-      @test qd.Bn1 ≈ -Kn1*R_ref
+      @test qf.Bn1L ≈ Kn1*p_over_q_ref*L
+      @test qd.Bn1L ≈ -Kn1*p_over_q_ref*L
+      @test qf.Bn1 ≈ Kn1*p_over_q_ref
+      @test qd.Bn1 ≈ -Kn1*p_over_q_ref
 
       Kn1 = 4.0
       @test qf.Kn1L ≈ Kn1*L
       @test qd.Kn1L ≈ -Kn1*L
-      @test qf.Bn1L ≈ Kn1*R_ref*L
-      @test qd.Bn1L ≈ -Kn1*R_ref*L
-      @test qf.Bn1 ≈ Kn1*R_ref
-      @test qd.Bn1 ≈ -Kn1*R_ref
+      @test qf.Bn1L ≈ Kn1*p_over_q_ref*L
+      @test qd.Bn1L ≈ -Kn1*p_over_q_ref*L
+      @test qf.Bn1 ≈ Kn1*p_over_q_ref
+      @test qd.Bn1 ≈ -Kn1*p_over_q_ref
     end
     ele = LineElement(x1_limit=123,
                       x2_limit=456,
@@ -979,45 +979,45 @@ using ForwardDiff, GTPSA, ReverseDiff
     @test Beamlines.deval(ele.RFParams) ≈ RFParams(bo + 27, bo + 28, bo + 29, false, PhaseReference.Accelerating, false, false)
 
     # Species addition
-    bl = Beamline([LineElement(), LineElement()]; R_ref=-59.52872449027632, species_ref=Species("electron"))
+    bl = Beamline([LineElement(), LineElement()]; p_over_q_ref=-59.52872449027632, species_ref=Species("electron"))
     @test bl.species_ref == Species("electron")
-    @test bl.R_ref == -59.52872449027632
+    @test bl.p_over_q_ref == -59.52872449027632
     @test bl.pc_ref ≈ 1.7846262612447e10
     @test bl.E_ref ≈ 1.784626264386055e10
     @test sqrt(bl.E_ref^2-bl.pc_ref^2) ≈ Beamlines.massof(bl.species_ref)
     bl = Beamline([LineElement(), LineElement()]; pc_ref=1.7846262612447e10, species_ref=Species("electron"))
     @test bl.species_ref == Species("electron")
-    @test bl.R_ref ≈ -59.52872449027632
+    @test bl.p_over_q_ref ≈ -59.52872449027632
     @test bl.pc_ref ≈ 1.7846262612447e10
     @test bl.E_ref ≈ 1.784626264386055e10
     @test sqrt(bl.E_ref^2-bl.pc_ref^2) ≈ Beamlines.massof(bl.species_ref)
     bl = Beamline([LineElement(), LineElement()]; E_ref=1.784626264386055e10, species_ref=Species("electron"))
     @test bl.species_ref == Species("electron")
-    @test bl.R_ref ≈ -59.52872449027632
+    @test bl.p_over_q_ref ≈ -59.52872449027632
     @test bl.pc_ref ≈ 1.7846262612447e10
     @test bl.E_ref ≈ 1.784626264386055e10
     @test abs(bl.pc_ref*sinh(acosh(bl.E_ref/bl.pc_ref)) - Beamlines.massof(bl.species_ref)) < 0.41 # Round off error here
 
-    @test_throws ErrorException bl.dR_ref
+    @test_throws ErrorException bl.dp_over_q_ref
     @test_throws ErrorException bl.dE_ref
     @test_throws ErrorException bl.dpc_ref
     @test bl.line[1].E_ref == bl.E_ref
-    @test bl.line[1].R_ref == bl.R_ref
+    @test bl.line[1].p_over_q_ref == bl.p_over_q_ref
     @test bl.line[1].pc_ref == bl.pc_ref
     @test bl.line[2].E_ref == bl.E_ref
-    @test bl.line[2].R_ref == bl.R_ref
+    @test bl.line[2].p_over_q_ref == bl.p_over_q_ref
     @test bl.line[2].pc_ref == bl.pc_ref
 
-    @test Beamline(LineElement[], species_ref=Species("electron"), R_ref = 10).R_ref == -10
+    @test Beamline(LineElement[], species_ref=Species("electron"), p_over_q_ref = 10).p_over_q_ref == -10
     ele = LineElement()
     bl1 = Beamline([ele])
     @test_throws ErrorException Beamline([ele])
-    bl = Beamline(LineElement[], species_ref=Species("electron"), R_ref = 10)
-    @test bl.R_ref == -10
-    @test (bl.pc_ref = 0; bl.R_ref) == 0
-    @test (bl.E_ref = Beamlines.massof(Species("electron")); bl.R_ref) == 0
-    bl.R_ref = 10
-    @test bl.R_ref == -10
+    bl = Beamline(LineElement[], species_ref=Species("electron"), p_over_q_ref = 10)
+    @test bl.p_over_q_ref == -10
+    @test (bl.pc_ref = 0; bl.p_over_q_ref) == 0
+    @test (bl.E_ref = Beamlines.massof(Species("electron")); bl.p_over_q_ref) == 0
+    bl.p_over_q_ref = 10
+    @test bl.p_over_q_ref == -10
 
     @test_throws ErrorException Beamline(LineElement[]).species_ref
 
@@ -1025,29 +1025,29 @@ using ForwardDiff, GTPSA, ReverseDiff
     @test_throws ErrorException LineElement(angle=1.0).angle
 
     # Test dR etc
-    bl = Beamline(LineElement[]; dR_ref=-59.52872449027632, species_ref=Species("electron"))
+    bl = Beamline(LineElement[]; dp_over_q_ref=-59.52872449027632, species_ref=Species("electron"))
     @test bl.species_ref == Species("electron")
-    @test bl.dR_ref == -59.52872449027632
+    @test bl.dp_over_q_ref == -59.52872449027632
     @test_throws ErrorException bl.dpc_ref
     @test_throws ErrorException bl.dE_ref
-    @test_throws ErrorException bl.R_ref
+    @test_throws ErrorException bl.p_over_q_ref
     @test_throws ErrorException bl.E_ref
     @test_throws ErrorException bl.pc_ref
     bl = Beamline(LineElement[]; dpc_ref=1.7846262612447e10, species_ref=Species("electron"))
     @test bl.species_ref == Species("electron")
     @test bl.dpc_ref == 1.7846262612447e10
-    @test_throws ErrorException bl.dR_ref
+    @test_throws ErrorException bl.dp_over_q_ref
     @test_throws ErrorException bl.dE_ref
-    @test_throws ErrorException bl.R_ref
+    @test_throws ErrorException bl.p_over_q_ref
     @test_throws ErrorException bl.E_ref
     @test_throws ErrorException bl.pc_ref
     bl = Beamline(LineElement[]; dE_ref=1.784626264386055e10, species_ref=Species("electron"))
     @test bl.species_ref == Species("electron")
     @test bl.dE_ref == 1.784626264386055e10
     @test_throws ErrorException bl.dpc_ref
-    @test_throws ErrorException bl.dR_ref
+    @test_throws ErrorException bl.dp_over_q_ref
     @test_throws ErrorException bl.E_ref 
-    @test_throws ErrorException bl.R_ref
+    @test_throws ErrorException bl.p_over_q_ref
     @test_throws ErrorException bl.pc_ref
 
     # InitialBeamlineParams
@@ -1055,35 +1055,35 @@ using ForwardDiff, GTPSA, ReverseDiff
     @test_throws ErrorException ele.InitialBeamlineParams
     @test_throws ErrorException ele.InitialBeamlineParams = Beamlines.InitialBeamlineParams()
     @test Beamline([ele]).species_ref == Species("electron")
-    ele = LineElement(species_ref=Species("electron"), dR_ref=-59.52872449027632)
-    @test ele.dR_ref == -59.52872449027632
+    ele = LineElement(species_ref=Species("electron"), dp_over_q_ref=-59.52872449027632)
+    @test ele.dp_over_q_ref == -59.52872449027632
     @test_throws ErrorException ele.dpc_ref
     @test_throws ErrorException ele.dE_ref 
     ele.dpc_ref = 1.7846262612447e10
     @test ele.dpc_ref == 1.7846262612447e10
-    @test_throws ErrorException ele.dR_ref
+    @test_throws ErrorException ele.dp_over_q_ref
     @test_throws ErrorException ele.dE_ref
     ele.dE_ref = 1.784626264386055e10
     @test ele.dE_ref == 1.784626264386055e10
-    @test_throws ErrorException ele.dR_ref 
+    @test_throws ErrorException ele.dp_over_q_ref 
     @test_throws ErrorException ele.dpc_ref
     ele.species_ref = Species("proton")
     @test ele.species_ref == Species("proton")
     @test ele.dE_ref == 1.784626264386055e10
-    @test_throws ErrorException ele.dR_ref 
+    @test_throws ErrorException ele.dp_over_q_ref 
     @test_throws ErrorException ele.dpc_ref
     ele.E_ref = ele.dE_ref
     ele.species_ref = Species("electron")
     @test ele.species_ref == Species("electron")
-    @test ele.R_ref ≈ -59.52872449027632
+    @test ele.p_over_q_ref ≈ -59.52872449027632
     @test ele.pc_ref ≈ 1.7846262612447e10
     @test ele.E_ref ≈ 1.784626264386055e10
     ele.pc_ref = 1.7846262612447e10
-    @test ele.R_ref ≈ -59.52872449027632
+    @test ele.p_over_q_ref ≈ -59.52872449027632
     @test ele.pc_ref ≈ 1.7846262612447e10
     @test ele.E_ref ≈ 1.784626264386055e10
-    ele.R_ref = -59.52872449027632
-    @test ele.R_ref ≈ -59.52872449027632
+    ele.p_over_q_ref = -59.52872449027632
+    @test ele.p_over_q_ref ≈ -59.52872449027632
     @test ele.pc_ref ≈ 1.7846262612447e10
     @test ele.E_ref ≈ 1.784626264386055e10
 
@@ -1091,7 +1091,7 @@ using ForwardDiff, GTPSA, ReverseDiff
     @test_throws ErrorException LineElement().E_ref
     @test_throws ErrorException LineElement().species_ref
     @test_throws ErrorException LineElement(E_ref=18e9).species_ref
-    @test_throws ErrorException LineElement(species_ref=Species("electron")).R_ref
+    @test_throws ErrorException LineElement(species_ref=Species("electron")).p_over_q_ref
 
      # Only valid at first element
     bl = Beamline([LineElement(), LineElement()], E_ref=10e9, species_ref=Species("electron"))
@@ -1099,14 +1099,14 @@ using ForwardDiff, GTPSA, ReverseDiff
     bl.line[1].E_ref = 2e9
     @test bl.line[1].E_ref == 2e9
     @test bl.line[2].E_ref == 2e9
-    @test bl.line[2].dR_ref == 0
+    @test bl.line[2].dp_over_q_ref == 0
     @test bl.line[2].dE_ref == 0
     @test bl.line[2].dpc_ref == 0
-    @test_throws ErrorException bl.line[1].dR_ref
+    @test_throws ErrorException bl.line[1].dp_over_q_ref
     @test_throws ErrorException bl.line[1].dE_ref
     @test_throws ErrorException bl.line[1].dpc_ref
     @test_throws ErrorException Beamline([LineElement(), LineElement(species_ref=Species("electron"))])
-    @test_throws ErrorException Beamline([LineElement(), LineElement(R_ref=-39.)])
+    @test_throws ErrorException Beamline([LineElement(), LineElement(p_over_q_ref=-39.)])
     @test_throws ErrorException Beamline([LineElement(), LineElement(E_ref=10e9, species_ref=Species("electron"))])
 
     # Overriding InitialBeamlineParams at Beamline level
@@ -1126,51 +1126,51 @@ using ForwardDiff, GTPSA, ReverseDiff
     bl2 = Beamline(LineElement[]; dE_ref=-3e9, species_ref=Species("proton"))
     @test_throws ErrorException bl1.dE_ref
     @test_throws ErrorException bl2.dpc_ref
-    @test_throws ErrorException bl2.dR_ref
+    @test_throws ErrorException bl2.dp_over_q_ref
     @test bl2.dE_ref == -3e9
     lat = Lattice([bl1, bl2])
     @test bl2.E_ref == 7e9
     @test bl2.species_ref == Species("proton")
     @test bl2.dE_ref == -3e9
     @test bl1.dE_ref == 10e9
-    @test bl2.R_ref - bl1.R_ref ≈ bl2.dR_ref
+    @test bl2.p_over_q_ref - bl1.p_over_q_ref ≈ bl2.dp_over_q_ref
     @test bl2.E_ref - bl1.E_ref ≈ bl2.dE_ref
     @test bl2.pc_ref - bl1.pc_ref ≈ bl2.dpc_ref
-    @test bl2.R_ref ≈ Beamlines.E_to_R(bl2.species_ref, bl2.E_ref)
+    @test bl2.p_over_q_ref ≈ Beamlines.E_to_R(bl2.species_ref, bl2.E_ref)
     @test bl2.pc_ref ≈ Beamlines.E_to_pc(bl2.species_ref, bl2.E_ref)
 
     bl2.dpc_ref = -2e9
-    bl1.R_ref = -40
+    bl1.p_over_q_ref = -40
     @test bl2.dpc_ref == -2e9
-    @test bl1.R_ref == -40
+    @test bl1.p_over_q_ref == -40
     @test bl2.pc_ref - bl1.pc_ref ≈ bl2.dpc_ref
     @test bl2.E_ref - bl1.E_ref ≈ bl2.dE_ref
-    @test bl2.R_ref - bl1.R_ref ≈ bl2.dR_ref
+    @test bl2.p_over_q_ref - bl1.p_over_q_ref ≈ bl2.dp_over_q_ref
 
-    bl2.dR_ref = -5
+    bl2.dp_over_q_ref = -5
     bl1.pc_ref = 9e9
     @test bl2.pc_ref - bl1.pc_ref ≈ bl2.dpc_ref
     @test bl2.E_ref - bl1.E_ref ≈ bl2.dE_ref
-    @test bl2.R_ref - bl1.R_ref ≈ bl2.dR_ref
+    @test bl2.p_over_q_ref - bl1.p_over_q_ref ≈ bl2.dp_over_q_ref
 
     bl2.E_ref = 10e9
     @test bl2.E_ref == 10e9
     @test bl2.pc_ref - bl1.pc_ref ≈ bl2.dpc_ref
     @test bl2.E_ref - bl1.E_ref ≈ bl2.dE_ref
-    @test bl2.R_ref - bl1.R_ref ≈ bl2.dR_ref
+    @test bl2.p_over_q_ref - bl1.p_over_q_ref ≈ bl2.dp_over_q_ref
 
-    @test_throws ErrorException Beamline(LineElement[]; pc_ref=1, dR_ref=2)
+    @test_throws ErrorException Beamline(LineElement[]; pc_ref=1, dp_over_q_ref=2)
     @test_throws ErrorException Beamline(LineElement[]).lattice
     @test (bl = Beamline(LineElement[]; E_ref=10); lat = Lattice([bl]); bl.dE_ref) == 10
     @test_throws ErrorException Beamline(LineElement[]).lattice_index = 1
     @test_throws ErrorException Beamline(LineElement[]).lattice = Beamlines.NULL_LATTICE
-    @test_throws ErrorException Beamline(LineElement[]).ref_meaning = Beamlines.RefMeaning.R_ref
+    @test_throws ErrorException Beamline(LineElement[]).ref_meaning = Beamlines.RefMeaning.p_over_q_ref
     
     bl = Beamline(LineElement[])
     lat = Lattice([bl])
     @test_throws ErrorException Lattice([bl])
 
-    @test Lattice([Beamline(LineElement[]; dR_ref=10.)]).beamlines[1].R_ref == 10.
+    @test Lattice([Beamline(LineElement[]; dp_over_q_ref=10.)]).beamlines[1].p_over_q_ref == 10.
 
     # Lattice LineElement ctor:
     ele1 = LineElement(E_ref=10e9, species_ref=Species("electron"))
@@ -1187,28 +1187,28 @@ using ForwardDiff, GTPSA, ReverseDiff
     @test bl2.species_ref == Species("proton")
     @test bl2.dE_ref == -3e9
     @test bl1.dE_ref == 10e9
-    @test bl2.R_ref - bl1.R_ref ≈ bl2.dR_ref
+    @test bl2.p_over_q_ref - bl1.p_over_q_ref ≈ bl2.dp_over_q_ref
     @test bl2.E_ref - bl1.E_ref ≈ bl2.dE_ref
     @test bl2.pc_ref - bl1.pc_ref ≈ bl2.dpc_ref
-    @test bl2.R_ref ≈ Beamlines.E_to_R(bl2.species_ref, bl2.E_ref)
+    @test bl2.p_over_q_ref ≈ Beamlines.E_to_R(bl2.species_ref, bl2.E_ref)
     @test bl2.pc_ref ≈ Beamlines.E_to_pc(bl2.species_ref, bl2.E_ref)
     bl2.dpc_ref = -2e9
-    bl1.R_ref = -40
+    bl1.p_over_q_ref = -40
     @test bl2.dpc_ref == -2e9
-    @test bl1.R_ref == -40
+    @test bl1.p_over_q_ref == -40
     @test bl2.pc_ref - bl1.pc_ref ≈ bl2.dpc_ref
     @test bl2.E_ref - bl1.E_ref ≈ bl2.dE_ref
-    @test bl2.R_ref - bl1.R_ref ≈ bl2.dR_ref
-    bl2.dR_ref = -5
+    @test bl2.p_over_q_ref - bl1.p_over_q_ref ≈ bl2.dp_over_q_ref
+    bl2.dp_over_q_ref = -5
     bl1.pc_ref = 9e9
     @test bl2.pc_ref - bl1.pc_ref ≈ bl2.dpc_ref
     @test bl2.E_ref - bl1.E_ref ≈ bl2.dE_ref
-    @test bl2.R_ref - bl1.R_ref ≈ bl2.dR_ref
+    @test bl2.p_over_q_ref - bl1.p_over_q_ref ≈ bl2.dp_over_q_ref
     bl2.E_ref = 10e9
     @test bl2.E_ref == 10e9
     @test bl2.pc_ref - bl1.pc_ref ≈ bl2.dpc_ref
     @test bl2.E_ref - bl1.E_ref ≈ bl2.dE_ref
-    @test bl2.R_ref - bl1.R_ref ≈ bl2.dR_ref
+    @test bl2.p_over_q_ref - bl1.p_over_q_ref ≈ bl2.dp_over_q_ref
 
 
     # Check that InitialBeamlineParams is overridden:

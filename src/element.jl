@@ -118,6 +118,8 @@ function Base.show(io::IO, ele::LineElement)
     show_column_labels=false,
     line_breaks=true,
     alignment=:l,
+    fit_table_in_display_horizontally=get(io, :limit, false),
+    fit_table_in_display_vertically=get(io, :limit, false),
     table_format = TextTableFormat(borders = text_table_borders__borderless),
     new_line_at_end=false,
     formatters=[(v, i, j)-> isnothing(v) ? "" : v]
@@ -188,10 +190,10 @@ Patch(; kwargs...)      = LineElement(; kind="Patch", kwargs...)
 struct SciBmadStandard end
 
 @kwdef mutable struct UniversalParams <: AbstractParams
-  tracking_method = SciBmadStandard()
-  L               = Float32(0.0)
-  kind           = ""
+  kind            = ""
   name            = ""
+  L               = Float32(0.0)
+  tracking_method = SciBmadStandard()
 end
 
 function Base.isapprox(a::UniversalParams, b::UniversalParams)
