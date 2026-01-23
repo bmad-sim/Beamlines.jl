@@ -25,7 +25,7 @@ using ForwardDiff, GTPSA, ReverseDiff
     @test !(ele2 === ele)
     @test ele2 ≈ ele 
 
-    up_new = UniversalParams(SciBmadStandard(), 10.0, "NewTest", "NewTest123")
+    up_new = UniversalParams(tracking_method=SciBmadStandard(), L=10.0, name="NewTest", kind="NewTest123")
     ele.UniversalParams = up_new
     @test ele.UniversalParams === up_new
     @test ele.kind == up_new.kind
