@@ -135,7 +135,7 @@ function Base.show(io::IO, bl::Beamline)
   lines_used = 1
   name = "Inferred"
   try 
-    species_ref = blspecies_ref
+    species_ref = bl.species_ref
     name = species_ref.name
   catch
   end
