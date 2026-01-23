@@ -60,39 +60,39 @@ function _get_BM_strength(ele, b::BMultipoleParams, key)
   else
     if !isactive(ele.BeamlineParams)
       if stored_normalized == true
-        error("Unable to get $key of LineElement: Normalized multipole is stored, but the element is not within a Beamline with a set R_ref")
+        error("Unable to get $key of LineElement: Normalized multipole is stored, but the element is not within a Beamline with a set p_over_q_ref")
       else
-        error("Unable to get $key of LineElement: Unnormalized multipole is stored, but the element is not within a Beamline with a set R_ref")
+        error("Unable to get $key of LineElement: Unnormalized multipole is stored, but the element is not within a Beamline with a set p_over_q_ref")
       end
     end
-    R_ref = ele.R_ref
+    p_over_q_ref = ele.p_over_q_ref
     if stored_integrated == integrated
       if stored_normalized == false
         # user asking for normalized strength of unnormalized BMultipole
-        return strength/R_ref
+        return strength/p_over_q_ref
       else
         # user asking for unnormalized strength of normalized BMultipole
-        return strength*R_ref
+        return strength*p_over_q_ref
       end
     else
       L = ele.L
       if stored_normalized == false
         if stored_integrated == false
-          return strength/R_ref*L
+          return strength/p_over_q_ref*L
         else
           if L == 0
             error("Unable to get $key of LineElement: Integrated multipole is stored, but the element length L = 0")
           end
-          return strength/R_ref/L
+          return strength/p_over_q_ref/L
         end
       else
         if stored_integrated == false
-          return strength*R_ref*L
+          return strength*p_over_q_ref*L
         else
           if L == 0
             error("Unable to get $key of LineElement: Integrated multipole is stored, but the element length L = 0")
           end
-          return strength*R_ref/L
+          return strength*p_over_q_ref/L
         end
       end
     end
@@ -107,7 +107,7 @@ function set_BM_strength!(ele::LineElement, key::Symbol, value)
   end
 
   # Setting is painful, because we do not know what the type of
-  # of the input must be (including L and R_ref potentially)
+  # of the input must be (including L and p_over_q_ref potentially)
   # And, if it requires promotion of the BMultipoleParams struct,
   # ouchies
   strength = calc_BM_internal_strength(ele, b, key, value)
@@ -141,14 +141,14 @@ function calc_BM_internal_strength(ele, b::BMultipoleParams, key, value)
         end
       end
     else
-      R_ref = ele.R_ref
+      p_over_q_ref = ele.p_over_q_ref
       if stored_integrated == integrated
         if stored_normalized == false
           # user setting normalized strength of unnormalized BMultipole
-          return value*R_ref
+          return value*p_over_q_ref
         else
           # user setting unnormalized strength of normalized BMultipole
-          return value/R_ref
+          return value/p_over_q_ref
         end
       else
         L = ele.L
@@ -159,11 +159,11 @@ function calc_BM_internal_strength(ele, b::BMultipoleParams, key, value)
             if L == 0
               error("Unable to set $key of LineElement: Nonintegrated multipole is stored, but the element length L = 0")
             end
-            return value*R_ref/L
+            return value*p_over_q_ref/L
           else
             # user setting normalized, nonintegrated strength of 
             # unnormalized, integrated BMultipole
-            return value*R_ref*L
+            return value*p_over_q_ref*L
           end
         else
           if stored_integrated == false
@@ -172,11 +172,11 @@ function calc_BM_internal_strength(ele, b::BMultipoleParams, key, value)
             if L == 0
               error("Unable to set $key of LineElement: Nonintegrated multipole is stored, but the element length L = 0")
             end
-            return value/R_ref/L
+            return value/p_over_q_ref/L
           else
             # user setting unnormalized, nonintegrated strength of 
             # normalized, integrated BMultipole
-            return value/R_ref*L
+            return value/p_over_q_ref*L
           end
         end
       end
@@ -309,11 +309,11 @@ function set_BM_independent!(ele::LineElement, ::Symbol, value)
       s = olds
       if old_normalized != normalized
         if old_normalized == true
-          n *= ele.R_ref
-          s *= ele.R_ref
+          n *= ele.p_over_q_ref
+          s *= ele.p_over_q_ref
         else
-          n /= ele.R_ref
-          s /= ele.R_ref
+          n /= ele.p_over_q_ref
+          s /= ele.p_over_q_ref
         end
       end
 
@@ -495,10 +495,10 @@ const VIRTUAL_GETTER_MAP = Dict{Symbol,Function}(
   :harmon => get_cavity_rate,
 
   :species_ref => get_bl_params,
-  :R_ref => get_bl_params,
+  :p_over_q_ref => get_bl_params,
   :E_ref => get_bl_params,
   :pc_ref => get_bl_params,
-  :dR_ref => get_bl_params,
+  :dp_over_q_ref => get_bl_params,
   :dE_ref => get_bl_params,
   :dpc_ref => get_bl_params,
 )
@@ -518,10 +518,10 @@ const VIRTUAL_SETTER_MAP = Dict{Symbol,Function}(
   :harmon_master => set_harmon_master!,
 
   :species_ref => set_bl_params!,
-  :R_ref => set_bl_params!,
+  :p_over_q_ref => set_bl_params!,
   :E_ref => set_bl_params!,
   :pc_ref => set_bl_params!,
-  :dR_ref => set_bl_params!,
+  :dp_over_q_ref => set_bl_params!,
   :dE_ref => set_bl_params!,
   :dpc_ref => set_bl_params!,
 )

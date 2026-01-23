@@ -54,7 +54,7 @@ sqf = Quadrupole(Ks1=0.36, L=0.2)
 # Note that tilt1 specifies a tilt to only the Kn1 multipole.
 
 # Create a FODO beamline
-bl = Beamline([qf, sf, d1, Bn1, d2, qd, sd, d3, b2, d4], R_ref=60.0)
+bl = Beamline([qf, sf, d1, Bn1, d2, qd, sd, d3, b2, d4], p_over_q_ref=60.0)
 
 # Now we can get the unnormalized field strengths:
 qf.Bn1
@@ -91,8 +91,8 @@ qd.s_downstream
 
 # Even the reference energy of the Beamline can be set as 
 # a TPSA variable:
-ΔR_ref = @vars(D)[2]
-bl.R_ref += ΔR_ref
+Δp_over_q_ref = @vars(D)[2]
+bl.p_over_q_ref += Δp_over_q_ref
 
 # Now e.g. unnormalized field strengths will be TPSA:
 qd.Bn1
@@ -194,16 +194,16 @@ qf.Kn1 = 0.1
 qf2 = fodo.line[5]
 qf2.Kn1 == 0.1 # true
 
-# A Beamline has a single E_ref, R_ref, or pc_ref, and 
+# A Beamline has a single E_ref, p_over_q_ref, or pc_ref, and 
 # a single Species. One could also specify a single 
-# dE_ref, dR_ref, dpc_ref wrt the previous Beamline, granted 
+# dE_ref, dp_over_q_ref, dpc_ref wrt the previous Beamline, granted 
 # the Beamlines are in a Lattice
 bl1 = Beamline(LineElement[]; E_ref=10e9, species_ref=Species("proton"))
 bl2 = Beamline(LineElement[]; dE_ref=-3e9, species_ref=Species("electron"))
 lat = Lattice([bl1, bl2])
 
 # In this case, bl1.E_ref=10e9, bl2.E_ref=7e9
-# Whichever of E_ref, R_ref, pc_ref, dE_ref, dR_ref, or dpc_ref is 
+# Whichever of E_ref, p_over_q_ref, pc_ref, dE_ref, dp_over_q_ref, or dpc_ref is 
 # entered LAST is the independent variable
 
 # One could also put this information in the FIRST element of a Beamline:

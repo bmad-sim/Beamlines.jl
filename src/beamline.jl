@@ -16,17 +16,17 @@ struct _Lattice{T<:Branch}
   end
 end
 
-@enumx RefMeaning R_ref E_ref pc_ref dR_ref dE_ref dpc_ref
+@enumx RefMeaning p_over_q_ref E_ref pc_ref dp_over_q_ref dE_ref dpc_ref
 
 @inline function refmeaning_to_sym(ref_meaning::RefMeaning.T)
-  if ref_meaning == RefMeaning.R_ref
-    return :R_ref
+  if ref_meaning == RefMeaning.p_over_q_ref
+    return :p_over_q_ref
   elseif ref_meaning == RefMeaning.E_ref
     return :E_ref
   elseif ref_meaning == RefMeaning.pc_ref
     return :pc_ref
-  elseif ref_meaning == RefMeaning.dR_ref
-    return :dR_ref
+  elseif ref_meaning == RefMeaning.dp_over_q_ref
+    return :dp_over_q_ref
   elseif ref_meaning == RefMeaning.dE_ref
     return :dE_ref
   else
@@ -35,14 +35,14 @@ end
 end
 
 @inline function sym_to_refmeaning(sym::Symbol)
-  if sym == :R_ref
-    return RefMeaning.R_ref
+  if sym == :p_over_q_ref
+    return RefMeaning.p_over_q_ref
   elseif sym == :E_ref
     return RefMeaning.E_ref
   elseif sym == :pc_ref
     return RefMeaning.pc_ref
-  elseif sym == :dR_ref
-    return RefMeaning.dR_ref
+  elseif sym == :dp_over_q_ref
+    return RefMeaning.dp_over_q_ref
   elseif sym == :dE_ref
     return RefMeaning.dE_ref
   else
@@ -65,15 +65,15 @@ end
   function Beamline(
     line;
     species_ref::Species=Species(),  
-    R_ref=nothing, 
+    p_over_q_ref=nothing, 
     E_ref=nothing, 
     pc_ref=nothing,
-    dR_ref=nothing, 
+    dp_over_q_ref=nothing, 
     dE_ref=nothing, 
     dpc_ref=nothing,
   )
-    kwargs = (R_ref, E_ref, pc_ref, dR_ref, dE_ref, dpc_ref)
-    kwarg_syms = (:R_ref, :E_ref, :pc_ref, :dR_ref, :dE_ref, :dpc_ref)
+    kwargs = (p_over_q_ref, E_ref, pc_ref, dp_over_q_ref, dE_ref, dpc_ref)
+    kwarg_syms = (:p_over_q_ref, :E_ref, :pc_ref, :dp_over_q_ref, :dE_ref, :dpc_ref)
     c = count(t->!isnothing(t), kwargs)
     if c > 1
       error("Only one of $(kwarg_syms) can be specified")
@@ -86,7 +86,7 @@ end
       end
     end
 
-    bl = new(ReadOnlyVector(vec(line)), species_ref, NULL_LATTICE, -1, RefMeaning.R_ref, nothing)
+    bl = new(ReadOnlyVector(vec(line)), species_ref, NULL_LATTICE, -1, RefMeaning.p_over_q_ref, nothing)
 
     # Check if any are in a Beamline already
     for i in eachindex(bl.line)
@@ -121,13 +121,74 @@ end
     # Beamline ctor kwargs override any InitialBeamlineParams
     if c == 1
       idx = findfirst(t->!isnothing(t), kwargs)
-      sym = (:R_ref, :E_ref, :pc_ref, :dR_ref, :dE_ref, :dpc_ref)[idx]
-      val = (R_ref, E_ref, pc_ref, dR_ref, dE_ref, dpc_ref)[idx]
+      sym = (:p_over_q_ref, :E_ref, :pc_ref, :dp_over_q_ref, :dE_ref, :dpc_ref)[idx]
+      val = (p_over_q_ref, E_ref, pc_ref, dp_over_q_ref, dE_ref, dpc_ref)[idx]
       setproperty!(bl, sym, val)
     end
 
     return bl
   end
+end
+#show(io::IO, ::MIME"text/plain", bl::Beamline) = show(io, bl)
+function Base.show(io::IO, bl::Beamline)
+  println(io, "Beamline:")
+  lines_used = 1
+  name = "Inferred"
+  try 
+    species_ref = blspecies_ref
+    name = species_ref.name
+  catch
+  end
+  println(io, " species_ref", " = ", name)
+  lines_used += 1
+  ref = ""
+  try
+    ref = bl.ref
+  catch
+  end
+  ref_meaning = refmeaning_to_sym(bl.ref_meaning)
+  println(io, " "*String(ref_meaning), " = ", ref)
+  lines_used += 1
+
+  lattice_index = getfield(bl, :lattice_index)
+  if lattice_index != -1
+    println(io, " lattice_index", " = ", lattice_index)
+    lines_used += 1
+  end
+
+  offset = 6
+
+  N_ele = length(bl.line)
+  # Index, Name, Kind, s
+  ele_table = Matrix{Any}(nothing, 1+N_ele, 4)
+  ele_table[1,:] = ["Index", "Name", "Kind", "s [m]"]
+  lines_used
+  for i in 1:N_ele
+    ele = bl.line[i]
+    ele_table[i+1,:] = [ele.beamline_index, ele.name, ele.kind, ele.s]
+    lines_used += 1
+    if get(io, :limit, false) && lines_used > displaysize(io)[1]-offset
+      break
+    end
+  end
+
+  println(io)
+  pretty_table(io, ele_table;
+    limit_printing=get(io, :limit, false),
+    alignment=:l,
+    show_column_labels=false,
+    fit_table_in_display_horizontally=get(io, :limit, false),
+    fit_table_in_display_vertically=get(io, :limit, false),
+    table_format = TextTableFormat(
+      borders = text_table_borders__borderless,
+      horizontal_line_at_beginning=false,
+    ),
+    display_size=(displaysize(io)[1]-offset, displaysize(io)[2]),
+    highlighters=[TextHighlighter((v,i,j)->i == 1, crayon"bold")],
+    new_line_at_end=false,
+    formatters=[(v, i, j)-> isnothing(v) ? "" : v]
+  )
+  return
 end
 
 function reverse_bl_construction!(bl::Beamline, idx)
@@ -147,18 +208,18 @@ function Lattice(
   line::Vector{LineElement};
   species_ref0::Species=Species(),
   E_ref0=nothing,
-  R_ref0=nothing,
+  p_over_q_ref0=nothing,
   pc_ref0=nothing,
 )
-  kwargs = (R_ref0, E_ref0, pc_ref0)
-  kwarg_syms = (:R_ref, :E_ref, :pc_ref)
+  kwargs = (p_over_q_ref0, E_ref0, pc_ref0)
+  kwarg_syms = (:p_over_q_ref, :E_ref, :pc_ref)
   c = count(t->!isnothing(t), kwargs)
   if c > 1
-    error("Only one of E_ref0, pc_ref0, R_ref0 can be specified")
+    error("Only one of E_ref0, pc_ref0, p_over_q_ref0 can be specified")
   end
   kwarg_idx = findfirst(t->!isnothing(t), kwargs)
   kwarg_val = isnothing(kwarg_idx) ? nothing : kwargs[kwarg_idx]
-  kwarg_sym = isnothing(kwarg_idx) ? :R_ref : kwarg_syms[kwarg_idx] 
+  kwarg_sym = isnothing(kwarg_idx) ? :p_over_q_ref : kwarg_syms[kwarg_idx] 
 
   # Check if any elements already in Beamline
   if any(t->haskey(getfield(t, :pdict), BeamlineParams), line)
@@ -192,10 +253,10 @@ function Lattice(
   return Lattice(beamlines)
 end
 
-Base.propertynames(::Beamline) = (:line, :ref_meaning, :ref, :lattice, :lattice_index, :R_ref, :E_ref, :pc_ref, :dR_ref, :dE_ref, :dpc_ref, :species_ref)
+Base.propertynames(::Beamline) = (:line, :ref_meaning, :ref, :lattice, :lattice_index, :p_over_q_ref, :E_ref, :pc_ref, :dp_over_q_ref, :dE_ref, :dpc_ref, :species_ref)
  
 
-# Sign is included to ensure that values could be dE_ref, dR_ref, for example
+# Sign is included to ensure that values could be dE_ref, dp_over_q_ref, for example
 R_to_E(species_ref::Species, R) = sign(R)*sign(chargeof(species_ref))*sqrt((R*C_LIGHT*chargeof(species_ref))^2 + massof(species_ref)^2)
 E_to_R(species_ref::Species, E) = sign(E)*massof(species_ref)*sinh(acosh(abs(E)/massof(species_ref)))/C_LIGHT/chargeof(species_ref)  # sqrt(E^2-massof(species_ref)^2)/C_LIGHT/chargeof(species_ref)
 pc_to_R(species_ref::Species, pc) = pc/C_LIGHT/chargeof(species_ref)
@@ -208,7 +269,7 @@ function Base.getproperty(b::Beamline, key::Symbol)
   if key in (:ref, :ref_meaning, :species_ref, :line, :lattice, :lattice_index)
     field = deval(getfield(b, key))
     if key == :ref && isnothing(field)
-      #@warn "R_ref has not been set: using default value of NaN"
+      #@warn "p_over_q_ref has not been set: using default value of NaN"
       error("Unable to get $key: ref of the Beamline has not been set")
     elseif key == :species_ref && isnullspecies(field)
       latidx = getfield(b, :lattice_index)
@@ -221,13 +282,13 @@ function Base.getproperty(b::Beamline, key::Symbol)
       error("Unable to get $key: Beamline is not in a Lattice")
     end
     return field
-  elseif key in (:E_ref, :pc_ref, :R_ref, :dE_ref, :dpc_ref, :dR_ref)
+  elseif key in (:E_ref, :pc_ref, :p_over_q_ref, :dE_ref, :dpc_ref, :dp_over_q_ref)
     ref_meaning = refmeaning_to_sym(b.ref_meaning)
     if key == ref_meaning
       return b.ref
-    elseif key in (:E_ref, :pc_ref, :R_ref)
+    elseif key in (:E_ref, :pc_ref, :p_over_q_ref)
       # Key absolute
-      if ref_meaning in (:E_ref, :pc_ref, :R_ref)
+      if ref_meaning in (:E_ref, :pc_ref, :p_over_q_ref)
         # Both absolute is easy
         if key == :E_ref
           if ref_meaning == :pc_ref
@@ -252,7 +313,7 @@ function Base.getproperty(b::Beamline, key::Symbol)
         # Key absolute, ref_meaning relative
         if (key == :E_ref && ref_meaning == :dE_ref) || 
             (key == :pc_ref && ref_meaning == :dpc_ref) || 
-            (key == :R_ref && ref_meaning == :dR_ref)
+            (key == :p_over_q_ref && ref_meaning == :dp_over_q_ref)
           # Can just add going backwards
           lat_idx = getfield(b, :lattice_index)
           if lat_idx == -1
@@ -268,13 +329,13 @@ function Base.getproperty(b::Beamline, key::Symbol)
           if ref_meaning == :dpc_ref
             return pc_to_E(b.species_ref, b.pc_ref)
           else
-            return R_to_E(b.species_ref, b.R_ref)
+            return R_to_E(b.species_ref, b.p_over_q_ref)
           end
         elseif key == :pc_ref
           if ref_meaning == :dE_ref
             return E_to_pc(b.species_ref, b.E_ref)
           else
-            return R_to_pc(b.species_ref, b.R_ref)
+            return R_to_pc(b.species_ref, b.p_over_q_ref)
           end
         else
           if ref_meaning == :dpc_ref
@@ -299,7 +360,7 @@ function Base.getproperty(b::Beamline, key::Symbol)
         elseif key == :dpc_ref
           return b.pc_ref - b.lattice.beamlines[b.lattice_index-1].pc_ref
         else
-          return b.R_ref - b.lattice.beamlines[b.lattice_index-1].R_ref
+          return b.p_over_q_ref - b.lattice.beamlines[b.lattice_index-1].p_over_q_ref
         end
       end
     end
@@ -314,13 +375,13 @@ function Base.setproperty!(b::Beamline, key::Symbol, value)
     return setfield!(b, key, value)
   elseif key in (:lattice, :lattice_index, :ref_meaning)
     error("Unable to set property $key: this field is protected")
-  elseif key in (:E_ref, :pc_ref, :dR_ref, :dE_ref, :dpc_ref)
+  elseif key in (:E_ref, :pc_ref, :dp_over_q_ref, :dE_ref, :dpc_ref)
     setfield!(b, :ref_meaning, sym_to_refmeaning(key))
     return setfield!(b, :ref, value)
-  elseif key == :R_ref
+  elseif key == :p_over_q_ref
     species_ref = getfield(b, :species_ref)
     if !isnothing(value) && !isnullspecies(species_ref) && sign(chargeof(species_ref)) != sign(value)
-      println("Setting R_ref to $(sign(chargeof(species_ref))*value) to match sign of species_ref charge")
+      println("Setting p_over_q_ref to $(sign(chargeof(species_ref))*value) to match sign of species_ref charge")
       setfield!(b, :ref_meaning, sym_to_refmeaning(key))
       return setfield!(b, :ref, sign(chargeof(species_ref))*value)
     else
@@ -337,14 +398,48 @@ struct BeamlineParams <: AbstractParams
   beamline_index::Int
 end
 
-# Make E_ref and R_ref (in beamline) be properties
+function Base.show(io::IO, bp::BeamlineParams)
+  println(io, typeof(bp))
+  width = length(" beamline_index") # longest String
+  println(io, rpad(" beamline_index", width), " = ", bp.beamline_index)
+
+  name = "Inferred"
+  try 
+    species_ref = bp.beamline.species_ref
+    name = species_ref.name
+  catch
+  end
+  println(io, rpad(" species_ref", width), " = ", name)
+
+  ref = ""
+  try
+    ref = bp.beamline.ref
+  catch
+  end
+  ref_meaning = refmeaning_to_sym(bp.beamline.ref_meaning)
+  if !(ref_meaning in (:dp_over_q_ref, :dE_ref, :dpc_ref)) || bp.beamline_index == 1
+    println(io, rpad((" "*String(ref_meaning)), width), " = ", ref)
+  end
+
+  println(io, rpad(" s",width), " = ", bp.s)
+  println(io, rpad(" s_downstream",width), " = ", bp.s_downstream)
+
+  lattice_index = getfield(bp.beamline, :lattice_index)
+  if lattice_index != -1
+    println(io, rpad(" lattice_index", width), " = ", lattice_index)
+  end
+
+  return
+end
+
+# Make E_ref and p_over_q_ref (in beamline) be properties
 # Also make s a property of BeamlineParams
 # Note that because BeamlineParams is immutable, not setting rn
-Base.propertynames(::BeamlineParams) = (:beamline, :beamline_index, :s, :s_downstream, :R_ref, :E_ref, :pc_ref, :dR_ref, :dE_ref, :dpc_ref, :species_ref, :lattice, :lattice_index)
+Base.propertynames(::BeamlineParams) = (:beamline, :beamline_index, :s, :s_downstream, :p_over_q_ref, :E_ref, :pc_ref, :dp_over_q_ref, :dE_ref, :dpc_ref, :species_ref, :lattice, :lattice_index)
 
 function Base.setproperty!(bp::BeamlineParams, key::Symbol, value)
   # only settable at first element
-  if key in (:R_ref, :E_ref, :pc_ref, :dR_ref, :dE_ref, :dpc_ref)
+  if key in (:p_over_q_ref, :E_ref, :pc_ref, :dp_over_q_ref, :dE_ref, :dpc_ref)
     if bp.beamline_index == 1 # && !any(t->haskey(getfield(t, :pdict), InheritParams) && getfield(t, :pdict)[InheritParams].parent === ele, bp.beamline.line)
       return setproperty!(bp.beamline, key, value)
     else
@@ -364,7 +459,7 @@ end
 # looks unreachable, commenting out for now
 #=
 function replace(bp::BeamlineParams, key::Symbol, value)
-  #if key in (:R_ref, :E_ref, :pc_ref, :dR_ref, :dE_ref, :dpc_ref, :species_ref)
+  #if key in (:p_over_q_ref, :E_ref, :pc_ref, :dp_over_q_ref, :dE_ref, :dpc_ref, :species_ref)
   setproperty!(bp, key, value)
   return bp
   #else
@@ -374,9 +469,9 @@ end
 =#
 
 function Base.getproperty(bp::BeamlineParams, key::Symbol)
-  if key in (:R_ref, :E_ref, :pc_ref, :species_ref, :lattice, :lattice_index, :ref)
+  if key in (:p_over_q_ref, :E_ref, :pc_ref, :species_ref, :lattice, :lattice_index, :ref)
     return deval(getproperty(bp.beamline, key))
-  elseif key in (:dR_ref, :dE_ref, :dpc_ref)
+  elseif key in (:dp_over_q_ref, :dE_ref, :dpc_ref)
     if bp.beamline_index != 1
       return 0
     else
@@ -405,12 +500,34 @@ end
 # This will then get destroyed when constructing a Beamline
 @kwdef mutable struct InitialBeamlineParams <: AbstractParams
   species_ref::Species       = Species()
-  ref_meaning::RefMeaning.T  = RefMeaning.R_ref
+  ref_meaning::RefMeaning.T  = RefMeaning.p_over_q_ref
   ref                        = nothing
 end
 
+function Base.show(io::IO, ibp::InitialBeamlineParams)
+  println(io, typeof(ibp))
+  width = length(" species_refr") # longest String
+
+  name = "Inferred"
+  try 
+    species_ref = ibp.species_ref
+    name = species_ref.name
+  catch
+  end
+  println(io, rpad(" species_ref", width), " = ", name)
+
+  ref = ""
+  try
+    ref = ibp.ref
+  catch
+  end
+  ref_meaning = refmeaning_to_sym(ibp.ref_meaning)
+  println(io, rpad((" "*String(ref_meaning)), width), " = ", ref)
+  return
+end
+
 function Base.setproperty!(ibp::InitialBeamlineParams, key::Symbol, value)
-  if key in (:E_ref, :R_ref, :pc_ref, :dE_ref, :dR_ref, :dpc_ref)
+  if key in (:E_ref, :p_over_q_ref, :pc_ref, :dE_ref, :dp_over_q_ref, :dpc_ref)
     setfield!(ibp, :ref_meaning, sym_to_refmeaning(key))
     setfield!(ibp, :ref, value)
   else
@@ -432,7 +549,7 @@ function Base.getproperty(ibp::InitialBeamlineParams, key::Symbol)
     ref_meaning = refmeaning_to_sym(ibp.ref_meaning)
     if key == ref_meaning
       return ibp.ref
-    elseif key in (:R_ref, :E_ref, :pc_ref) && ref_meaning in (:R_ref, :E_ref, :pc_ref)
+    elseif key in (:p_over_q_ref, :E_ref, :pc_ref) && ref_meaning in (:p_over_q_ref, :E_ref, :pc_ref)
       if key == :E_ref
         if ref_meaning == :pc_ref
           return pc_to_E(ibp.species_ref, ibp.ref)

@@ -33,6 +33,29 @@ Structure holding the magnetic multipole components of a lattice element.
   end
 end
 
+function Base.show(io::IO, b::BMultipoleParams)
+  println(io, BMultipoleParams)
+  width = length(" Kn21L")
+  for bm in b
+    n = bm.n
+    s = bm.s
+    tilt = bm.tilt
+    if n != 0
+      sym = BMULTIPOLE_STRENGTH_INVERSE_MAP[(true, bm.order, bm.normalized, bm.integrated)]
+      println(io, rpad((" "*String(sym)),width), " = ", n)
+    end
+    if s != 0
+      sym = BMULTIPOLE_STRENGTH_INVERSE_MAP[(false, bm.order, bm.normalized, bm.integrated)]
+      println(io, rpad((" "*String(sym)),width), " = ", s)
+    end
+    if tilt != 0
+      sym = BMULTIPOLE_TILT_INVERSE_MAP[bm.order]
+      println(io, rpad((" "*String(sym)),width), " = ", tilt)
+    end
+  end
+  return
+end
+
 o2i(b::BMultipoleParams, ord::Int) = findfirst(t->t==ord, b.order)
 
 function BMultipoleParams{T}(b::BMultipoleParams=BMultipoleParams()) where {T}
@@ -406,3 +429,5 @@ const BMULTIPOLE_TILT_MAP = Dict{Symbol,Int}(
   :tilt20 => 21, 
   :tilt21 => 22, 
 )
+
+const BMULTIPOLE_TILT_INVERSE_MAP = Dict(value => key for (key, value) in BMULTIPOLE_TILT_MAP)

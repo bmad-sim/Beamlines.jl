@@ -56,7 +56,8 @@ using Accessors,
       OrderedCollections,
       MacroTools,
       EnumX,
-      ReadOnlyArrays
+      ReadOnlyArrays,
+      PrettyTables
 
 export Species
 
