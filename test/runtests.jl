@@ -545,30 +545,30 @@ using ForwardDiff, GTPSA, ReverseDiff
     @test typeof(ele.dz_rot) == ComplexF64
     @test !(ele.PatchParams === pp)
 
-    # @eles
-    @eles qf = Quadrupole(Kn1=0.36)
+    # @elements
+    @elements qf = Quadrupole(Kn1=0.36)
     @test qf.name == "qf"
-    @eles d = Drift()
+    @elements d = Drift()
     @test d.name == "d"
     
-    @eles begin
+    @elements begin
       qf = Quadrupole(Kn1=0.36)
     end
     @test qf.name == "qf"
 
-    @eles begin
+    @elements begin
       d = Drift()
     end
     @test d.name == "d"
 
-    @eles begin
+    @elements begin
       qf = Quadrupole(Kn1=0.36)
       d = Drift()
     end
     @test qf.name == "qf"
     @test d.name == "d"
 
-    @eles begin
+    @elements begin
       qf = Quadrupole(Kn1=0.36)
       a = 1+qf.Kn1
       d = Drift(L=a)

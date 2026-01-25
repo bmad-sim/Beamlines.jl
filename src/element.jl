@@ -91,8 +91,10 @@ function Base.show(io::IO, ele::LineElement)
   vs = collect(values(pdict))
   idxs = sortperm(String.(Symbol.(ks))) # Sort alphabetically
 
-  # Put it all in a matrix, 2 columns
-  pgs = Matrix{Any}(nothing, 3, div(length(vs), 3, RoundUp))
+  # Put it all in a matrix
+  ncols = 2 #displaysize(io)[2] < 100 ? 2 : 3
+  nrows = div(length(vs), ncols, RoundUp)
+  pgs = Matrix{Any}(nothing, ncols, nrows)
 
   idx = 1
   # However, always put UniversalParams and BeamlinesParams

@@ -45,7 +45,10 @@ export AbstractParams,
 
        SciBmadStandard,
 
-       @eles,
+       @eles, # deprecated, to be removed in next breaking release
+       
+       @elements, 
+       elements,
 
        scalarize,
        scalarize!
@@ -91,7 +94,7 @@ include("patch.jl")
 include("aperture.jl")
 include("misc.jl")
 include("keymaps.jl")
-include("macros.jl")
+include("element-name-handling.jl")
 
 # BitsBeamline is no longer supported
 # Support may continue in the future with 
