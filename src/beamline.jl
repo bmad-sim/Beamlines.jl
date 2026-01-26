@@ -3,7 +3,7 @@ abstract type Branch end # Only subtype is Beamline
 struct _Lattice{T<:Branch}
   beamlines::ReadOnlyVector{T,Vector{T}}
   function _Lattice{T}(beamlines::Vector{T}) where {T<:Branch}
-    lat = new(ReadOnlyVector(vec(beamlines)))
+    lat = new(ReadOnlyVector(beamlines))
     for i in eachindex(beamlines)
       bl = beamlines[i]
       if getfield(bl, :lattice_index) != -1
@@ -205,7 +205,7 @@ const Lattice = _Lattice{Beamline}
 const NULL_LATTICE = Lattice(Beamline[])
 
 function Lattice(
-  line;
+  line::AbstractArray{<:LineElement};
   species_ref0::Species=Species(),
   E_ref0=nothing,
   p_over_q_ref0=nothing,
