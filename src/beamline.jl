@@ -3,7 +3,7 @@ abstract type Branch end # Only subtype is Beamline
 struct _Lattice{T<:Branch}
   beamlines::ReadOnlyVector{T,Vector{T}}
   function _Lattice{T}(beamlines::Vector{T}) where {T<:Branch}
-    lat = new(ReadOnlyVector(vec(beamlines)))
+    lat = new(ReadOnlyVector(beamlines))
     for i in eachindex(beamlines)
       bl = beamlines[i]
       if getfield(bl, :lattice_index) != -1
@@ -86,7 +86,7 @@ end
       end
     end
 
-    bl = new(ReadOnlyVector(vec(line)), species_ref, NULL_LATTICE, -1, RefMeaning.p_over_q_ref, nothing)
+    bl = new(ReadOnlyVector(convert(Vector{LineElement}, vec(line))), species_ref, NULL_LATTICE, -1, RefMeaning.p_over_q_ref, nothing)
 
     # Check if any are in a Beamline already
     for i in eachindex(bl.line)
@@ -205,7 +205,7 @@ const Lattice = _Lattice{Beamline}
 const NULL_LATTICE = Lattice(Beamline[])
 
 function Lattice(
-  line::Vector{LineElement};
+  line::AbstractArray{<:LineElement};
   species_ref0::Species=Species(),
   E_ref0=nothing,
   p_over_q_ref0=nothing,
