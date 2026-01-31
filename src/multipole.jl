@@ -42,15 +42,15 @@ function Base.show(io::IO, b::BMultipoleParams)
     tilt = bm.tilt
     if n != 0
       sym = BMULTIPOLE_STRENGTH_INVERSE_MAP[(true, bm.order, bm.normalized, bm.integrated)]
-      println(io, rpad((" "*String(sym)),width), " = ", n)
+      println(io, rpad((" "*String(sym)),width), " = ", repr(n))
     end
     if s != 0
       sym = BMULTIPOLE_STRENGTH_INVERSE_MAP[(false, bm.order, bm.normalized, bm.integrated)]
-      println(io, rpad((" "*String(sym)),width), " = ", s)
+      println(io, rpad((" "*String(sym)),width), " = ", repr(s))
     end
     if tilt != 0
       sym = BMULTIPOLE_TILT_INVERSE_MAP[bm.order]
-      println(io, rpad((" "*String(sym)),width), " = ", tilt)
+      println(io, rpad((" "*String(sym)),width), " = ", repr(tilt))
     end
   end
   return
