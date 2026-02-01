@@ -60,7 +60,8 @@ using Accessors,
       MacroTools,
       EnumX,
       ReadOnlyArrays,
-      PrettyTables
+      PrettyTables,
+      LegibleLambdas
 
 export Species
 
