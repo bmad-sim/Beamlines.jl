@@ -43,7 +43,7 @@ developer-guide/index
 
 ## API Reference
 
-For detailed API documentation, see the API Reference (coming soon).
+For detailed API documentation, see the [API Reference](api/index.html).
 
 ## Key Features
 
@@ -105,5 +105,5 @@ The lazy evaluation approach is inspired by [MAD-NG](https://github.com/Methodic
 ## Getting Help
 
 - Visit the [GitHub repository](https://github.com/bmad-sim/Beamlines.jl)
-- Check the API Reference (coming soon)
+- Check the [API Reference](api/index.html)
 - Report issues on [GitHub Issues](https://github.com/bmad-sim/Beamlines.jl/issues)
