@@ -28,25 +28,12 @@ templates_path = ['_templates']
 exclude_patterns = []
 
 # -- Options for HTML output -------------------------------------------------
-html_theme = 'sphinx_immaterial'
+html_theme = 'furo'
 
 html_theme_options = {
-    'repo_url': 'https://github.com/bmad-sim/Beamlines.jl',
-    'repo_name': 'Beamlines.jl',
-    'edit_uri': 'blob/main/sphinx-docs/source',
-    'palette': [
-        {
-            'primary': 'indigo',
-            'accent': 'light-blue',
-        }
-    ],
-    'features': [
-        'navigation.tabs',
-        'navigation.sections',
-        'navigation.expand',
-        'search.highlight',
-        'toc.integrate',
-    ],
+    'source_repository': 'https://github.com/bmad-sim/Beamlines.jl',
+    'source_branch': 'main',
+    'source_directory': 'sphinx-docs/source/',
 }
 
 html_title = 'Beamlines.jl Documentation'
