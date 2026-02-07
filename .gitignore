@@ -3,5 +3,8 @@
 # Sphinx documentation build
 sphinx-docs/build/
 
+# Documenter.jl build
+docs/build/
+
 # GitHub Pages
 gh-pages/
