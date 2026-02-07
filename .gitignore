@@ -1,1 +1,7 @@
 /Manifest.toml
+
+# Sphinx documentation build
+sphinx-docs/build/
+
+# GitHub Pages
+gh-pages/
