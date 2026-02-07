@@ -36,10 +36,10 @@ qd.s    # Position in beamline (deferred expression)
 :maxdepth: 2
 
 getting-started
+user-guide/index
 ```
 
 Coming soon:
-- User Guide
 - Examples
 - Developer Guide
 
