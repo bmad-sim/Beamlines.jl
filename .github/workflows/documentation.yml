@@ -36,6 +36,12 @@ jobs:
         with:
           version: '1.10'
 
+      - name: Ensure Julia depot exists
+        run: |
+          depot="${JULIA_DEPOT_PATH:-$HOME/.julia}"
+          mkdir -p "$depot"/{artifacts,packages,registries,compiled,scratchspaces,logs}
+        shell: bash
+
       - name: Cache Julia packages
         uses: julia-actions/cache@v2
 
