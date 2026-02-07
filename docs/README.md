@@ -2,6 +2,15 @@
 
 This directory contains all documentation for Beamlines.jl, combining narrative documentation (Sphinx/MyST) with API reference (Documenter.jl).
 
+## Quick Start
+
+**Build all documentation:**
+```bash
+python docs/build.py
+```
+
+This builds both Sphinx and Documenter documentation and combines them into `gh-pages/`.
+
 ## Directory Structure
 
 ```
