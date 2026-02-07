@@ -29,7 +29,7 @@ jobs:
 
       - name: Install Python dependencies
         run: |
-          pip install -r sphinx-docs/requirements.txt
+          pip install -r docs/requirements.txt
 
       - name: Setup Julia
         uses: julia-actions/setup-julia@v2
@@ -48,20 +48,20 @@ jobs:
 
       - name: Build Sphinx documentation
         run: |
-          cd sphinx-docs
-          sphinx-build -b html source build/html
+          cd docs
+          sphinx-build -b html src build/html
 
       - name: Build Documenter.jl documentation
-        run: julia --project=docs docs/make.jl
+        run: julia --project=docs docs/api/make.jl
         env:
           CI: 'true'
 
       - name: Combine documentation
         run: |
           mkdir -p gh-pages
-          cp -r sphinx-docs/build/html/* gh-pages/
+          cp -r docs/build/html/* gh-pages/
           mkdir -p gh-pages/api
-          cp -r docs/build/* gh-pages/api/
+          cp -r docs/api/build/* gh-pages/api/
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3

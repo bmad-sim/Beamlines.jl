@@ -1,10 +1,9 @@
 /Manifest.toml
 
-# Sphinx documentation build
-sphinx-docs/build/
-
-# Documenter.jl build
+# Documentation builds
 docs/build/
+docs/api/build/
 
 # GitHub Pages
 gh-pages/
+.claude/

@@ -33,7 +33,7 @@ html_theme = 'furo'
 html_theme_options = {
     'source_repository': 'https://github.com/bmad-sim/Beamlines.jl',
     'source_branch': 'main',
-    'source_directory': 'sphinx-docs/source/',
+    'source_directory': 'docs/src/',
     'navigation_with_keys': True,
     'sidebar_hide_name': False,
 }
