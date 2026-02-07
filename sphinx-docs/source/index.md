@@ -32,8 +32,13 @@ qd.s    # Position in beamline (deferred expression)
 
 ## Documentation Sections
 
+```{toctree}
+:maxdepth: 2
+
+getting-started
+```
+
 Coming soon:
-- Getting Started
 - User Guide
 - Examples
 - Developer Guide
