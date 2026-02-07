@@ -38,10 +38,8 @@ qd.s    # Position in beamline (deferred expression)
 getting-started
 user-guide/index
 examples/index
+developer-guide/index
 ```
-
-Coming soon:
-- Developer Guide
 
 ## API Reference
 
