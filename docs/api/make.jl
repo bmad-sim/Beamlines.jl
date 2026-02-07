@@ -11,7 +11,7 @@ makedocs(;
         canonical="https://bmad-sim.github.io/Beamlines.jl",
         edit_link="main",
         assets=String[],
-        prettyurls=get(ENV, "CI", "false") == "true",
+        prettyurls=false, # prettyurls breaks the redirect to the main documentation
     ),
     pages=[
         "← Documentation" => "main-docs.md",
