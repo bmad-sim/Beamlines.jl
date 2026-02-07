@@ -176,4 +176,4 @@ sqf = Quadrupole(Ks1=0.36, L=0.2)
 - Learn about [beamline basics](user-guide/beamline-basics.md)
 - Explore [deferred expressions](user-guide/deferred-expressions.md)
 - See [examples](examples/index.md) for more advanced usage
-- Check the [API Reference](api/index.html) for detailed documentation
+- Check the <a href="api/index.html">API Reference</a> for detailed documentation

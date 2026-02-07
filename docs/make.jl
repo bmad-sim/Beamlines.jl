@@ -14,6 +14,7 @@ makedocs(;
         prettyurls=get(ENV, "CI", "false") == "true",
     ),
     pages=[
+        "← Documentation" => "main-docs.md",
         "API Reference" => "index.md",
     ],
     warnonly=true,  # Don't fail on warnings

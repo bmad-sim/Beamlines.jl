@@ -34,6 +34,7 @@ qd.s    # Position in beamline (deferred expression)
 
 ```{toctree}
 :maxdepth: 2
+:caption: Contents
 
 getting-started
 user-guide/index
@@ -43,7 +44,7 @@ developer-guide/index
 
 ## API Reference
 
-For detailed API documentation, see the [API Reference](api/index.html).
+For detailed API documentation, see the <a href="api/index.html">API Reference</a>.
 
 ## Key Features
 
@@ -105,5 +106,5 @@ The lazy evaluation approach is inspired by [MAD-NG](https://github.com/Methodic
 ## Getting Help
 
 - Visit the [GitHub repository](https://github.com/bmad-sim/Beamlines.jl)
-- Check the [API Reference](api/index.html)
+- Check the <a href="api/index.html">API Reference</a>
 - Report issues on [GitHub Issues](https://github.com/bmad-sim/Beamlines.jl/issues)

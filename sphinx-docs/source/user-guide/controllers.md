@@ -250,4 +250,4 @@ Choose based on your use case:
 
 - Learn about [deferred expressions](deferred-expressions.md)
 - See [examples](../examples/index.md) for practical applications
-- Check the [API Reference](../api/index.html) for detailed documentation
+- Check the <a href="../api/index.html">API Reference</a> for detailed documentation
