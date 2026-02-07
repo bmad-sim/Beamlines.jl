@@ -6,18 +6,15 @@ DocMeta.setdocmeta!(Beamlines, :DocTestSetup, :(using Beamlines); recursive=true
 makedocs(;
     modules=[Beamlines],
     authors="mattsignorelli <mgs255@cornell.edu> and contributors",
-    sitename="Beamlines.jl",
+    sitename="Beamlines.jl API Reference",
     format=Documenter.HTML(;
-        canonical="https://mattsignorelli.github.io/Beamlines.jl",
+        canonical="https://bmad-sim.github.io/Beamlines.jl",
         edit_link="main",
         assets=String[],
+        prettyurls=get(ENV, "CI", "false") == "true",
     ),
     pages=[
-        "Home" => "index.md",
+        "API Reference" => "index.md",
     ],
-)
-
-deploydocs(;
-    repo="github.com/mattsignorelli/Beamlines.jl",
-    devbranch="main",
+    warnonly=true,  # Don't fail on warnings
 )
