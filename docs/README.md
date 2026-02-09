@@ -183,9 +183,17 @@ the `jl:type`, `jl:function`, `jl:method`, and `jl:macro` roles from the invento
 {jl:function}`Custom text <Beamlines.Quadrupole>`
 ```
 
-### API → MyST (redirect page)
+### API → MyST (plain links)
 
-Documenter's sidebar shows a "← Documentation" link (`docs/api/src/main-docs.md`)
+Documenter.jl doesn't support intersphinx, so use plain markdown links with relative
+URLs. Since the API docs live under `api/` in the combined site, `../` reaches the
+Sphinx site root:
+
+```markdown
+[Getting Started](../getting-started.html)
+```
+
+Documenter's sidebar also shows a "← Documentation" link (`docs/api/src/main-docs.md`)
 that uses a JS redirect back to the main Sphinx docs.
 
 ### Sidebar navigation
