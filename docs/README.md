@@ -9,7 +9,7 @@ This directory contains all documentation for Beamlines.jl, combining narrative 
 python docs/build.py
 ```
 
-This builds both Sphinx and Documenter documentation and combines them into `gh-pages/`.
+This builds Documenter first (to generate `objects.inv` for intersphinx), then Sphinx, and combines them into `gh-pages/`.
 
 ## Directory Structure
 
@@ -48,6 +48,17 @@ pip install -r docs/requirements.txt
 julia --project=docs -e 'using Pkg; Pkg.develop(PackageSpec(path=pwd())); Pkg.instantiate()'
 ```
 
+### Build API Reference (Documenter.jl) — must run first
+
+Sphinx uses intersphinx to cross-reference into the API docs, so Documenter's
+`objects.inv` must exist before building Sphinx.
+
+```bash
+julia --project=docs docs/api/make.jl
+```
+
+Output: `docs/api/build/`
+
 ### Build Narrative Documentation (Sphinx)
 
 ```bash
@@ -57,31 +68,16 @@ sphinx-build -b html src build/html
 
 Output: `docs/build/html/`
 
-### Build API Reference (Documenter.jl)
-
-```bash
-julia --project=docs docs/api/make.jl
-```
-
-Output: `docs/api/build/`
-
 ### Build Combined Documentation
 
 ```bash
-# Build both
-cd docs && sphinx-build -b html src build/html
-julia --project=docs docs/api/make.jl
-
-# Combine
-mkdir -p gh-pages
-cp -r docs/build/html/* gh-pages/
-mkdir -p gh-pages/api
-cp -r docs/api/build/* gh-pages/api/
+# Or just use the build script, which handles ordering automatically:
+python docs/build.py
 
 # Open
-open gh-pages/index.html  # macOS
-xdg-open gh-pages/index.html  # Linux
 start gh-pages/index.html  # Windows
+open gh-pages/index.html   # macOS
+xdg-open gh-pages/index.html  # Linux
 ```
 
 ## Contributing to Documentation
@@ -165,15 +161,37 @@ Quadrupole(; kwargs...) = LineElement(; kind="Quadrupole", kwargs...)
 
 The docstrings automatically appear in the API reference.
 
-## Navigation Between Documentation Systems
+## Cross-referencing Between Documentation Systems
 
-The documentation has seamless navigation:
+### MyST → API (intersphinx)
 
-**Main Documentation (Sphinx):**
-- Sidebar shows "API Reference →" link
+Sphinx's intersphinx extension reads Documenter's `objects.inv` inventory to resolve
+cross-references to specific API items. A `doctree-resolved` event handler in `conf.py`
+rewrites the absolute URLs to relative paths so links work both locally and deployed.
 
-**API Reference (Documenter):**
-- Sidebar shows "← Documentation" link
+A minimal Julia domain (`_JuliaDomain`) is registered in `conf.py` so Sphinx recognises
+the `jl:type`, `jl:function`, `jl:method`, and `jl:macro` roles from the inventory.
+
+**Link to the API landing page:**
+```markdown
+{external+julia:std:doc}`API Reference <index>`
+```
+
+**Link to a specific type or function:**
+```markdown
+{external+julia:jl:type}`Beamlines.BMultipoleParams`
+{external+julia:jl:function}`Custom text <Beamlines.Quadrupole>`
+```
+
+### API → MyST (redirect page)
+
+Documenter's sidebar shows a "← Documentation" link (`docs/api/src/main-docs.md`)
+that uses a JS redirect back to the main Sphinx docs.
+
+### Sidebar navigation
+
+- **Main docs (Sphinx):** sidebar shows "API Reference →" link
+- **API reference (Documenter):** sidebar shows "← Documentation" link
 
 Both systems are deployed as a unified site:
 - Main docs at root: `https://bmad-sim.github.io/Beamlines.jl/`
@@ -192,10 +210,10 @@ See `.github/workflows/documentation.yml` for details.
 
 Always test documentation builds locally before pushing:
 
-1. **Test Sphinx build** - Verify no warnings/errors
-2. **Test Documenter build** - Verify docstrings render correctly
-3. **Test combined output** - Verify cross-links work
-4. **Check in browser** - Verify formatting and navigation
+1. **Test Documenter build** - Verify docstrings render correctly (`julia --project=docs docs/api/make.jl`)
+2. **Test Sphinx build** - Verify no warnings/errors (`cd docs && sphinx-build -b html src build/html`)
+3. **Test combined output** - Run `python docs/build.py` and verify cross-links work
+4. **Check in browser** - Open `gh-pages/index.html`, verify formatting and navigation
 
 ## Questions?
 
