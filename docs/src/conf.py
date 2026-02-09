@@ -12,8 +12,74 @@ author = 'Beamlines.jl Contributors'
 extensions = [
     'myst_parser',
     'sphinx.ext.githubpages',
+    'sphinx.ext.intersphinx',
     'sphinx.ext.mathjax',
 ]
+
+# -- Intersphinx configuration -----------------------------------------------
+_docs_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+_api_base_url = 'https://bmad-sim.github.io/Beamlines.jl/api/'
+intersphinx_mapping = {
+    'julia': (_api_base_url,
+              (os.path.join(_docs_dir, 'api', 'build', 'objects.inv'),))
+}
+
+# Subpath where API docs live in the combined site (gh-pages/api/)
+_api_subpath = 'api/'
+
+def _fix_intersphinx_refs(app, doctree, docname):
+    """Rewrite intersphinx absolute URLs to relative paths for local browsing."""
+    from docutils import nodes
+    from posixpath import relpath, dirname
+
+    for node in doctree.traverse(nodes.reference):
+        uri = node.get('refuri', '')
+        if not uri.startswith(_api_base_url):
+            continue
+        rel_part = uri[len(_api_base_url):]
+        target = _api_subpath + rel_part
+        doc_dir = dirname(docname)
+        if '#' in target:
+            path_part, fragment = target.split('#', 1)
+            node['refuri'] = relpath(path_part, doc_dir) + '#' + fragment
+        else:
+            node['refuri'] = relpath(target, doc_dir)
+
+# -- Minimal Julia domain for intersphinx cross-references -------------------
+# Documenter.jl writes jl:function, jl:type, etc. into objects.inv.
+# Sphinx needs the domain registered to resolve those roles.
+from sphinx.domains import Domain, ObjType
+from sphinx.roles import XRefRole
+
+class _JuliaDomain(Domain):
+    name = 'jl'
+    label = 'Julia'
+    object_types = {
+        'function': ObjType('function', 'function'),
+        'method':   ObjType('method',   'method'),
+        'type':     ObjType('type',     'type'),
+        'macro':    ObjType('macro',    'macro'),
+        'module':   ObjType('module',   'module'),
+    }
+    roles = {
+        'function': XRefRole(),
+        'method':   XRefRole(),
+        'type':     XRefRole(),
+        'macro':    XRefRole(),
+        'module':   XRefRole(),
+    }
+    directives = {}
+    initial_data = {'objects': {}}
+
+    def resolve_xref(self, env, fromdocname, builder, typ, target, node, contnode):
+        return None  # intersphinx handles external references
+
+    def get_objects(self):
+        return iter([])
+
+def setup(app):
+    app.add_domain(_JuliaDomain)
+    app.connect('doctree-resolved', _fix_intersphinx_refs)
 
 # MyST Parser configuration
 myst_enable_extensions = [

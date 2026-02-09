@@ -140,6 +140,7 @@ m_thick.Kn1 == 0.16/2.0   # true
 ```
 
 The first specification (integrated vs non-integrated) sets the independent variable.
+Multipole field data is stored internally in a {external+julia:jl:type}`Beamlines.BMultipoleParams` struct.
 
 ## Misalignments
 
@@ -176,4 +177,4 @@ sqf = Quadrupole(Ks1=0.36, L=0.2)
 - Learn about [beamline basics](user-guide/beamline-basics.md)
 - Explore [deferred expressions](user-guide/deferred-expressions.md)
 - See [examples](examples/index.md) for more advanced usage
-- Check the <a href="api/index.html">API Reference</a> for detailed documentation
+- Check the {external+julia:std:doc}`API Reference <index>` for detailed documentation

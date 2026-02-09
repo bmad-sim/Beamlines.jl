@@ -9,20 +9,20 @@ from pathlib import Path
 docs_dir = Path(__file__).parent
 project_root = docs_dir.parent
 
-# Build Sphinx
-print("Building Sphinx documentation...")
+# Build Documenter first (Sphinx intersphinx needs its objects.inv)
+print("Building Documenter.jl documentation...")
 result = subprocess.run(
-    ["sphinx-build", "-b", "html", "src", "build/html"],
-    cwd=docs_dir
+    ["julia", f"--project={docs_dir}", "docs/api/make.jl"],
+    cwd=project_root
 )
 if result.returncode != 0:
     exit(1)
 
-# Build Documenter
-print("\nBuilding Documenter.jl documentation...")
+# Build Sphinx
+print("\nBuilding Sphinx documentation...")
 result = subprocess.run(
-    ["julia", f"--project={docs_dir}", "docs/api/make.jl"],
-    cwd=project_root
+    ["sphinx-build", "-b", "html", "src", "build/html"],
+    cwd=docs_dir
 )
 if result.returncode != 0:
     exit(1)

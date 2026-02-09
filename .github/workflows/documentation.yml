@@ -52,15 +52,15 @@ jobs:
             Pkg.develop(PackageSpec(path=pwd()))
             Pkg.instantiate()'
 
-      - name: Build Sphinx documentation
-        run: |
-          cd docs
-          sphinx-build -b html src build/html
-
       - name: Build Documenter.jl documentation
         run: julia --project=docs docs/api/make.jl
         env:
           CI: 'true'
+
+      - name: Build Sphinx documentation
+        run: |
+          cd docs
+          sphinx-build -b html src build/html
 
       - name: Combine documentation
         run: |
