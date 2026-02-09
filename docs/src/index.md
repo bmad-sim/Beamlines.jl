@@ -44,7 +44,7 @@ developer-guide/index
 
 ## API Reference
 
-For detailed API documentation, see the {external+julia:std:doc}`API Reference <index>`.
+For detailed API documentation, see the {external:doc}`API Reference <index>`.
 
 ## Key Features
 
@@ -106,5 +106,5 @@ The lazy evaluation approach is inspired by [MAD-NG](https://github.com/Methodic
 ## Getting Help
 
 - Visit the [GitHub repository](https://github.com/bmad-sim/Beamlines.jl)
-- Check the {external+julia:std:doc}`API Reference <index>`
+- Check the {external:doc}`API Reference <index>`
 - Report issues on [GitHub Issues](https://github.com/bmad-sim/Beamlines.jl/issues)

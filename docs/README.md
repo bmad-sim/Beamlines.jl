@@ -174,13 +174,13 @@ the `jl:type`, `jl:function`, `jl:method`, and `jl:macro` roles from the invento
 
 **Link to the API landing page:**
 ```markdown
-{external+julia:std:doc}`API Reference <index>`
+{external:doc}`API Reference <index>`
 ```
 
 **Link to a specific type or function:**
 ```markdown
-{external+julia:jl:type}`Beamlines.BMultipoleParams`
-{external+julia:jl:function}`Custom text <Beamlines.Quadrupole>`
+{jl:type}`Beamlines.BMultipoleParams`
+{jl:function}`Custom text <Beamlines.Quadrupole>`
 ```
 
 ### API → MyST (redirect page)

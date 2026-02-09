@@ -250,4 +250,4 @@ Choose based on your use case:
 
 - Learn about [deferred expressions](deferred-expressions.md)
 - See [examples](../examples/index.md) for practical applications
-- Check the {external+julia:std:doc}`API Reference <index>` for detailed documentation
+- Check the {external:doc}`API Reference <index>` for detailed documentation
