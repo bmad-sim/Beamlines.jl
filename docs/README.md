@@ -126,7 +126,6 @@ This is a note box.
 ```{warning}
 This is a warning box.
 ```
-```
 
 **Resources:**
 - [MyST Markdown Guide](https://myst-parser.readthedocs.io/)
@@ -137,26 +136,26 @@ This is a warning box.
 API docs are auto-generated from Julia docstrings. Add docstrings to functions in `src/*.jl`:
 
 ```julia
-"""
-    Quadrupole(; Kn1=0.0, L=0.0, kwargs...)
+    """
+        Quadrupole(; Kn1=0.0, L=0.0, kwargs...)
 
-Create a quadrupole magnet element.
+    Create a quadrupole magnet element.
 
-# Arguments
-- `Kn1::Real`: Normalized quadrupole strength (1/m²)
-- `L::Real`: Length (m)
-- `kwargs...`: Additional LineElement parameters
+    # Arguments
+    - `Kn1::Real`: Normalized quadrupole strength (1/m²)
+    - `L::Real`: Length (m)
+    - `kwargs...`: Additional LineElement parameters
 
-# Returns
-- `LineElement` with kind="Quadrupole"
+    # Returns
+    - `LineElement` with kind="Quadrupole"
 
-# Examples
-```jldoctest
-julia> qf = Quadrupole(Kn1=0.36, L=0.5)
-LineElement(kind="Quadrupole", ...)
-```
-"""
-Quadrupole(; kwargs...) = LineElement(; kind="Quadrupole", kwargs...)
+    # Examples
+    ```jldoctest
+    julia> qf = Quadrupole(Kn1=0.36, L=0.5)
+    LineElement(kind="Quadrupole", ...)
+    ```
+    """
+    Quadrupole(; kwargs...) = LineElement(; kind="Quadrupole", kwargs...)
 ```
 
 The docstrings automatically appear in the API reference.
