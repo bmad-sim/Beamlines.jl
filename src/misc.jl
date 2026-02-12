@@ -5,7 +5,7 @@ end
 
 function Base.isapprox(a::MapParams, b::MapParams)
   return a.transport_map == b.transport_map && 
-         a.transport_map_params ≈ b.transport_map_params
+         a.transport_map_params .≈ b.transport_map_params
 end
 
 # === THIS BLOCK WAS WRITTEN BY CLAUDE ===
