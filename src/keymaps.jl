@@ -83,6 +83,8 @@ const PROPERTIES_MAP = Dict{Symbol,Type{<:AbstractParams}}(
   :is_crabcavity => RFParams,
 
   :transport_map => MapParams,
+  :transport_map_params => MapParams,
+
   :four_potential => FourPotentialParams,
   
   :alias => MetaParams,

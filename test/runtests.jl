@@ -1259,7 +1259,11 @@ using ForwardDiff, GTPSA, ReverseDiff
     @test ele1.transport_map == g
     @test ele2.transport_map == g
     @test ele1 ≈ ele2
-
+    let
+      local a = 1
+      ele1.transport_map_params = (DefExpr(()->10*sin(a)), 100)
+      @test Beamlines.deval(ele1.MapParams) ≈ MapParams(ele1.transport_map, (10*sin(1),100.))
+    end
     # FourPotentialParams
     f = (x,y,s,t)->(1,2,3,4)
     g = (x,y,s,t)->(5,6,7,8)
