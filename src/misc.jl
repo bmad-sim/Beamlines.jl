@@ -1,6 +1,6 @@
-@kwdef mutable struct MapParams{F<:Function, P<:Tuple} <: AbstractParams
+@kwdef mutable struct MapParams{F<:Function, P} <: AbstractParams
   transport_map::F = (v, q, p=nothing) -> (v, q)
-  transport_map_params::P = ()
+  transport_map_params::P = nothing
 end
 
 function Base.isapprox(a::MapParams, b::MapParams)
