@@ -4,9 +4,14 @@
 end
 
 function Base.isapprox(a::MapParams, b::MapParams)
-  return a.transport_map == b.transport_map && 
-         all(a.transport_map_params .≈ b.transport_map_params)
+  if typeof(a.transport_map_params) != typeof(b.transport_map_params)
+    return false
+  else
+    return a.transport_map == b.transport_map && 
+          all(a.transport_map_params .≈ b.transport_map_params)
+  end
 end
+
 
 # === THIS BLOCK WAS PARTIALLY WRITTEN BY CLAUDE ===
 # Generated function for arbitrary-length tuples
