@@ -4,7 +4,7 @@
 end
 
 function Base.isapprox(a::MapParams, b::MapParams)
-  if typeof(a.transport_map_params) != typeof(b.transport_map_params)
+  if xor(isnothing(a.transport_map_params), isnothing(b.transport_map_params))
     return false
   else
     return a.transport_map == b.transport_map && 
