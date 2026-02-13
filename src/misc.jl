@@ -6,6 +6,8 @@ end
 function Base.isapprox(a::MapParams, b::MapParams)
   if xor(isnothing(a.transport_map_params), isnothing(b.transport_map_params))
     return false
+  elseif isnothing(a.transport_map_params) && isnothing(b.transport_map_params)
+    return true
   else
     return a.transport_map == b.transport_map && 
           all(a.transport_map_params .≈ b.transport_map_params)
