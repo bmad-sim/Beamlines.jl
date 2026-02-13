@@ -1,12 +1,19 @@
-@kwdef mutable struct MapParams{F<:Function, P<:Tuple} <: AbstractParams
+@kwdef mutable struct MapParams{F<:Function, P} <: AbstractParams
   transport_map::F = (v, q, p=nothing) -> (v, q)
-  transport_map_params::P = ()
+  transport_map_params::P = nothing
 end
 
 function Base.isapprox(a::MapParams, b::MapParams)
-  return a.transport_map == b.transport_map && 
-         all(a.transport_map_params .≈ b.transport_map_params)
+  if xor(isnothing(a.transport_map_params), isnothing(b.transport_map_params))
+    return false
+  elseif isnothing(a.transport_map_params) && isnothing(b.transport_map_params)
+    return true
+  else
+    return a.transport_map == b.transport_map && 
+          all(a.transport_map_params .≈ b.transport_map_params)
+  end
 end
+
 
 # === THIS BLOCK WAS PARTIALLY WRITTEN BY CLAUDE ===
 # Generated function for arbitrary-length tuples
