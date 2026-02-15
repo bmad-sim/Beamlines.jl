@@ -106,7 +106,6 @@ html_theme_options = {
 
 html_title = 'Beamlines.jl Documentation'
 html_static_path = ['_static']
-html_css_files = ['custom.css']
 
 # Sidebar settings with custom external links
 html_sidebars = {
