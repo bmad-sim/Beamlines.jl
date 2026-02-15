@@ -7,17 +7,11 @@ This section provides practical examples of using Beamlines.jl.
 ```{toctree}
 :maxdepth: 2
 
-fodo-lattice
-differentiation
 ```
 
 ## Overview
 
-These examples demonstrate:
+TODO: Add example pages and short descriptions, e.g.:
 
-- Building complete lattices
-- Using automatic differentiation with GTPSA
-- Controlling elements with DefExpr and Controllers
-- Working with deferred expressions
-
-Each example is self-contained and can be run independently.
+- Building a FODO
+- Ring tutorial

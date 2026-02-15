@@ -99,15 +99,16 @@ Narrative docs use **MyST Markdown**, an enhanced Markdown with Sphinx directive
 
 **Basic example:**
 ```markdown
-# Section Title
+    # Section Title
 
-Regular markdown text with [links](https://example.com).
+    Regular markdown text with [links](https://example.com).
 
-## Subsection
+    ## Subsection
 
-```julia
-# Code example
-qf = Quadrupole(Kn1=0.36, L=0.5)
+    ```julia
+    # Code example
+    qf = Quadrupole(Kn1=0.36, L=0.5)
+    ```
 ```
 
 **Math:**
