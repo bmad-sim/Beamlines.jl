@@ -17,7 +17,7 @@ end
 
 # === THIS BLOCK WAS PARTIALLY WRITTEN BY CLAUDE ===
 # Generated function for arbitrary-length tuples
-@generated function deval(mp::MapParams{F,P}) where {F,P}
+@generated function deval(mp::MapParams{F,P}) where {F,P<:Tuple}
     N = length(P.parameters)
     # Use getfield with literal integer arguments
     exprs = [:(deval(Base.getfield(mp.transport_map_params, $i))) for i in 1:N]
