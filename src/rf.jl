@@ -35,7 +35,7 @@ function Base.isapprox(a::RFParams, b::RFParams)
 end
 
 function Base.hasproperty(c::RFParams, key::Symbol)
-  if key in fieldnames(RFParams)
+  if key in (:rate, :voltage, :phi0, :harmon_master, :zero_phase, :traveling_wave, :is_crabcavity)
     return true
   elseif key in (:rf_frequency, :harmon)
     return (key == :harmon) == c.harmon_master
@@ -45,7 +45,7 @@ function Base.hasproperty(c::RFParams, key::Symbol)
 end
 
 function Base.getproperty(c::RFParams, key::Symbol)
-  if key in fieldnames(RFParams)
+  if key in (:rate, :voltage, :phi0, :harmon_master, :zero_phase, :traveling_wave, :is_crabcavity)
     return getfield(c, key)
   elseif key in (:rf_frequency, :harmon)
     if (key == :harmon) == c.harmon_master
