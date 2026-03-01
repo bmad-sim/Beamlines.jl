@@ -20,12 +20,18 @@ DefExpr{T}(a::DefExpr) where {T} = DefExpr{T}(()->convert(T,a()))
 
 # Make these apply via convert
 Base.convert(::Type{D}, a) where {D<:DefExpr} = D(a)
+Base.convert(::Type{D}, a::DefExpr) where {D<:DefExpr} = D(a)
 
 # Now simple constructor for convenience
 function DefExpr(f)
   T = Base.promote_op(f)
+  if T <: DefExpr
+    return f()
+  end
   return DefExpr{T}(f)
 end
+
+DefExpr(f::DefExpr) = f
 
 deval(d::DefExpr) = d()
 deval(d) = d
