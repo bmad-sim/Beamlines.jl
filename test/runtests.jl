@@ -831,8 +831,8 @@ using ForwardDiff, GTPSA, ReverseDiff
       @test qf.Bn1 ≈ Kn1*p_over_q_ref
       @test qd.Bn1 ≈ -Kn1*p_over_q_ref
 
-      @test +(DefExpr(()->L))() == +L
-      @test -(DefExpr(()->L))() == -L
+      @test (+DefExpr(()->L))() == +L
+      @test (-DefExpr(()->L))() == -L
     end
     ele = LineElement(x1_limit=123,
                       x2_limit=456,
