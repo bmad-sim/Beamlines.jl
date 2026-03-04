@@ -1,48 +1,56 @@
 #=
-Return a dictionary containing the values of [line_element]'s parameters of type [parameter_type]
+Return a dictionary whose keys are the fields associated with [parameter_type_sym]
+and whose values are those that correspond to the equivalent SciBMad format fields
+of [line_element].
 =#
-function params_to_dict(line_element, parameter_type)
-    # The accumulator that will be the dictionary formatting of the type
+function params_to_dict(line_element, parameter_type_sym)
+    # Accumulator
     acc = Dict()
 
-    params = PARAMS_MAP[parameter_type]
+    parameters = getfield(line_element, :pdict)
 
-    if (parameter_type == :BMultipoleParams) 
-        # If this is a MultipoleParams
+    parameter_type = PARAMS_MAP[parameter_type_sym]
 
-        for i in eachindex(params.order)
-            # Loop over the number of orders stored
+    if (haskey(parameters, parameter_type))
+        # If this group of parameters is present
 
-            # Access the "informational" vectors
-            order = params.order[i]
-            is_normal = params.normalized[i]
-            is_integrated = params.normalized[i]
+        parameter_group = parameters[parameter_type]
 
-            # Build the PALS field names based on the information
-            if (is_normal)
-                pals_norm = string("Kn", order)
-                pals_skew = string("Ks", order)
-            else
-                pals_norm = string("Bn", order)
-                pals_skew = string("Bs", order)
+        if (parameter_type == BMultipoleParams)
+            # If this is a B multipole
+
+            #= This code is from the override of [ show() ] in multipole.jl =#
+            for bm in parameter_group
+                n = bm.n
+                s = bm.s
+                tilt = bm.tilt
+                if n != 0
+                    sym = BMULTIPOLE_STRENGTH_INVERSE_MAP[(true, bm.order, bm.normalized, bm.integrated)]
+                    acc[string(sym)] = n
+                end
+                if s != 0
+                    sym = BMULTIPOLE_STRENGTH_INVERSE_MAP[(false, bm.order, bm.normalized, bm.integrated)]
+                    acc[string(sym)] = s
+                end
+                if tilt != 0
+                    sym = BMULTIPOLE_TILT_INVERSE_MAP[bm.order]
+                    acc[string(sym)] = tilt
+                end
             end
+            #= End code from the override of [ show() ] in multipole.jl =#
 
-            if (is_integrated)
-                pals_skew = string(pals_skew, "L")
-                pals_norm = string(pals_field, "L")
+        else
+            fields = fieldnames(typeof(parameter_group))
+            for field in fields
+                if (hasproperty(parameter_group, field))
+                    if (field == :L)
+                        # Replace "L" with "length"
+                        acc["length"] = getproperty(parameter_group, field)
+                    else
+                        acc[field] = getproperty(parameter_group, field)
+                    end
+                end
             end
-
-            # Populate the accumulator dictionary
-            acc[string("tilt", order)] = params.tilt[i]
-            acc[pals_norm] = params.n[i]
-            acc[pals_skew] = params.s[i]
-        end
-    else
-        # If this is any other parameter type
-
-        # Just write out the values of the field names IF THEY AREN'T DEFAULT
-        for field_name in propertynames(params)
-            acc[field_name] = getproperty(params, field_name)
         end
     end
 
@@ -61,71 +69,71 @@ function pals_format(line_element)
 
     if (kind == "Quadrupole")
         # [line_element] is a quadrupole
-        format_dict["ApertureP"] => params_to_dict(line_element, :ApertureParams)
-        format_dict["MagneticMultipoleP"] => params_to_dict(line_element, :BMultipoleParams)
-        format_dict["MetaP"] => params_to_dict(line_element, :MetaParams)
+        format_dict["ApertureP"] = params_to_dict(line_element, :ApertureParams)
+        format_dict["MagneticMultipoleP"] = params_to_dict(line_element, :BMultipoleParams)
+        format_dict["MetaP"] = params_to_dict(line_element, :MetaParams)
 
         # Missing: BodyShiftP, ElectricMultipoleP, FloorP, ReferenceP, ReferenceChangeP, and TrackingP
 
     elseif (kind == "Solenoid")
         # [line_element] is a solenoid
-        format_dict["ApertureP"] => params_to_dict(line_element, :ApertureParams)
-        format_dict["MagneticMultipoleP"] => params_to_dict(line_element, :BMultipoleParams)
-        format_dict["MetaP"] => params_to_dict(line_element, :MetaParams)
+        format_dict["ApertureP"] = params_to_dict(line_element, :ApertureParams)
+        format_dict["MagneticMultipoleP"] = params_to_dict(line_element, :BMultipoleParams)
+        format_dict["MetaP"] = params_to_dict(line_element, :MetaParams)
 
         # Missing: BodyShiftP, ElectricMultipoleP, FloorP, ReferenceP, ReferenceChangeP, TrackingP, and SolenoidP
 
     elseif (kind == "SBend")
         # [line_element] is an S bend
-        format_dict["BendP"] => params_to_dict(line_element, :BendParams)
-        format_dict["ApertureP"] => params_to_dict(line_element, :ApertureParams)
-        format_dict["MagneticMultipoleP"] => params_to_dict(line_element, :BMultipoleParams)
-        format_dict["MetaP"] => params_to_dict(line_element, :MetaParams)
+        format_dict["BendP"] = params_to_dict(line_element, :BendParams)
+        format_dict["ApertureP"] = params_to_dict(line_element, :ApertureParams)
+        format_dict["MagneticMultipoleP"] = params_to_dict(line_element, :BMultipoleParams)
+        format_dict["MetaP"] = params_to_dict(line_element, :MetaParams)
 
         # Missing: BodyShiftP, ElectricMultipoleP, FloorP, ReferenceP, ReferenceChangeP, and TrackingP
 
     elseif (kind == "Sextupole")
         # [line_element] is a sextupole
-        format_dict["ApertureP"] => params_to_dict(line_element, :ApertureParams)
-        format_dict["MagneticMultipoleP"] => params_to_dict(line_element, :BMultipoleParams)
-        format_dict["MetaP"] => params_to_dict(line_element, :MetaParams)
+        format_dict["ApertureP"] = params_to_dict(line_element, :ApertureParams)
+        format_dict["MagneticMultipoleP"] = params_to_dict(line_element, :BMultipoleParams)
+        format_dict["MetaP"] = params_to_dict(line_element, :MetaParams)
 
         # Missing: BodyShiftP, ElectricMultipoleP, FloorP, ReferenceP, ReferenceChangeP, and TrackingP
 
     elseif (kind == "Drift")
         # [line_element] is a drift section
-        format_dict["ApertureP"] => params_to_dict(line_element, :ApertureParams)
-        format_dict["MetaP"] => params_to_dict(line_element, :MetaParams)
+        format_dict["ApertureP"] = params_to_dict(line_element, :ApertureParams)
+        format_dict["MetaP"] = params_to_dict(line_element, :MetaParams)
 
         # Missing: BodyShiftP, FloorP, ReferenceP, ReferenceChangeP, and TrackingP
 
     elseif (kind == "Octupole")
         # [line_element] is an octupole
-        format_dict["ApertureP"] => params_to_dict(line_element, :ApertureParams)
-        format_dict["MagneticMultipoleP"] => params_to_dict(line_element, :BMultipoleParams)
-        format_dict["MetaP"] => params_to_dict(line_element, :MetaParams)
+        format_dict["ApertureP"] = params_to_dict(line_element, :ApertureParams)
+        format_dict["MagneticMultipoleP"] = params_to_dict(line_element, :BMultipoleParams)
+        format_dict["MetaP"] = params_to_dict(line_element, :MetaParams)
 
         # Missing: BodyShiftP, ElectricMultipoleP, FloorP, ReferenceP, ReferenceChangeP, and TrackingP
 
     elseif (kind == "Multipole")
         # [line_element] is a multipole
-        format_dict["ApertureP"] => params_to_dict(line_element, :ApertureParams)
-        format_dict["MagneticMultipoleP"] => params_to_dict(line_element, :BMultipoleParams)
-        format_dict["MetaP"] => params_to_dict(line_element, :MetaParams)
+        format_dict["ApertureP"] = params_to_dict(line_element, :ApertureParams)
+        format_dict["MagneticMultipoleP"] = params_to_dict(line_element, :BMultipoleParams)
+        format_dict["MetaP"] = params_to_dict(line_element, :MetaParams)
 
         # Missing: BodyShiftP, ElectricMultipoleP, FloorP, ReferenceP, ReferenceChangeP, and TrackingP
 
     elseif (kind == "Marker")
         # [line_element] is a marker
-        format_dict["MetaP"] => params_to_dict(line_element, :MetaParams)
+        format_dict["MetaP"] = params_to_dict(line_element, :MetaParams)
 
         # Missing: BodyShiftP, FloorP, ReferenceP
 
     elseif (kind == "Kicker")
         # [line_element] is a kicker
-        format_dict["ApertureP"] => params_to_dict(line_element, :ApertureParams)
-        format_dict["MagneticMultipoleP"] => params_to_dict(line_element, :BMultipoleParams)
-        format_dict["MetaP"] => params_to_dict(line_element, :MetaParams)
+        format_dict["ApertureP"] = params_to_dict(line_element, :ApertureParams)
+        format_dict["MagneticMultipoleP"] = params_to_dict(line_element, :BMultipoleParams)
+        format_dict["MetaP"] = params_to_dict(line_element, :MetaParams)
 
         # Nothing in PALS about HKickers and VKickers
 
@@ -133,27 +141,27 @@ function pals_format(line_element)
 
     elseif (kind == "RFCavity")
         # [line_element] is an RF cavity
-        format_dict["ApertureP"] => params_to_dict(line_element, :ApertureParams)
-        format_dict["MagneticMultipoleP"] => params_to_dict(line_element, :BMultipoleParams)
-        format_dict["MetaP"] => params_to_dict(line_element, :MetaParams)
-        format_dict["RFP"] => params_to_dict(line_element, :ApertureParams)
+        format_dict["ApertureP"] = params_to_dict(line_element, :ApertureParams)
+        format_dict["MagneticMultipoleP"] = params_to_dict(line_element, :BMultipoleParams)
+        format_dict["MetaP"] = params_to_dict(line_element, :MetaParams)
+        format_dict["RFP"] = params_to_dict(line_element, :ApertureParams)
 
         # Missing: BodyShiftP, ElectricMultipoleP, FloorP, ReferenceP, ReferenceChangeP, TrackingP, and SolenoidP
 
     elseif (kind == "CrabCavity")
         # [line_element] is a crab cavity
-        format_dict["ApertureP"] => params_to_dict(line_element, :ApertureParams)
-        format_dict["MagneticMultipoleP"] => params_to_dict(line_element, :BMultipoleParams)
-        format_dict["MetaP"] => params_to_dict(line_element, :MetaParams)
-        format_dict["RFP"] => params_to_dict(line_element, :ApertureParams)
+        format_dict["ApertureP"] = params_to_dict(line_element, :ApertureParams)
+        format_dict["MagneticMultipoleP"] = params_to_dict(line_element, :BMultipoleParams)
+        format_dict["MetaP"] = params_to_dict(line_element, :MetaParams)
+        format_dict["RFP"] = params_to_dict(line_element, :ApertureParams)
 
         # Missing: BodyShiftP, ElectricMultipoleP, FloorP, ReferenceP, ReferenceChangeP, and TrackingP
 
     elseif (kind == "Patch")
         # [line_element] is a patch
-        format_dict["ApertureP"] => params_to_dict(line_element, :ApertureParams)
-        format_dict["MetaP"] => params_to_dict(line_element, :MetaParams)
-        format_dict["PatchP"] => params_to_dict(line_element, :PatchParams)
+        format_dict["ApertureP"] = params_to_dict(line_element, :ApertureParams)
+        format_dict["MetaP"] = params_to_dict(line_element, :MetaParams)
+        format_dict["PatchP"] = params_to_dict(line_element, :PatchParams)
 
         # Missing: BodyShiftP, FloorP, ReferenceP, ReferenceChangeP, TrackingP, and SolenoidP
 
@@ -174,18 +182,22 @@ function scibmad_to_pals(lattice::Lattice, new_file_name::String)
     io = open(new_file_name * ".pals.yaml", "w")
 
     # If a key is in this set, then 
-    created_elements = Set(String)
+    created_elements = Set{String}()
+    created_branches = Set{String}()
 
     # Create a list which represents the elements and overall construction of the particle accelerator
     facility = []
 
     # Populate [facility]
-    for beamline in lattice.lines
+    branches = []
+    for beamline in lattice.beamlines
+        line = []
         for line_element in beamline.line
             # For every element in [beamline]'s line...
 
             # Get the element's name
             name = line_element.name
+            push!(line, name)
 
             # Check to see if the element already exists
             if (!(name in created_elements))
@@ -197,7 +209,29 @@ function scibmad_to_pals(lattice::Lattice, new_file_name::String)
                 push!(created_elements, name)
             end
         end
+
+        #= TODO How to handle names of beamlines? =#
+
+        push!(branches, "TODO: beamline.name")
+        push!(facility, 
+            Dict(
+                "TODO: beamline.name" => Dict(
+                    "kind" => "Beamline",
+                    "line" => line
+                )
+            )
+        )
     end
+    push!(facility, 
+        Dict(
+            "TODO: lattice.name" => Dict(
+                "kind" => "Lattice",
+                "branches" => branches
+            )
+        )
+    )
+
+    push!(facility, Dict("use" => "fodo_lattice"))
 
     # Encase [facility] in the proper PALS formatting
     data_to_write = Dict(
@@ -217,6 +251,6 @@ end
 #=
 A version of scibmad_to_pals() which can just accept a beamline 
 =#
-function scibmad_to_pals(beamline::Beamline, new_file_name)
+function scibmad_to_pals(beamline::Beamline, new_file_name::String)
     return scibmad_to_pals(Lattice(beamline), new_file_name)
 end
