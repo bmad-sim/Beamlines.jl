@@ -1,3 +1,8 @@
+#= TODO: tracking_method: SciBMad: SciBMad Standard =#
+#= TODO: Remove quotations from YAML display =#
+#= TODO: Remove default values from being displayed =#
+#= TODO: Create a default naming mechanism =#
+
 #=
 Return a dictionary whose keys are the fields associated with [parameter_type_sym]
 and whose values are those that correspond to the equivalent SciBMad format fields
@@ -46,6 +51,9 @@ function params_to_dict(line_element, parameter_type_sym)
                     if (field == :L)
                         # Replace "L" with "length"
                         acc["length"] = getproperty(parameter_group, field)
+                    elseif (field == :name)
+                        # We never display the name field
+                        continue
                     else
                         acc[field] = getproperty(parameter_group, field)
                     end
@@ -58,7 +66,8 @@ function params_to_dict(line_element, parameter_type_sym)
 end
 
 #=
-Creates the PALS representation of the given element as a dictionary or list.
+Return a dictionary whose single key is [line_element]'s name, storing a nested dictionary
+of all of [line_element]'s fields.
 =#
 function pals_format(line_element)
     # Access the line_element's kind
@@ -174,7 +183,7 @@ function pals_format(line_element)
 end
 
 #=
-Creates a YAML file named "[new_file_name].yaml" in __TODO__ in
+Creates a YAML file named "[new_file_name].yaml" in
 PALS format, given a ([lattice] : Lattice) object. 
 =#
 function scibmad_to_pals(lattice::Lattice, new_file_name::String)
@@ -249,7 +258,8 @@ function scibmad_to_pals(lattice::Lattice, new_file_name::String)
 end
 
 #=
-A version of scibmad_to_pals() which can just accept a beamline 
+Creates a YAML file named "[new_file_name].yaml" in
+PALS format, given a ([beamline] : Beamline) object. 
 =#
 function scibmad_to_pals(beamline::Beamline, new_file_name::String)
     return scibmad_to_pals(Lattice(beamline), new_file_name)
