@@ -8,11 +8,11 @@ Returns true if [value] is the default value that [field] can represent
 function isdefault(field, value)
     value_type = typeof(value)
 
-    if (value_type isa Dict)
+    if (value_type <: Dict)
         # A default dictionary is empty, regardless of its [field]
         return isempty(value)
 
-    elseif (value_type isa Vector)
+    elseif (value_type <: Vector)
         # A default vector is empty, regardless of its [field]
         return isempty(value)
 
@@ -66,27 +66,41 @@ function params_to_dict(line_element, parameter_type_sym)
             end
             #= End code from the override of [ show() ] in multipole.jl =#
 
+        elseif (parameter_type_sym == :UniversalParams)
+            # If these are the universal parameters
+
+            # Ensure that "kind" is first
+            if (hasproperty(parameter_group, :kind))
+                acc[:kind] = getproperty(parameter_group, :kind)
+            end
+
+            # Replace "L" with "length", if it's present
+            if (hasproperty(parameter_group, :L))
+                acc[:length] = getproperty(parameter_group, :L)
+            end
+
+            # Put "tracking_method" inside of a "SciBMad" dictionary inside of "TrackingP"
+            if (hasproperty(parameter_group, :tracking_method))
+                acc[:TrackingP] = Dict(:SciBMad => Dict(:tracking_method => getproperty(parameter_group, :tracking_method)))
+            end
+
+            # We do not map the name
+
         else
+            # General case
+
             fields = fieldnames(typeof(parameter_group))
             for field in fields
                 if (hasproperty(parameter_group, field))
-                    if (field == :L)
-                        # Replace "L" with "length"
-                        acc["length"] = getproperty(parameter_group, field)
-                    elseif (field == :name)
-                        # We never display the name field
-                        continue
-                    else
-                        # Get the property
-                        ret = getproperty(parameter_group, field)
+                    # Get the property
+                    ret = getproperty(parameter_group, field)
 
-                        # If it's a string, make it a symbol to remove quotation marks
-                        if (typeof(ret) == String)
-                            ret = Symbol(ret)
-                        end
-
-                        acc[field] = ret
+                    # If it's a string, make it a symbol to remove quotation marks
+                    if (typeof(ret) == String)
+                        ret = Symbol(ret)
                     end
+
+                    acc[field] = ret
                 end
             end
         end
