@@ -45,8 +45,8 @@ function params_to_dict(line_element, parameter_type)
         # If this is any other parameter type
 
         # Just write out the values of the field names
-        for field_name in fieldnames(params)
-            acc[fieldname] = getfield(params, fieldname)
+        for field_name in propertynames(params)
+            acc[fieldname] = getproperty(params, fieldname)
         end
     end
 
@@ -61,36 +61,111 @@ function pals_format(line_element)
     kind = line_element.kind
 
     # Create the accumulating dictionary that represents the element
-    format_dict = Dict(
-        line_element.name => Dict(
-            "kind" => kind,
-            "length" => line_element.L
-        )
-    )
+    format_dict = params_to_dict(line_element, :UniversalParams)
 
     if (kind == "Quadrupole")
         # [line_element] is a quadrupole
-        format_dict["ApertureP"] => get_parameters(line_element, ApertureP)
-        format_dict["BodyShiftP"] => get_parameters(line_element, BodyShiftP)
-        format_dict["ElectricMultipoleP"] => get_parameters(line_element, ElectricMultipoleP)
-        format_dict["FloorP"] => get_parameters(line_element, FloorP)
-        format_dict["MagneticMultipoleP"] => get_parameters(line_element, MagneticMultipoleP)
-        format_dict["MetaP"] => get_parameters(line_element, MetaP)
-        format_dict["ReferenceP"] => get_parameters(line_element, ReferenceP)
-        format_dict["ReferenceChangeP"] => get_parameters(line_element, ReferenceChangeP)
-        format_dict["TrackingP"] => get_parameters(line_element, TrackingP)
+        format_dict["ApertureP"] => params_to_dict(line_element, :ApertureParams)
+        format_dict["MagneticMultipoleP"] => params_to_dict(line_element, :BMultipoleParams)
+        format_dict["MetaP"] => params_to_dict(line_element, :MetaParams)
+
+        # Missing: BodyShiftP, ElectricMultipoleP, FloorP, ReferenceP, ReferenceChangeP, and TrackingP
 
     elseif (kind == "Solenoid")
         # [line_element] is a solenoid
-        formal_dict["SolenoidP"] => Dict("Ksol" => line_element.Ksol)
+        format_dict["ApertureP"] => params_to_dict(line_element, :ApertureParams)
+        format_dict["MagneticMultipoleP"] => params_to_dict(line_element, :BMultipoleParams)
+        format_dict["MetaP"] => params_to_dict(line_element, :MetaParams)
+
+        # Missing: BodyShiftP, ElectricMultipoleP, FloorP, ReferenceP, ReferenceChangeP, TrackingP, and SolenoidP
 
     elseif (kind == "SBend")
-        # [line_element] is a solenoid
-        formal_dict[]
+        # [line_element] is an S bend
+        format_dict["BendP"] => params_to_dict(line_element, :BendParams)
+        format_dict["ApertureP"] => params_to_dict(line_element, :ApertureParams)
+        format_dict["MagneticMultipoleP"] => params_to_dict(line_element, :BMultipoleParams)
+        format_dict["MetaP"] => params_to_dict(line_element, :MetaParams)
+
+        # Missing: BodyShiftP, ElectricMultipoleP, FloorP, ReferenceP, ReferenceChangeP, and TrackingP
+
+    elseif (kind == "Sextupole")
+        # [line_element] is a sextupole
+        format_dict["ApertureP"] => params_to_dict(line_element, :ApertureParams)
+        format_dict["MagneticMultipoleP"] => params_to_dict(line_element, :BMultipoleParams)
+        format_dict["MetaP"] => params_to_dict(line_element, :MetaParams)
+
+        # Missing: BodyShiftP, ElectricMultipoleP, FloorP, ReferenceP, ReferenceChangeP, and TrackingP
+
+    elseif (kind == "Drift")
+        # [line_element] is a drift section
+        format_dict["ApertureP"] => params_to_dict(line_element, :ApertureParams)
+        format_dict["MetaP"] => params_to_dict(line_element, :MetaParams)
+
+        # Missing: BodyShiftP, FloorP, ReferenceP, ReferenceChangeP, and TrackingP
+
+    elseif (kind == "Octupole")
+        # [line_element] is an octupole
+        format_dict["ApertureP"] => params_to_dict(line_element, :ApertureParams)
+        format_dict["MagneticMultipoleP"] => params_to_dict(line_element, :BMultipoleParams)
+        format_dict["MetaP"] => params_to_dict(line_element, :MetaParams)
+
+        # Missing: BodyShiftP, ElectricMultipoleP, FloorP, ReferenceP, ReferenceChangeP, and TrackingP
+
+    elseif (kind == "Multipole")
+        # [line_element] is a multipole
+        format_dict["ApertureP"] => params_to_dict(line_element, :ApertureParams)
+        format_dict["MagneticMultipoleP"] => params_to_dict(line_element, :BMultipoleParams)
+        format_dict["MetaP"] => params_to_dict(line_element, :MetaParams)
+
+        # Missing: BodyShiftP, ElectricMultipoleP, FloorP, ReferenceP, ReferenceChangeP, and TrackingP
+
+    elseif (kind == "Marker")
+        # [line_element] is a marker
+        format_dict["MetaP"] => params_to_dict(line_element, :MetaParams)
+
+        # Missing: BodyShiftP, FloorP, ReferenceP
+
+    elseif (kind == "Kicker")
+        # [line_element] is a kicker
+        format_dict["ApertureP"] => params_to_dict(line_element, :ApertureParams)
+        format_dict["MagneticMultipoleP"] => params_to_dict(line_element, :BMultipoleParams)
+        format_dict["MetaP"] => params_to_dict(line_element, :MetaParams)
+
+        # Nothing in PALS about HKickers and VKickers
+
+        # Missing: BodyShiftP, ElectricMultipoleP, FloorP, ReferenceP, ReferenceChangeP, and TrackingP
+
+    elseif (kind == "RFCavity")
+        # [line_element] is an RF cavity
+        format_dict["ApertureP"] => params_to_dict(line_element, :ApertureParams)
+        format_dict["MagneticMultipoleP"] => params_to_dict(line_element, :BMultipoleParams)
+        format_dict["MetaP"] => params_to_dict(line_element, :MetaParams)
+        format_dict["RFP"] => params_to_dict(line_element, :ApertureParams)
+
+        # Missing: BodyShiftP, ElectricMultipoleP, FloorP, ReferenceP, ReferenceChangeP, TrackingP, and SolenoidP
+
+    elseif (kind == "CrabCavity")
+        # [line_element] is a crab cavity
+        format_dict["ApertureP"] => params_to_dict(line_element, :ApertureParams)
+        format_dict["MagneticMultipoleP"] => params_to_dict(line_element, :BMultipoleParams)
+        format_dict["MetaP"] => params_to_dict(line_element, :MetaParams)
+        format_dict["RFP"] => params_to_dict(line_element, :ApertureParams)
+
+        # Missing: BodyShiftP, ElectricMultipoleP, FloorP, ReferenceP, ReferenceChangeP, and TrackingP
+
+    elseif (kind == "Patch")
+        # [line_element] is a patch
+        format_dict["ApertureP"] => params_to_dict(line_element, :ApertureParams)
+        format_dict["MetaP"] => params_to_dict(line_element, :MetaParams)
+        format_dict["PatchP"] => params_to_dict(line_element, :PatchParams)
+
+        # Missing: BodyShiftP, FloorP, ReferenceP, ReferenceChangeP, TrackingP, and SolenoidP
     end
 
     # Return the, now fully-formatted, element
-    return format_dict
+    return Dict(
+        line_element.name => format_dict
+    )
 end
 
 #=
