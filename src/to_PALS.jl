@@ -1,5 +1,4 @@
-#= TODO: tracking_method: SciBMad: SciBMad Standard =#
-#= TODO: Remove quotations from YAML display =#
+#= TODO: tracking_method: SciBMad: SciBMadStandard =#
 #= TODO: Remove default values from being displayed =#
 #= TODO: Create a default naming mechanism =#
 
@@ -55,7 +54,15 @@ function params_to_dict(line_element, parameter_type_sym)
                         # We never display the name field
                         continue
                     else
-                        acc[field] = getproperty(parameter_group, field)
+                        # Get the property
+                        ret = getproperty(parameter_group, field)
+
+                        # If it's a string, make it a symbol to remove quotation marks
+                        if (typeof(ret) == String)
+                            ret = Symbol(ret)
+                        end
+
+                        acc[field] = ret
                     end
                 end
             end
@@ -191,8 +198,8 @@ function scibmad_to_pals(lattice::Lattice, new_file_name::String)
     io = open(new_file_name * ".pals.yaml", "w")
 
     # If a key is in this set, then 
-    created_elements = Set{String}()
-    created_branches = Set{String}()
+    created_elements = Set{Symbol}()
+    created_branches = Set{Symbol}()
 
     # Create a list which represents the elements and overall construction of the particle accelerator
     facility = []
@@ -205,7 +212,7 @@ function scibmad_to_pals(lattice::Lattice, new_file_name::String)
             # For every element in [beamline]'s line...
 
             # Get the element's name
-            name = line_element.name
+            name = Symbol(line_element.name)
             push!(line, name)
 
             # Check to see if the element already exists
@@ -225,7 +232,7 @@ function scibmad_to_pals(lattice::Lattice, new_file_name::String)
         push!(facility, 
             Dict(
                 "TODO: beamline.name" => Dict(
-                    "kind" => "Beamline",
+                    "kind" => :Beamline,
                     "line" => line
                 )
             )
@@ -234,18 +241,18 @@ function scibmad_to_pals(lattice::Lattice, new_file_name::String)
     push!(facility, 
         Dict(
             "TODO: lattice.name" => Dict(
-                "kind" => "Lattice",
+                "kind" => :Lattice,
                 "branches" => branches
             )
         )
     )
 
-    push!(facility, Dict("use" => "fodo_lattice"))
+    push!(facility, Dict("use" => "TODO: lattice.name"))
 
     # Encase [facility] in the proper PALS formatting
     data_to_write = Dict(
         "PALS" => Dict(
-            "version" => "null",
+            "version" => :null,
             "facility" => facility
         )
     )
