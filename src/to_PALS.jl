@@ -1,5 +1,3 @@
-#= TODO: tracking_method: SciBMad: SciBMadStandard =#
-#= TODO: Remove default values from being displayed =#
 #= TODO: Create a default naming mechanism =#
 
 #=
@@ -71,7 +69,7 @@ function params_to_dict(line_element, parameter_type_sym)
 
             # Ensure that "kind" is first
             if (hasproperty(parameter_group, :kind))
-                acc[:kind] = getproperty(parameter_group, :kind)
+                acc[:kind] = Symbol(getproperty(parameter_group, :kind))
             end
 
             # Replace "L" with "length", if it's present
@@ -89,9 +87,12 @@ function params_to_dict(line_element, parameter_type_sym)
         else
             # General case
 
+            # Access all the fields associates with this parameter group
             fields = fieldnames(typeof(parameter_group))
             for field in fields
                 if (hasproperty(parameter_group, field))
+                    # If the field has been initialized
+
                     # Get the property
                     ret = getproperty(parameter_group, field)
 
