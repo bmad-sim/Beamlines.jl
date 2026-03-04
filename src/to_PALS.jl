@@ -1,5 +1,3 @@
-#= TODO: Create a default naming mechanism =#
-
 #=
 Returns true if [value] is the default value that [field] can represent
 =#
@@ -275,6 +273,8 @@ function scibmad_to_pals(lattice::Lattice, new_file_name::String)
 
     # Populate [facility]
     branches = []
+
+    line_counter = 1
     for beamline in lattice.beamlines
         line = []
         for line_element in beamline.line
@@ -295,12 +295,14 @@ function scibmad_to_pals(lattice::Lattice, new_file_name::String)
             end
         end
 
-        #= TODO How to handle names of beamlines? =#
+        #= TODO For now, before beamlines have names, use a default name assigner =#
 
-        push!(branches, "TODO: beamline.name")
+        beamline_name = string("beamline", line_counter)
+        push!(branches, Symbol(beamline_name))
+        line_counter += 1
         push!(facility, 
             Dict(
-                "TODO: beamline.name" => Dict(
+                Symbol(beamline_name) => Dict(
                     :kind => :Beamline,
                     :line => line
                 )
@@ -309,14 +311,14 @@ function scibmad_to_pals(lattice::Lattice, new_file_name::String)
     end
     push!(facility, 
         Dict(
-            "TODO: lattice.name" => Dict(
+            :lattice => Dict(
                 :kind => :Lattice,
                 :branches => branches
             )
         )
     )
 
-    push!(facility, Dict(:use => "TODO: lattice.name"))
+    push!(facility, Dict(:use => :lattice))
 
     # Encase [facility] in the proper PALS formatting
     data_to_write = Dict(
