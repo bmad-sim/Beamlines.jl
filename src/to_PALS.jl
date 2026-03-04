@@ -43,7 +43,7 @@ function params_to_dict(line_element, parameter_type_sym)
 
         parameter_group = parameters[parameter_type]
 
-        if (parameter_type == BMultipoleParams)
+        if (parameter_type_sym == :BMultipoleParams)
             # If this is a B multipole
 
             #= This code is from the override of [ show() ] in multipole.jl =#
@@ -53,15 +53,15 @@ function params_to_dict(line_element, parameter_type_sym)
                 tilt = bm.tilt
                 if n != 0
                     sym = BMULTIPOLE_STRENGTH_INVERSE_MAP[(true, bm.order, bm.normalized, bm.integrated)]
-                    acc[string(sym)] = n
+                    acc[sym] = n
                 end
                 if s != 0
                     sym = BMULTIPOLE_STRENGTH_INVERSE_MAP[(false, bm.order, bm.normalized, bm.integrated)]
-                    acc[string(sym)] = s
+                    acc[sym] = s
                 end
                 if tilt != 0
                     sym = BMULTIPOLE_TILT_INVERSE_MAP[bm.order]
-                    acc[string(sym)] = tilt
+                    acc[sym] = tilt
                 end
             end
             #= End code from the override of [ show() ] in multipole.jl =#
@@ -101,7 +101,7 @@ of all of [line_element]'s fields.
 =#
 function pals_format(line_element)
     # Access the line_element's kind
-    kind = line_element.kind
+    kind = Symbol(line_element.kind)
 
     # Create the accumulating dictionary that represents the element
     format_dict = params_to_dict(line_element, :UniversalParams)
@@ -113,7 +113,7 @@ function pals_format(line_element)
         format_dict[:MetaP] = params_to_dict(line_element, :MetaParams)
         format_dict[:BodyShiftP] = params_to_dict(line_element, :AlignmentParams)
 
-        # Missing: ElectricMultipoleP, FloorP, ReferenceP, ReferenceChangeP, and TrackingP
+        # Missing: ElectricMultipoleP, FloorP, ReferenceP, and ReferenceChangeP
 
     elseif (kind == :Solenoid)
         # [line_element] is a solenoid
@@ -122,7 +122,7 @@ function pals_format(line_element)
         format_dict[:MetaP] = params_to_dict(line_element, :MetaParams)
         format_dict[:BodyShiftP] = params_to_dict(line_element, :AlignmentParams)
 
-        # Missing: ElectricMultipoleP, FloorP, ReferenceP, ReferenceChangeP, TrackingP, and SolenoidP
+        # Missing: ElectricMultipoleP, FloorP, ReferenceP, ReferenceChangeP, and SolenoidP
 
     elseif (kind == :SBend)
         # [line_element] is an S bend
@@ -132,7 +132,7 @@ function pals_format(line_element)
         format_dict[:MetaP] = params_to_dict(line_element, :MetaParams)
         format_dict[:BodyShiftP] = params_to_dict(line_element, :AlignmentParams)
 
-        # Missing: ElectricMultipoleP, FloorP, ReferenceP, ReferenceChangeP, and TrackingP
+        # Missing: ElectricMultipoleP, FloorP, ReferenceP, and ReferenceChangeP
 
     elseif (kind == :Sextupole)
         # [line_element] is a sextupole
@@ -141,7 +141,7 @@ function pals_format(line_element)
         format_dict[:MetaP] = params_to_dict(line_element, :MetaParams)
         format_dict[:BodyShiftP] = params_to_dict(line_element, :AlignmentParams)
 
-        # Missing: ElectricMultipoleP, FloorP, ReferenceP, ReferenceChangeP, and TrackingP
+        # Missing: ElectricMultipoleP, FloorP, ReferenceP, and ReferenceChangeP
 
     elseif (kind == :Drift)
         # [line_element] is a drift section
@@ -149,7 +149,7 @@ function pals_format(line_element)
         format_dict[:MetaP] = params_to_dict(line_element, :MetaParams)
         format_dict[:BodyShiftP] = params_to_dict(line_element, :AlignmentParams)
 
-        # Missing: FloorP, ReferenceP, ReferenceChangeP, and TrackingP
+        # Missing: FloorP, ReferenceP, and ReferenceChangeP
 
     elseif (kind == :Octupole)
         # [line_element] is an octupole
@@ -158,7 +158,7 @@ function pals_format(line_element)
         format_dict[:MetaP] = params_to_dict(line_element, :MetaParams)
         format_dict[:BodyShiftP] = params_to_dict(line_element, :AlignmentParams)
 
-        # Missing: ElectricMultipoleP, FloorP, ReferenceP, ReferenceChangeP, and TrackingP
+        # Missing: ElectricMultipoleP, FloorP, ReferenceP, and ReferenceChangeP
 
     elseif (kind == :Multipole)
         # [line_element] is a multipole
@@ -167,7 +167,7 @@ function pals_format(line_element)
         format_dict[:MetaP] = params_to_dict(line_element, :MetaParams)
         format_dict[:BodyShiftP] = params_to_dict(line_element, :AlignmentParams)
 
-        # Missing: ElectricMultipoleP, FloorP, ReferenceP, ReferenceChangeP, and TrackingP
+        # Missing: ElectricMultipoleP, FloorP, ReferenceP, and ReferenceChangeP
 
     elseif (kind == :Marker)
         # [line_element] is a marker
@@ -185,7 +185,7 @@ function pals_format(line_element)
 
         # Nothing in PALS about HKickers and VKickers
 
-        # Missing: ElectricMultipoleP, FloorP, ReferenceP, ReferenceChangeP, and TrackingP
+        # Missing: ElectricMultipoleP, FloorP, ReferenceP, and ReferenceChangeP
 
     elseif (kind == :RFCavity)
         # [line_element] is an RF cavity
@@ -194,7 +194,7 @@ function pals_format(line_element)
         format_dict[:MetaP] = params_to_dict(line_element, :MetaParams)
         format_dict[:RFP] = params_to_dict(line_element, :ApertureParams)
 
-        # Missing: BodyShiftP, ElectricMultipoleP, FloorP, ReferenceP, ReferenceChangeP, TrackingP, and SolenoidP
+        # Missing: BodyShiftP, ElectricMultipoleP, FloorP, ReferenceP, ReferenceChangeP, and SolenoidP
 
     elseif (kind == :CrabCavity)
         # [line_element] is a crab cavity
@@ -203,7 +203,7 @@ function pals_format(line_element)
         format_dict[:MetaP] = params_to_dict(line_element, :MetaParams)
         format_dict[:RFP] = params_to_dict(line_element, :ApertureParams)
 
-        # Missing: BodyShiftP, ElectricMultipoleP, FloorP, ReferenceP, ReferenceChangeP, and TrackingP
+        # Missing: BodyShiftP, ElectricMultipoleP, FloorP, ReferenceP, and ReferenceChangeP
 
     elseif (kind == :Patch)
         # [line_element] is a patch
@@ -211,20 +211,29 @@ function pals_format(line_element)
         format_dict[:MetaP] = params_to_dict(line_element, :MetaParams)
         format_dict[:PatchP] = params_to_dict(line_element, :PatchParams)
 
-        # Missing: BodyShiftP, FloorP, ReferenceP, ReferenceChangeP, TrackingP, and SolenoidP
+        # Missing: BodyShiftP, FloorP, ReferenceP, ReferenceChangeP, and SolenoidP
 
     end
 
-    # Remove any empty dictionary fields from the format_dict
-    for key in keys(format_dict)
+    # Remove any empty dictionary fields from the format_dict. 
+    # Removing a default field may make a structure it's sitting
+    # inside of default, so loop until no changes are made
 
-        #= TODO Implement isdefault() =#
+    is_settled = false
 
-        if (isdefault(key, format_dict[key]))
-            # If this is an empty field or default value
+    while (!is_settled)
+        is_settled = true
 
-            # Remove this key value
-            delete!(format_dict, key)
+        for key in keys(format_dict)
+            if (isdefault(key, format_dict[key]))
+                # If this is an empty field or default value
+
+                # A change was made, so this is not yet is_settled
+                is_settled = false
+
+                # Remove this key value
+                delete!(format_dict, key)
+            end
         end
     end
 
