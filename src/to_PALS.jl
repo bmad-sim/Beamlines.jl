@@ -3,6 +3,29 @@
 #= TODO: Create a default naming mechanism =#
 
 #=
+Returns true if [value] is the default value that [field] can represent
+=#
+function isdefault(field, value)
+    value_type = typeof(value)
+
+    if (value_type isa Dict)
+        # A default dictionary is empty, regardless of its [field]
+        return isempty(value)
+
+    elseif (value_type isa Vector)
+        # A default vector is empty, regardless of its [field]
+        return isempty(value)
+
+    elseif (value_type == Symbol)
+        # Any symbol's default value is the empty symbol, regardless of its [field]
+        return value === Symbol("")
+    end
+
+    # If nothing above has been satisfied, it's not a default value
+    return false
+end
+
+#=
 Return a dictionary whose keys are the fields associated with [parameter_type_sym]
 and whose values are those that correspond to the equivalent SciBMad format fields
 of [line_element].
@@ -83,104 +106,126 @@ function pals_format(line_element)
     # Create the accumulating dictionary that represents the element
     format_dict = params_to_dict(line_element, :UniversalParams)
 
-    if (kind == "Quadrupole")
+    if (kind == :Quadrupole)
         # [line_element] is a quadrupole
-        format_dict["ApertureP"] = params_to_dict(line_element, :ApertureParams)
-        format_dict["MagneticMultipoleP"] = params_to_dict(line_element, :BMultipoleParams)
-        format_dict["MetaP"] = params_to_dict(line_element, :MetaParams)
+        format_dict[:ApertureP] = params_to_dict(line_element, :ApertureParams)
+        format_dict[:MagneticMultipoleP] = params_to_dict(line_element, :BMultipoleParams)
+        format_dict[:MetaP] = params_to_dict(line_element, :MetaParams)
+        format_dict[:BodyShiftP] = params_to_dict(line_element, :AlignmentParams)
 
-        # Missing: BodyShiftP, ElectricMultipoleP, FloorP, ReferenceP, ReferenceChangeP, and TrackingP
+        # Missing: ElectricMultipoleP, FloorP, ReferenceP, ReferenceChangeP, and TrackingP
 
-    elseif (kind == "Solenoid")
+    elseif (kind == :Solenoid)
         # [line_element] is a solenoid
-        format_dict["ApertureP"] = params_to_dict(line_element, :ApertureParams)
-        format_dict["MagneticMultipoleP"] = params_to_dict(line_element, :BMultipoleParams)
-        format_dict["MetaP"] = params_to_dict(line_element, :MetaParams)
+        format_dict[:ApertureP] = params_to_dict(line_element, :ApertureParams)
+        format_dict[:MagneticMultipoleP] = params_to_dict(line_element, :BMultipoleParams)
+        format_dict[:MetaP] = params_to_dict(line_element, :MetaParams)
+        format_dict[:BodyShiftP] = params_to_dict(line_element, :AlignmentParams)
 
-        # Missing: BodyShiftP, ElectricMultipoleP, FloorP, ReferenceP, ReferenceChangeP, TrackingP, and SolenoidP
+        # Missing: ElectricMultipoleP, FloorP, ReferenceP, ReferenceChangeP, TrackingP, and SolenoidP
 
-    elseif (kind == "SBend")
+    elseif (kind == :SBend)
         # [line_element] is an S bend
-        format_dict["BendP"] = params_to_dict(line_element, :BendParams)
-        format_dict["ApertureP"] = params_to_dict(line_element, :ApertureParams)
-        format_dict["MagneticMultipoleP"] = params_to_dict(line_element, :BMultipoleParams)
-        format_dict["MetaP"] = params_to_dict(line_element, :MetaParams)
+        format_dict[:BendP] = params_to_dict(line_element, :BendParams)
+        format_dict[:ApertureP] = params_to_dict(line_element, :ApertureParams)
+        format_dict[:MagneticMultipoleP] = params_to_dict(line_element, :BMultipoleParams)
+        format_dict[:MetaP] = params_to_dict(line_element, :MetaParams)
+        format_dict[:BodyShiftP] = params_to_dict(line_element, :AlignmentParams)
 
-        # Missing: BodyShiftP, ElectricMultipoleP, FloorP, ReferenceP, ReferenceChangeP, and TrackingP
+        # Missing: ElectricMultipoleP, FloorP, ReferenceP, ReferenceChangeP, and TrackingP
 
-    elseif (kind == "Sextupole")
+    elseif (kind == :Sextupole)
         # [line_element] is a sextupole
-        format_dict["ApertureP"] = params_to_dict(line_element, :ApertureParams)
-        format_dict["MagneticMultipoleP"] = params_to_dict(line_element, :BMultipoleParams)
-        format_dict["MetaP"] = params_to_dict(line_element, :MetaParams)
+        format_dict[:ApertureP] = params_to_dict(line_element, :ApertureParams)
+        format_dict[:MagneticMultipoleP] = params_to_dict(line_element, :BMultipoleParams)
+        format_dict[:MetaP] = params_to_dict(line_element, :MetaParams)
+        format_dict[:BodyShiftP] = params_to_dict(line_element, :AlignmentParams)
 
-        # Missing: BodyShiftP, ElectricMultipoleP, FloorP, ReferenceP, ReferenceChangeP, and TrackingP
+        # Missing: ElectricMultipoleP, FloorP, ReferenceP, ReferenceChangeP, and TrackingP
 
-    elseif (kind == "Drift")
+    elseif (kind == :Drift)
         # [line_element] is a drift section
-        format_dict["ApertureP"] = params_to_dict(line_element, :ApertureParams)
-        format_dict["MetaP"] = params_to_dict(line_element, :MetaParams)
+        format_dict[:ApertureP] = params_to_dict(line_element, :ApertureParams)
+        format_dict[:MetaP] = params_to_dict(line_element, :MetaParams)
+        format_dict[:BodyShiftP] = params_to_dict(line_element, :AlignmentParams)
 
-        # Missing: BodyShiftP, FloorP, ReferenceP, ReferenceChangeP, and TrackingP
+        # Missing: FloorP, ReferenceP, ReferenceChangeP, and TrackingP
 
-    elseif (kind == "Octupole")
+    elseif (kind == :Octupole)
         # [line_element] is an octupole
-        format_dict["ApertureP"] = params_to_dict(line_element, :ApertureParams)
-        format_dict["MagneticMultipoleP"] = params_to_dict(line_element, :BMultipoleParams)
-        format_dict["MetaP"] = params_to_dict(line_element, :MetaParams)
+        format_dict[:ApertureP] = params_to_dict(line_element, :ApertureParams)
+        format_dict[:MagneticMultipoleP] = params_to_dict(line_element, :BMultipoleParams)
+        format_dict[:MetaP] = params_to_dict(line_element, :MetaParams)
+        format_dict[:BodyShiftP] = params_to_dict(line_element, :AlignmentParams)
 
-        # Missing: BodyShiftP, ElectricMultipoleP, FloorP, ReferenceP, ReferenceChangeP, and TrackingP
+        # Missing: ElectricMultipoleP, FloorP, ReferenceP, ReferenceChangeP, and TrackingP
 
-    elseif (kind == "Multipole")
+    elseif (kind == :Multipole)
         # [line_element] is a multipole
-        format_dict["ApertureP"] = params_to_dict(line_element, :ApertureParams)
-        format_dict["MagneticMultipoleP"] = params_to_dict(line_element, :BMultipoleParams)
-        format_dict["MetaP"] = params_to_dict(line_element, :MetaParams)
+        format_dict[:ApertureP] = params_to_dict(line_element, :ApertureParams)
+        format_dict[:MagneticMultipoleP] = params_to_dict(line_element, :BMultipoleParams)
+        format_dict[:MetaP] = params_to_dict(line_element, :MetaParams)
+        format_dict[:BodyShiftP] = params_to_dict(line_element, :AlignmentParams)
 
-        # Missing: BodyShiftP, ElectricMultipoleP, FloorP, ReferenceP, ReferenceChangeP, and TrackingP
+        # Missing: ElectricMultipoleP, FloorP, ReferenceP, ReferenceChangeP, and TrackingP
 
-    elseif (kind == "Marker")
+    elseif (kind == :Marker)
         # [line_element] is a marker
-        format_dict["MetaP"] = params_to_dict(line_element, :MetaParams)
+        format_dict[:MetaP] = params_to_dict(line_element, :MetaParams)
+        format_dict[:BodyShiftP] = params_to_dict(line_element, :AlignmentParams)
 
-        # Missing: BodyShiftP, FloorP, ReferenceP
+        # Missing: FloorP, ReferenceP
 
-    elseif (kind == "Kicker")
+    elseif (kind == :Kicker)
         # [line_element] is a kicker
-        format_dict["ApertureP"] = params_to_dict(line_element, :ApertureParams)
-        format_dict["MagneticMultipoleP"] = params_to_dict(line_element, :BMultipoleParams)
-        format_dict["MetaP"] = params_to_dict(line_element, :MetaParams)
+        format_dict[:ApertureP] = params_to_dict(line_element, :ApertureParams)
+        format_dict[:MagneticMultipoleP] = params_to_dict(line_element, :BMultipoleParams)
+        format_dict[:MetaP] = params_to_dict(line_element, :MetaParams)
+        format_dict[:BodyShiftP] = params_to_dict(line_element, :AlignmentParams)
 
         # Nothing in PALS about HKickers and VKickers
 
-        # Missing: BodyShiftP, ElectricMultipoleP, FloorP, ReferenceP, ReferenceChangeP, and TrackingP
+        # Missing: ElectricMultipoleP, FloorP, ReferenceP, ReferenceChangeP, and TrackingP
 
-    elseif (kind == "RFCavity")
+    elseif (kind == :RFCavity)
         # [line_element] is an RF cavity
-        format_dict["ApertureP"] = params_to_dict(line_element, :ApertureParams)
-        format_dict["MagneticMultipoleP"] = params_to_dict(line_element, :BMultipoleParams)
-        format_dict["MetaP"] = params_to_dict(line_element, :MetaParams)
-        format_dict["RFP"] = params_to_dict(line_element, :ApertureParams)
+        format_dict[:ApertureP] = params_to_dict(line_element, :ApertureParams)
+        format_dict[:MagneticMultipoleP] = params_to_dict(line_element, :BMultipoleParams)
+        format_dict[:MetaP] = params_to_dict(line_element, :MetaParams)
+        format_dict[:RFP] = params_to_dict(line_element, :ApertureParams)
 
         # Missing: BodyShiftP, ElectricMultipoleP, FloorP, ReferenceP, ReferenceChangeP, TrackingP, and SolenoidP
 
-    elseif (kind == "CrabCavity")
+    elseif (kind == :CrabCavity)
         # [line_element] is a crab cavity
-        format_dict["ApertureP"] = params_to_dict(line_element, :ApertureParams)
-        format_dict["MagneticMultipoleP"] = params_to_dict(line_element, :BMultipoleParams)
-        format_dict["MetaP"] = params_to_dict(line_element, :MetaParams)
-        format_dict["RFP"] = params_to_dict(line_element, :ApertureParams)
+        format_dict[:ApertureP] = params_to_dict(line_element, :ApertureParams)
+        format_dict[:MagneticMultipoleP] = params_to_dict(line_element, :BMultipoleParams)
+        format_dict[:MetaP] = params_to_dict(line_element, :MetaParams)
+        format_dict[:RFP] = params_to_dict(line_element, :ApertureParams)
 
         # Missing: BodyShiftP, ElectricMultipoleP, FloorP, ReferenceP, ReferenceChangeP, and TrackingP
 
-    elseif (kind == "Patch")
+    elseif (kind == :Patch)
         # [line_element] is a patch
-        format_dict["ApertureP"] = params_to_dict(line_element, :ApertureParams)
-        format_dict["MetaP"] = params_to_dict(line_element, :MetaParams)
-        format_dict["PatchP"] = params_to_dict(line_element, :PatchParams)
+        format_dict[:ApertureP] = params_to_dict(line_element, :ApertureParams)
+        format_dict[:MetaP] = params_to_dict(line_element, :MetaParams)
+        format_dict[:PatchP] = params_to_dict(line_element, :PatchParams)
 
         # Missing: BodyShiftP, FloorP, ReferenceP, ReferenceChangeP, TrackingP, and SolenoidP
 
+    end
+
+    # Remove any empty dictionary fields from the format_dict
+    for key in keys(format_dict)
+
+        #= TODO Implement isdefault() =#
+
+        if (isdefault(key, format_dict[key]))
+            # If this is an empty field or default value
+
+            # Remove this key value
+            delete!(format_dict, key)
+        end
     end
 
     # Return the, now fully-formatted, element
@@ -232,8 +277,8 @@ function scibmad_to_pals(lattice::Lattice, new_file_name::String)
         push!(facility, 
             Dict(
                 "TODO: beamline.name" => Dict(
-                    "kind" => :Beamline,
-                    "line" => line
+                    :kind => :Beamline,
+                    :line => line
                 )
             )
         )
@@ -241,19 +286,19 @@ function scibmad_to_pals(lattice::Lattice, new_file_name::String)
     push!(facility, 
         Dict(
             "TODO: lattice.name" => Dict(
-                "kind" => :Lattice,
-                "branches" => branches
+                :kind => :Lattice,
+                :branches => branches
             )
         )
     )
 
-    push!(facility, Dict("use" => "TODO: lattice.name"))
+    push!(facility, Dict(:use => "TODO: lattice.name"))
 
     # Encase [facility] in the proper PALS formatting
     data_to_write = Dict(
-        "PALS" => Dict(
-            "version" => :null,
-            "facility" => facility
+        :PALS => Dict(
+            :version => :null,
+            :facility => facility
         )
     )
 
