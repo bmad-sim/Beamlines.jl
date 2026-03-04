@@ -1,8 +1,3 @@
-using Beamlines
-using keymaps
-using DataStructures
-using YAML
-
 #=
 Return a dictionary containing the values of [line_element]'s parameters of type [parameter_type]
 =#
@@ -13,9 +8,10 @@ function params_to_dict(line_element, parameter_type)
     params = PARAMS_MAP[parameter_type]
 
     if (parameter_type == :BMultipoleParams) 
-        # If this is a Multipole
+        # If this is a MultipoleParams
+
         for i in eachindex(params.order)
-            # Loop over the non-fixed size components
+            # Loop over the number of orders stored
 
             # Access the "informational" vectors
             order = params.order[i]
@@ -44,9 +40,9 @@ function params_to_dict(line_element, parameter_type)
     else
         # If this is any other parameter type
 
-        # Just write out the values of the field names
+        # Just write out the values of the field names IF THEY AREN'T DEFAULT
         for field_name in propertynames(params)
-            acc[fieldname] = getproperty(params, fieldname)
+            acc[field_name] = getproperty(params, field_name)
         end
     end
 
@@ -160,6 +156,7 @@ function pals_format(line_element)
         format_dict["PatchP"] => params_to_dict(line_element, :PatchParams)
 
         # Missing: BodyShiftP, FloorP, ReferenceP, ReferenceChangeP, TrackingP, and SolenoidP
+
     end
 
     # Return the, now fully-formatted, element
@@ -170,9 +167,9 @@ end
 
 #=
 Creates a YAML file named "[new_file_name].yaml" in __TODO__ in
-PALS format, given a ([beamline] : Beamline) object. 
+PALS format, given a ([lattice] : Lattice) object. 
 =#
-function scibmad_to_pals(beamline, new_file_name)
+function scibmad_to_pals(lattice::Lattice, new_file_name::String)
     # Create a new PALS yaml file in write mode
     io = open(new_file_name * ".pals.yaml", "w")
 
@@ -183,20 +180,22 @@ function scibmad_to_pals(beamline, new_file_name)
     facility = []
 
     # Populate [facility]
-    for line_element in beamline.line
-        # For every element in [beamline]'s line...
+    for beamline in lattice.lines
+        for line_element in beamline.line
+            # For every element in [beamline]'s line...
 
-        # Get the element's name
-        name = line_element.name
+            # Get the element's name
+            name = line_element.name
 
-        # Check to see if the element already exists
-        if (!(name in created_elements))
-            # If this line element has not already been created...
+            # Check to see if the element already exists
+            if (!(name in created_elements))
+                # If this line element has not already been created...
 
-            # Push the line element onto [facility]
-            push!(facility, line_element)
-            # Push the line element's name onto the set of unique elements
-            push!(created_elements, name)
+                # Push the line element onto [facility]
+                push!(facility, pals_format(line_element))
+                # Push the line element's name onto the set of unique elements
+                push!(created_elements, name)
+            end
         end
     end
 
@@ -213,4 +212,11 @@ function scibmad_to_pals(beamline, new_file_name)
 
     # Flush the PALS yaml file
     close(io)
+end
+
+#=
+A version of scibmad_to_pals() which can just accept a beamline 
+=#
+function scibmad_to_pals(beamline::Beamline, new_file_name)
+    return scibmad_to_pals(Lattice(beamline), new_file_name)
 end
