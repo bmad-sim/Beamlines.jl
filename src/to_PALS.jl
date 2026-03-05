@@ -32,105 +32,6 @@ function isdefault(field, value)
     return false
 end
 
-#=
-"""
-Return a dictionary whose keys are the fields associated with [parameter_type_sym]
-and whose values are those that correspond to the equivalent SciBMad format fields
-of [line_element].
-
-This function is used as a helper to [ scibmad_to_pals() ] to create the dictionaries
-that store the fields and field values of a parameter group.
-
-- [line_element] is the LineElement that parameters are being extracted from.
-- [parameter_type_sym] is the name of an AbstractParams group as a Symbol.
-    (ex. To access MagneticMultipoleP, pass in :MagneticMultipoleP)
-"""
-function params_to_dict(line_element, parameter_type_sym)
-    # Accumulator
-    acc = Dict()
-
-    # Access the dictionary storing all of [line_elements]'s parameters
-    parameters = getfield(line_element, :pdict)
-
-    # Access the parameter type denoted by [ parameter_type_sym ]
-    parameter_type = PARAMS_MAP[parameter_type_sym]
-
-    if (haskey(parameters, parameter_type))
-        # If this group of parameters is present
-
-        # Access the initialized parameters of type [parameter_type] in [parameters]
-        parameter_group = parameters[parameter_type]
-
-        if (parameter_type_sym == :BMultipoleParams)
-            # If this is a B multipole
-
-            #= This code is from the override of [ show() ] in multipole.jl =#
-            for bm in parameter_group
-                n = bm.n
-                s = bm.s
-                tilt = bm.tilt
-                if n != 0
-                    sym = BMULTIPOLE_STRENGTH_INVERSE_MAP[(true, bm.order, bm.normalized, bm.integrated)]
-                    acc[sym] = n
-                end
-                if s != 0
-                    sym = BMULTIPOLE_STRENGTH_INVERSE_MAP[(false, bm.order, bm.normalized, bm.integrated)]
-                    acc[sym] = s
-                end
-                if tilt != 0
-                    sym = BMULTIPOLE_TILT_INVERSE_MAP[bm.order]
-                    acc[sym] = tilt
-                end
-            end
-            #= End code from the override of [ show() ] in multipole.jl =#
-
-        elseif (parameter_type_sym == :UniversalParams)
-            # If these are the universal parameters
-
-            # Extract [ kind ], if present
-            if (hasproperty(parameter_group, :kind))
-                acc[:kind] = Symbol(getproperty(parameter_group, :kind))
-            end
-
-            # Replace [ L ] with [ length ], if it's present
-            if (hasproperty(parameter_group, :L))
-                acc[:length] = getproperty(parameter_group, :L)
-            end
-
-            # Put [ tracking_method ] inside of a [ SciBMad ] dictionary inside of  [ TrackingP ]
-            if (hasproperty(parameter_group, :tracking_method))
-                acc[:TrackingP] = Dict(:SciBMad => Dict(:tracking_method => getproperty(parameter_group, :tracking_method)))
-            end
-
-            # We do not map the name
-
-        else
-            # General case
-
-            # Access all the fields associates with this parameter group
-            fields = fieldnames(typeof(parameter_group))
-            for field in fields
-                if (hasproperty(parameter_group, field))
-                    # If the field has been initialized
-
-                    # Get the property
-                    ret = getproperty(parameter_group, field)
-
-                    # If it's a string, make it a symbol to remove quotation marks
-                    if (typeof(ret) == String)
-                        ret = Symbol(ret)
-                    end
-
-                    acc[field] = ret
-                end
-            end
-        end
-    end
-
-    return acc
-end
-=#
-
 #= This maps types of AbstractParams to the symbol representing its PALS-format name =#
 const PARAMTYPES_TO_PALSNAMES_MAP = Dict{Type{<:AbstractParams}, Symbol}(
     BMultipoleParams => :MagneticMultipoleP,
@@ -154,7 +55,35 @@ associated with elements with them.
 - [format_dict] is the dictionary to be modified which represents the information about a line element.
 - [parameter_group] is an AbstractParams object containing the parameters to extract to [acc].
 """
-function params_to_dict!(format_dict::Dict, parameter_group<:AbstractParams) end
+# Handle basically any other type of AbstractParams
+function params_to_dict!(format_dict::Dict, parameter_group::T) where {T<:AbstractParams}
+    # The accumulator dictionary 
+    acc = Dict()
+    parameter_type = nothing # This holds the type of the parameter group
+
+    for parameter_name in propertynames(parameter_group)
+        if (parameter_type == nothing)
+            # Set the type of the parameter
+            if haskey(PROPERTIES_MAP, parameter_name)
+                parameter_type = PROPERTIES_MAP[parameter_name]
+            end
+        end
+        if (hasproperty(parameter_group, parameter_name))
+            # Get the value stored at that property
+            parameter_value = getproperty(parameter_group, parameter_name)
+
+            # If it's a string, make it a symbol to remove quotation marks
+            if (typeof(parameter_value) == String)
+                parameter_value = Symbol(parameter_value)
+            end
+
+            acc[parameter_name] = parameter_value
+        end
+    end
+
+    format_dict[PARAMTYPES_TO_PALSNAMES_MAP[parameter_type]] = acc
+end
+
 
 # Handle BMultipoleParams
 function params_to_dict!(format_dict::Dict, parameter_group::BMultipoleParams) 
@@ -186,27 +115,6 @@ function params_to_dict!(format_dict::Dict, parameter_group::BMultipoleParams)
 end
 
 
-# Handle basically any other type of AbstractParams
-function params_to_dict!(format_dict::Dict, parameter_group<:AbstractParams) 
-    # The accumulator dictionary 
-    acc = Dict()
-
-    for parameter_name in propertynames(parameter_group)
-        # Get the value stored at that property
-        parameter_value = getproperty(parameter_group, parameter_name)
-
-        # If it's a string, make it a symbol to remove quotation marks
-        if (typeof(parameter_value) == String)
-            parameter_value = Symbol(parameter_value)
-        end
-
-        acc[parameter_name] = parameter_value
-    end
-
-    format_dict[PARAMTYPES_TO_PALSNAMES_MAP[typeof(parameter_group)]] = acc
-end
-
-
 """
 Return a dictionary whose single key is [line_element]'s name, storing another dictionary
 whose keys are [line_element]'s fields. This is the format desired by PALS.
@@ -216,7 +124,7 @@ accelerator element, along with all parameters assocaited with it.
 
 - [line_element] is the LineElement being formatted into PALS.
 """
-function pals_format(line_element::LineElement) 
+function pals_format(line_element) 
     # The accumulator dictionary which will become the final return dictionary
     format_dict = Dict()
 
@@ -230,7 +138,7 @@ function pals_format(line_element::LineElement)
     for parameter_group in values(parameter_groups)
         # Loop through every parameter group [line_element] has
 
-        if (parameter_group == UniversalParams)
+        if (typeof(parameter_group) == UniversalParams)
             #=
             Special case: Universal Parameters contains basic information that's 
             not displayed inside of another dictionary, it should be at the "top level",
@@ -252,7 +160,14 @@ function pals_format(line_element::LineElement)
                 format_dict[:TrackingP] = Dict(:SciBMad => Dict(:tracking_method => getproperty(parameter_group, :tracking_method)))
             end
 
+            #= TODO Handle Beamline parameters here? =#
+
             # We do not put the name as an element of the dictionary
+        elseif (typeof(parameter_group) == BeamlineParams)
+            # Special case: Beamline Parameters should be handled and grouped under TrackingP
+            # this was (should be) already handled in UniversalParams case
+
+            continue
         else
             # General case: Any other group of parameters
 
@@ -274,151 +189,6 @@ function pals_format(line_element::LineElement)
     return Dict(line_element.name => format_dict)
 end
 
-#=
-"""
-Return a dictionary whose single key is [line_element]'s name, storing another dictionary
-whose keys are [line_element]'s fields. This is the format desired by PALS.
-
-This function is used as a helper to [ scibmad_to_pals() ] to create the entry for a single
-accelerator element, along with all parameters assocaited with it.
-
-- [line_element] is the LineElement being formatted into PALS.
-"""
-function pals_format(line_element)
-    # Access the line_element's [ kind ]
-    kind = Symbol(line_element.kind)
-
-    # Create the accumulating dictionary that represents the element
-    format_dict = params_to_dict(line_element, :UniversalParams)
-
-    if (kind == :Quadrupole)
-        # [line_element] is a quadrupole
-        format_dict[:ApertureP] = params_to_dict(line_element, :ApertureParams)
-        format_dict[:MagneticMultipoleP] = params_to_dict(line_element, :BMultipoleParams)
-        format_dict[:MetaP] = params_to_dict(line_element, :MetaParams)
-        format_dict[:BodyShiftP] = params_to_dict(line_element, :AlignmentParams)
-
-        # Missing: ElectricMultipoleP, FloorP, ReferenceP, and ReferenceChangeP
-
-    elseif (kind == :Solenoid)
-        # [line_element] is a solenoid
-        format_dict[:ApertureP] = params_to_dict(line_element, :ApertureParams)
-        format_dict[:MagneticMultipoleP] = params_to_dict(line_element, :BMultipoleParams)
-        format_dict[:MetaP] = params_to_dict(line_element, :MetaParams)
-        format_dict[:BodyShiftP] = params_to_dict(line_element, :AlignmentParams)
-
-        # Missing: ElectricMultipoleP, FloorP, ReferenceP, ReferenceChangeP, and SolenoidP
-
-    elseif (kind == :SBend)
-        # [line_element] is an S bend
-        format_dict[:BendP] = params_to_dict(line_element, :BendParams)
-        format_dict[:ApertureP] = params_to_dict(line_element, :ApertureParams)
-        format_dict[:MagneticMultipoleP] = params_to_dict(line_element, :BMultipoleParams)
-        format_dict[:MetaP] = params_to_dict(line_element, :MetaParams)
-        format_dict[:BodyShiftP] = params_to_dict(line_element, :AlignmentParams)
-
-        # Missing: ElectricMultipoleP, FloorP, ReferenceP, and ReferenceChangeP
-
-    elseif (kind == :Sextupole)
-        # [line_element] is a sextupole
-        format_dict[:ApertureP] = params_to_dict(line_element, :ApertureParams)
-        format_dict[:MagneticMultipoleP] = params_to_dict(line_element, :BMultipoleParams)
-        format_dict[:MetaP] = params_to_dict(line_element, :MetaParams)
-        format_dict[:BodyShiftP] = params_to_dict(line_element, :AlignmentParams)
-
-        # Missing: ElectricMultipoleP, FloorP, ReferenceP, and ReferenceChangeP
-
-    elseif (kind == :Drift)
-        # [line_element] is a drift section
-        format_dict[:ApertureP] = params_to_dict(line_element, :ApertureParams)
-        format_dict[:MetaP] = params_to_dict(line_element, :MetaParams)
-        format_dict[:BodyShiftP] = params_to_dict(line_element, :AlignmentParams)
-
-        # Missing: FloorP, ReferenceP, and ReferenceChangeP
-
-    elseif (kind == :Octupole)
-        # [line_element] is an octupole
-        format_dict[:ApertureP] = params_to_dict(line_element, :ApertureParams)
-        format_dict[:MagneticMultipoleP] = params_to_dict(line_element, :BMultipoleParams)
-        format_dict[:MetaP] = params_to_dict(line_element, :MetaParams)
-        format_dict[:BodyShiftP] = params_to_dict(line_element, :AlignmentParams)
-
-        # Missing: ElectricMultipoleP, FloorP, ReferenceP, and ReferenceChangeP
-
-    elseif (kind == :Multipole)
-        # [line_element] is a multipole
-        format_dict[:ApertureP] = params_to_dict(line_element, :ApertureParams)
-        format_dict[:MagneticMultipoleP] = params_to_dict(line_element, :BMultipoleParams)
-        format_dict[:MetaP] = params_to_dict(line_element, :MetaParams)
-        format_dict[:BodyShiftP] = params_to_dict(line_element, :AlignmentParams)
-
-        # Missing: ElectricMultipoleP, FloorP, ReferenceP, and ReferenceChangeP
-
-    elseif (kind == :Marker)
-        # [line_element] is a marker
-        format_dict[:MetaP] = params_to_dict(line_element, :MetaParams)
-        format_dict[:BodyShiftP] = params_to_dict(line_element, :AlignmentParams)
-
-        # Missing: FloorP, ReferenceP
-
-    elseif (kind == :Kicker || kind == :VKicker || kind == :HKicker)
-        # [line_element] is a kicker
-        format_dict[:ApertureP] = params_to_dict(line_element, :ApertureParams)
-        format_dict[:MagneticMultipoleP] = params_to_dict(line_element, :BMultipoleParams)
-        format_dict[:MetaP] = params_to_dict(line_element, :MetaParams)
-        format_dict[:BodyShiftP] = params_to_dict(line_element, :AlignmentParams)
-
-        # Nothing in PALS about HKickers and VKickers
-
-        # Missing: ElectricMultipoleP, FloorP, ReferenceP, and ReferenceChangeP
-
-    elseif (kind == :RFCavity)
-        # [line_element] is an RF cavity
-        format_dict[:ApertureP] = params_to_dict(line_element, :ApertureParams)
-        format_dict[:MagneticMultipoleP] = params_to_dict(line_element, :BMultipoleParams)
-        format_dict[:MetaP] = params_to_dict(line_element, :MetaParams)
-        format_dict[:RFP] = params_to_dict(line_element, :RFParams)
-        format_dict[:BodyShiftP] = params_to_dict(line_element, :AlignmentParams)
-
-        # Missing: ElectricMultipoleP, FloorP, ReferenceP, and ReferenceChangeP
-
-    elseif (kind == :CrabCavity)
-        # [line_element] is a crab cavity
-        format_dict[:ApertureP] = params_to_dict(line_element, :ApertureParams)
-        format_dict[:MagneticMultipoleP] = params_to_dict(line_element, :BMultipoleParams)
-        format_dict[:MetaP] = params_to_dict(line_element, :MetaParams)
-        format_dict[:RFP] = params_to_dict(line_element, :ApertureParams)
-        format_dict[:BodyShiftP] = params_to_dict(line_element, :AlignmentParams)
-
-        # Missing: ElectricMultipoleP, FloorP, ReferenceP, and ReferenceChangeP
-
-    elseif (kind == :Patch)
-        # [line_element] is a patch
-        format_dict[:ApertureP] = params_to_dict(line_element, :ApertureParams)
-        format_dict[:MetaP] = params_to_dict(line_element, :MetaParams)
-        format_dict[:PatchP] = params_to_dict(line_element, :PatchParams)
-        format_dict[:BodyShiftP] = params_to_dict(line_element, :AlignmentParams)
-
-        # Missing: FloorP, ReferenceP, and ReferenceChangeP
-
-    end
-
-    # Remove any unpopulated fields from the format_dict before returning. 
-    for key in keys(format_dict)
-        if (isdefault(key, format_dict[key]))
-            # If this is an empty field or default value
-
-            # Remove this key value
-            delete!(format_dict, key)
-        end
-    end
-
-    # Return the, now fully-formatted, element
-    return Dict(
-        line_element.name => format_dict
-    )
-end
-=#
 
 """
 Creates a YAML file named "[new_file_name].yaml" in PALS format representing [lattice]
