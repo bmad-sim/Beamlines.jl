@@ -4,10 +4,15 @@ Returns true if [value] is the default value that [field] can represent.
 This function is used as a helper function for [ scibmad_to_pals() ] to 
 cut out elements that store no information (besides default values).
 
+Dictionaries' default value is {}
+Vectors' default value is []
+Symbols' default value is Symbol("")
+
 - [field] is a Symbol representing the name of a parameter.
-- [value] is what is the value stored at [field]
+- [value] is the value stored at [field]
 """
 function isdefault(field, value)
+    # If more defaults need to be accounted for, this may be expanded
     value_type = typeof(value)
 
     if (value_type <: Dict)
@@ -38,6 +43,7 @@ that store the fields and field values of a parameter group.
 
 - [line_element] is the LineElement that parameters are being extracted from.
 - [parameter_type_sym] is the name of an AbstractParams group as a Symbol.
+    (ex. To access MagneticMultipoleP, pass in :MagneticMultipoleP)
 """
 function params_to_dict(line_element, parameter_type_sym)
     # Accumulator
@@ -226,7 +232,7 @@ function pals_format(line_element)
         format_dict[:MetaP] = params_to_dict(line_element, :MetaParams)
         format_dict[:RFP] = params_to_dict(line_element, :ApertureParams)
 
-        # Missing: BodyShiftP, ElectricMultipoleP, FloorP, ReferenceP, ReferenceChangeP, and SolenoidP
+        # Missing: ElectricMultipoleP, FloorP, ReferenceP, and ReferenceChangeP
 
     elseif (kind == :CrabCavity)
         # [line_element] is a crab cavity
@@ -235,7 +241,7 @@ function pals_format(line_element)
         format_dict[:MetaP] = params_to_dict(line_element, :MetaParams)
         format_dict[:RFP] = params_to_dict(line_element, :ApertureParams)
 
-        # Missing: BodyShiftP, ElectricMultipoleP, FloorP, ReferenceP, and ReferenceChangeP
+        # Missing: ElectricMultipoleP, FloorP, ReferenceP, and ReferenceChangeP
 
     elseif (kind == :Patch)
         # [line_element] is a patch
@@ -243,7 +249,7 @@ function pals_format(line_element)
         format_dict[:MetaP] = params_to_dict(line_element, :MetaParams)
         format_dict[:PatchP] = params_to_dict(line_element, :PatchParams)
 
-        # Missing: BodyShiftP, FloorP, ReferenceP, ReferenceChangeP, and SolenoidP
+        # Missing: FloorP, ReferenceP, and ReferenceChangeP
 
     end
 
