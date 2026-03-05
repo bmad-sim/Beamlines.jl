@@ -49,13 +49,16 @@ function params_to_dict(line_element, parameter_type_sym)
     # Accumulator
     acc = Dict()
 
+    # Access the dictionary storing all of [line_elements]'s parameters
     parameters = getfield(line_element, :pdict)
 
+    # Access the parameter type denoted by [ parameter_type_sym ]
     parameter_type = PARAMS_MAP[parameter_type_sym]
 
     if (haskey(parameters, parameter_type))
         # If this group of parameters is present
 
+        # Access the initialized parameters of type [parameter_type] in [parameters]
         parameter_group = parameters[parameter_type]
 
         if (parameter_type_sym == :BMultipoleParams)
@@ -84,17 +87,17 @@ function params_to_dict(line_element, parameter_type_sym)
         elseif (parameter_type_sym == :UniversalParams)
             # If these are the universal parameters
 
-            # Ensure that "kind" is first
+            # Extract [ kind ], if present
             if (hasproperty(parameter_group, :kind))
                 acc[:kind] = Symbol(getproperty(parameter_group, :kind))
             end
 
-            # Replace "L" with "length", if it's present
+            # Replace [ L ] with [ length ], if it's present
             if (hasproperty(parameter_group, :L))
                 acc[:length] = getproperty(parameter_group, :L)
             end
 
-            # Put "tracking_method" inside of a "SciBMad" dictionary inside of "TrackingP"
+            # Put [ tracking_method ] inside of a [ SciBMad ] dictionary inside of  [ TrackingP ]
             if (hasproperty(parameter_group, :tracking_method))
                 acc[:TrackingP] = Dict(:SciBMad => Dict(:tracking_method => getproperty(parameter_group, :tracking_method)))
             end
@@ -138,7 +141,7 @@ accelerator element, along with all parameters assocaited with it.
 - [line_element] is the LineElement being formatted into PALS.
 """
 function pals_format(line_element)
-    # Access the line_element's kind
+    # Access the line_element's [ kind ]
     kind = Symbol(line_element.kind)
 
     # Create the accumulating dictionary that represents the element
@@ -253,25 +256,13 @@ function pals_format(line_element)
 
     end
 
-    # Remove any empty dictionary fields from the format_dict. 
-    # Removing a default field may make a structure it's sitting
-    # inside of default, so loop until no changes are made
+    # Remove any unpopulated fields from the format_dict before returning. 
+    for key in keys(format_dict)
+        if (isdefault(key, format_dict[key]))
+            # If this is an empty field or default value
 
-    is_settled = false
-
-    while (!is_settled)
-        is_settled = true
-
-        for key in keys(format_dict)
-            if (isdefault(key, format_dict[key]))
-                # If this is an empty field or default value
-
-                # A change was made, so this is not yet is_settled
-                is_settled = false
-
-                # Remove this key value
-                delete!(format_dict, key)
-            end
+            # Remove this key value
+            delete!(format_dict, key)
         end
     end
 
@@ -296,19 +287,25 @@ function scibmad_to_pals(lattice::Lattice, new_file_name::String)
     # Create a new PALS yaml file in write mode
     io = open(new_file_name * ".pals.yaml", "w")
 
-    # If a key is in this set, then 
+    # If a key is in this set, then it's already been created
     created_elements = Set{Symbol}()
-    created_branches = Set{Symbol}()
+    # created_branches = Set{Symbol}()  # Not needed until BeamLines have a [ name ]
 
-    # Create a list which represents the elements and overall construction of the particle accelerator
+    # Create a list which represents the overall construction of the particle accelerator
     facility = []
 
-    # Populate [facility]
-    branches = []
+    branches = [] # Accumulator for the branches of the lattice
 
-    line_counter = 1
+    line_counter = 1 # Counter used for naming BeamLines
+
     for beamline in lattice.beamlines
-        line = []
+        # For every branch (BeamLine) in the lattice...
+
+        # Until beamlines get their own [ name ] field,
+        # it may be confusing to see if they already exist
+
+        line = [] # Accumulator for what's in a beamline
+
         for line_element in beamline.line
             # For every element in [beamline]'s line...
 
@@ -327,8 +324,8 @@ function scibmad_to_pals(lattice::Lattice, new_file_name::String)
             end
         end
 
-        #= TODO For now, before beamlines have names, use a default name assigner =#
-
+        # Name beamlines using default-namer (for now), increment the counter
+        # for the namer, and push the beamline onto [ facility ]
         beamline_name = string("beamline", line_counter)
         push!(branches, Symbol(beamline_name))
         line_counter += 1
@@ -341,6 +338,7 @@ function scibmad_to_pals(lattice::Lattice, new_file_name::String)
             )
         )
     end
+    # Push the lattice entry onto [ facility ]
     push!(facility, 
         Dict(
             :lattice => Dict(
@@ -349,7 +347,7 @@ function scibmad_to_pals(lattice::Lattice, new_file_name::String)
             )
         )
     )
-
+    # Push the lattice on as the last element of the PALS file being "used"
     push!(facility, Dict(:use => :lattice))
 
     # Encase [facility] in the proper PALS formatting
