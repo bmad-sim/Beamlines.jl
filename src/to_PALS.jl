@@ -55,7 +55,6 @@ associated with elements with them.
 - [format_dict] is the dictionary to be modified which represents the information about a line element.
 - [parameter_group] is an AbstractParams object containing the parameters to extract to [acc].
 """
-# Handle basically any other type of AbstractParams
 function params_to_dict!(format_dict::Dict, parameter_group::T) where {T<:AbstractParams}
     # The accumulator dictionary 
     acc = Dict()
