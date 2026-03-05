@@ -234,6 +234,7 @@ function pals_format(line_element)
         format_dict[:MagneticMultipoleP] = params_to_dict(line_element, :BMultipoleParams)
         format_dict[:MetaP] = params_to_dict(line_element, :MetaParams)
         format_dict[:RFP] = params_to_dict(line_element, :ApertureParams)
+        format_dict[:BodyShiftP] = params_to_dict(line_element, :AlignmentParams)
 
         # Missing: ElectricMultipoleP, FloorP, ReferenceP, and ReferenceChangeP
 
