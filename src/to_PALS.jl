@@ -140,6 +140,61 @@ accelerator element, along with all parameters assocaited with it.
 
 - [line_element] is the LineElement being formatted into PALS.
 """
+function pals_format(line_element::LineElement) 
+    # The accumulator dictionary which will become the final return dictionary
+    format_dict = Dict()
+
+    #=
+    Access [line_element]'s parameter groups.
+    Reminder: A LineElement's [pdict] is a dictionary mapping AbstractParams types to objects 
+    containing the initialized parameters of [line_element]
+    =#
+    parameter_groups = getfield(line_element, :pdict)
+
+    for parameter_group in values(parameter_groups)
+        # Loop through every parameter group [line_element] has
+
+        if (parameter_group == UniversalParams)
+            # Special case: Universal Parameters contains basic information that's 
+            # not displayed inside of another dictionary, it should be at the "top level"
+            
+            # Extract [ kind ], if present
+            if (hasproperty(parameter_group, :kind))
+                format_dict[:kind] = Symbol(getproperty(parameter_group, :kind))
+            end
+
+            # Replace [ L ] with [ length ], if it's present
+            if (hasproperty(parameter_group, :L))
+                format_dict[:length] = getproperty(parameter_group, :L)
+            end
+
+            # Put [ tracking_method ] inside of a [ SciBMad ] dictionary inside of  [ TrackingP ]
+            if (hasproperty(parameter_group, :tracking_method))
+                format_dict[:TrackingP] = Dict(:SciBMad => Dict(:tracking_method => getproperty(parameter_group, :tracking_method)))
+            end
+
+            # We do not put the name as an element of the dictionary
+        else
+            # General case: Any other group of parameters
+
+            # Represent the parameter group as a dictionary and add it to [format_dict]
+            params_to_dict!(format_dict, parameter_group)
+        end
+    end
+    
+    return Dict(line_element.name => format_dict)
+end
+
+#=
+"""
+Return a dictionary whose single key is [line_element]'s name, storing another dictionary
+whose keys are [line_element]'s fields. This is the format desired by PALS.
+
+This function is used as a helper to [ scibmad_to_pals() ] to create the entry for a single
+accelerator element, along with all parameters assocaited with it.
+
+- [line_element] is the LineElement being formatted into PALS.
+"""
 function pals_format(line_element)
     # Access the line_element's [ kind ]
     kind = Symbol(line_element.kind)
@@ -274,7 +329,7 @@ function pals_format(line_element)
         line_element.name => format_dict
     )
 end
-
+=#
 
 """
 Creates a YAML file named "[new_file_name].yaml" in PALS format representing [lattice]
@@ -314,6 +369,8 @@ function scibmad_to_pals(lattice::Lattice, new_file_name::String)
 
             # Get the element's name
             name = Symbol(line_element.name)
+
+            # Add the element's name to the beamline
             push!(line, name)
 
             # Check to see if the element already exists
@@ -322,6 +379,7 @@ function scibmad_to_pals(lattice::Lattice, new_file_name::String)
 
                 # Push the line element onto [facility]
                 push!(facility, pals_format(line_element))
+
                 # Push the line element's name onto the set of unique elements
                 push!(created_elements, name)
             end
