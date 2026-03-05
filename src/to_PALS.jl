@@ -44,7 +44,7 @@ const PARAMTYPES_TO_PALSNAMES_MAP = Dict{Type{<:AbstractParams}, Symbol}(
 )
 
 """
-Modifies [acc] to have a new entry which stores a dictionary whose keys are parameter
+Modifies [format_dict] to have a new entry which stores a dictionary whose keys are parameter
 names from [parameter_group] and whose values are the initialized values corresponding
 to those parameter names.
 
