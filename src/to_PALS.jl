@@ -355,7 +355,7 @@ function scibmad_to_pals(lattice::Lattice, new_file_name::String)
     # Encase [facility] in the proper PALS formatting
     data_to_write = Dict(
         :PALS => Dict(
-            :version => :null,
+            :version => :null, # Update with version
             :facility => facility
         )
     )
