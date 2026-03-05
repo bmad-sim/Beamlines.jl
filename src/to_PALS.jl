@@ -32,7 +32,7 @@ function isdefault(field, value)
     return false
 end
 
-
+#=
 """
 Return a dictionary whose keys are the fields associated with [parameter_type_sym]
 and whose values are those that correspond to the equivalent SciBMad format fields
@@ -129,7 +129,23 @@ function params_to_dict(line_element, parameter_type_sym)
 
     return acc
 end
+=#
 
+"""
+Modifies [acc] to have a new entry which stores a dictionary whose keys are parameter
+names from [parameter_group] and whose values are the initialized values corresponding
+to those parameter names.
+
+This function is used as a helper to [ scibmad_to_pals() ] to create the dictionaries
+that store the fields and field values of a parameter group and populate the dictionaries
+associated with elements with them.
+
+- [acc] is the dictionary to be modified which represents the information about a line element.
+- [parameter_group] is an AbstractParams object containing the parameters to extract to [acc].
+"""
+function params_to_dict!(acc::Dict, parameter_group::AbstractParams)
+
+end
 
 """
 Return a dictionary whose single key is [line_element]'s name, storing another dictionary
@@ -182,6 +198,16 @@ function pals_format(line_element::LineElement)
         end
     end
     
+    # Remove any unpopulated elements from the format_dict before returning. 
+    for key in keys(format_dict)
+        if (isdefault(key, format_dict[key]))
+            # If this is an empty field or default value
+
+            # Remove this key value
+            delete!(format_dict, key)
+        end
+    end
+
     return Dict(line_element.name => format_dict)
 end
 
