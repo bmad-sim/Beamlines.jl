@@ -1,6 +1,12 @@
-#=
-Returns true if [value] is the default value that [field] can represent
-=#
+"""
+Returns true if [value] is the default value that [field] can represent.
+
+This function is used as a helper function for [ scibmad_to_pals() ] to 
+cut out elements that store no information (besides default values).
+
+- [field] is a Symbol representing the name of a parameter.
+- [value] is what is the value stored at [field]
+"""
 function isdefault(field, value)
     value_type = typeof(value)
 
@@ -21,11 +27,18 @@ function isdefault(field, value)
     return false
 end
 
-#=
+
+"""
 Return a dictionary whose keys are the fields associated with [parameter_type_sym]
 and whose values are those that correspond to the equivalent SciBMad format fields
 of [line_element].
-=#
+
+This function is used as a helper to [ scibmad_to_pals() ] to create the dictionaries
+that store the fields and field values of a parameter group.
+
+- [line_element] is the LineElement that parameters are being extracted from.
+- [parameter_type_sym] is the name of an AbstractParams group as a Symbol.
+"""
 function params_to_dict(line_element, parameter_type_sym)
     # Accumulator
     acc = Dict()
@@ -108,10 +121,16 @@ function params_to_dict(line_element, parameter_type_sym)
     return acc
 end
 
-#=
-Return a dictionary whose single key is [line_element]'s name, storing a nested dictionary
-of all of [line_element]'s fields.
-=#
+
+"""
+Return a dictionary whose single key is [line_element]'s name, storing another dictionary
+whose keys are [line_element]'s fields. This is the format desired by PALS.
+
+This function is used as a helper to [ scibmad_to_pals() ] to create the entry for a single
+accelerator element, along with all parameters assocaited with it.
+
+- [line_element] is the LineElement being formatted into PALS.
+"""
 function pals_format(line_element)
     # Access the line_element's kind
     kind = Symbol(line_element.kind)
@@ -189,7 +208,7 @@ function pals_format(line_element)
 
         # Missing: FloorP, ReferenceP
 
-    elseif (kind == :Kicker)
+    elseif (kind == :Kicker || kind == :VKicker || kind == :HKicker)
         # [line_element] is a kicker
         format_dict[:ApertureP] = params_to_dict(line_element, :ApertureParams)
         format_dict[:MagneticMultipoleP] = params_to_dict(line_element, :BMultipoleParams)
@@ -256,10 +275,17 @@ function pals_format(line_element)
     )
 end
 
-#=
-Creates a YAML file named "[new_file_name].yaml" in
-PALS format, given a ([lattice] : Lattice) object. 
-=#
+
+"""
+Creates a YAML file named "[new_file_name].yaml" in PALS format representing [lattice]
+
+This function is the main workhorse and purpose of this file, converting SciBMad-style
+[lattice] elements into PALS-style .yaml files to be used for other purposes.
+
+- [lattice] is the SciBMad Lattice that will be turned into a PALS YAML file.
+- [new_file_name] is a String which COMES BEFORE ".pals.txt" that the resulting
+    file will be named.
+"""
 function scibmad_to_pals(lattice::Lattice, new_file_name::String)
     # Create a new PALS yaml file in write mode
     io = open(new_file_name * ".pals.yaml", "w")
