@@ -1,1 +1,10 @@
 /Manifest.toml
+docs/Manifest.toml
+
+# Documentation builds
+docs/build/
+docs/api/build/
+
+# GitHub Pages
+gh-pages/
+.claude/

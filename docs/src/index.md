@@ -1,14 +1,21 @@
-```@meta
-CurrentModule = Beamlines
+# Beamlines.jl Documentation
+
+Welcome to the documentation for **Beamlines.jl**.
+
+TODO: Brief package description and key features.
+
+## Documentation Sections
+
+```{toctree}
+:maxdepth: 2
+:caption: Contents
+
+getting-started
+user-guide/index
+examples/index
+developer-guide/index
 ```
 
-# Beamlines
+## API Reference
 
-Documentation for [Beamlines](https://github.com/mattsignorelli/Beamlines.jl).
-
-```@index
-```
-
-```@autodocs
-Modules = [Beamlines]
-```
+For detailed API documentation, see the {external:doc}`API Reference <index>`.

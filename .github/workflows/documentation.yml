@@ -1,0 +1,87 @@
+name: Documentation
+
+on:
+  push:
+    branches:
+      - main
+      - documentation  # For testing on fork
+    tags: ['*']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install Python dependencies
+        run: |
+          pip install -r docs/requirements.txt
+
+      - name: Setup Julia
+        uses: julia-actions/setup-julia@v2
+        with:
+          version: '1.10'
+
+      - name: Ensure Julia depot exists
+        run: |
+          depot="${JULIA_DEPOT_PATH:-$HOME/.julia}"
+          mkdir -p "$depot"/{artifacts,packages,registries,compiled,scratchspaces,logs}
+        shell: bash
+
+      - name: Cache Julia packages
+        uses: julia-actions/cache@v2
+
+      - name: Install Julia dependencies
+        run: |
+          julia --project=docs -e '
+            using Pkg
+            Pkg.develop(PackageSpec(path=pwd()))
+            Pkg.instantiate()'
+
+      - name: Build Documenter.jl documentation
+        run: julia --project=docs docs/api/make.jl
+        env:
+          CI: 'true'
+
+      - name: Build Sphinx documentation
+        run: |
+          cd docs
+          sphinx-build -b html src build/html
+
+      - name: Combine documentation
+        run: |
+          mkdir -p gh-pages
+          cp -r docs/build/html/* gh-pages/
+          mkdir -p gh-pages/api
+          cp -r docs/api/build/* gh-pages/api/
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: gh-pages
+
+  deploy:
+    needs: build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
