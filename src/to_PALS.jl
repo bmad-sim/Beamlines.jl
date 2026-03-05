@@ -131,6 +131,17 @@ function params_to_dict(line_element, parameter_type_sym)
 end
 =#
 
+#= This maps types of AbstractParams to the symbol representing its PALS-format name =#
+const PARAMTYPES_TO_PALSNAMES_MAP = Dict{Type{<:AbstractParams}, Symbol}(
+    BMultipoleParams => :MagneticMultipoleP,
+    ApertureParams => :ApertureP,
+    MetaParams => :MetaP,
+    AlignmentParams => :BodyShiftP,
+    BendParams => :BendP,
+    RFParams => :RFP,
+    PatchParams => :PatchP
+)
+
 """
 Modifies [acc] to have a new entry which stores a dictionary whose keys are parameter
 names from [parameter_group] and whose values are the initialized values corresponding
@@ -140,12 +151,61 @@ This function is used as a helper to [ scibmad_to_pals() ] to create the diction
 that store the fields and field values of a parameter group and populate the dictionaries
 associated with elements with them.
 
-- [acc] is the dictionary to be modified which represents the information about a line element.
+- [format_dict] is the dictionary to be modified which represents the information about a line element.
 - [parameter_group] is an AbstractParams object containing the parameters to extract to [acc].
 """
-function params_to_dict!(acc::Dict, parameter_group::AbstractParams)
+function params_to_dict!(format_dict::Dict, parameter_group<:AbstractParams) end
 
+# Handle BMultipoleParams
+function params_to_dict!(format_dict::Dict, parameter_group::BMultipoleParams) 
+    # The accumulator dictionary 
+    acc = Dict()
+
+    #= This code is from the override of [ show() ] in multipole.jl =#
+    for bm in parameter_group
+        n = bm.n
+        s = bm.s
+        tilt = bm.tilt
+        if n != 0
+            sym = BMULTIPOLE_STRENGTH_INVERSE_MAP[(true, bm.order, bm.normalized, bm.integrated)]
+            acc[sym] = n
+        end
+        if s != 0
+            sym = BMULTIPOLE_STRENGTH_INVERSE_MAP[(false, bm.order, bm.normalized, bm.integrated)]
+            acc[sym] = s
+        end
+        if tilt != 0
+            sym = BMULTIPOLE_TILT_INVERSE_MAP[bm.order]
+            acc[sym] = tilt
+        end
+    end
+    #= End code from the override of [ show() ] in multipole.jl =#
+
+    # Modify [format_dict]
+    format_dict[:MagneticMultipoleP] = acc
 end
+
+
+# Handle basically any other type of AbstractParams
+function params_to_dict!(format_dict::Dict, parameter_group<:AbstractParams) 
+    # The accumulator dictionary 
+    acc = Dict()
+
+    for parameter_name in propertynames(parameter_group)
+        # Get the value stored at that property
+        parameter_value = getproperty(parameter_group, parameter_name)
+
+        # If it's a string, make it a symbol to remove quotation marks
+        if (typeof(parameter_value) == String)
+            parameter_value = Symbol(parameter_value)
+        end
+
+        acc[parameter_name] = parameter_value
+    end
+
+    format_dict[PARAMTYPES_TO_PALSNAMES_MAP[typeof(parameter_group)]] = acc
+end
+
 
 """
 Return a dictionary whose single key is [line_element]'s name, storing another dictionary
@@ -171,8 +231,11 @@ function pals_format(line_element::LineElement)
         # Loop through every parameter group [line_element] has
 
         if (parameter_group == UniversalParams)
-            # Special case: Universal Parameters contains basic information that's 
-            # not displayed inside of another dictionary, it should be at the "top level"
+            #=
+            Special case: Universal Parameters contains basic information that's 
+            not displayed inside of another dictionary, it should be at the "top level",
+            so handle it here instead of in the helper.
+            =#
             
             # Extract [ kind ], if present
             if (hasproperty(parameter_group, :kind))
@@ -314,7 +377,7 @@ function pals_format(line_element)
         format_dict[:ApertureP] = params_to_dict(line_element, :ApertureParams)
         format_dict[:MagneticMultipoleP] = params_to_dict(line_element, :BMultipoleParams)
         format_dict[:MetaP] = params_to_dict(line_element, :MetaParams)
-        format_dict[:RFP] = params_to_dict(line_element, :ApertureParams)
+        format_dict[:RFP] = params_to_dict(line_element, :RFParams)
         format_dict[:BodyShiftP] = params_to_dict(line_element, :AlignmentParams)
 
         # Missing: ElectricMultipoleP, FloorP, ReferenceP, and ReferenceChangeP
