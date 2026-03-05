@@ -367,10 +367,4 @@ function scibmad_to_pals(lattice::Lattice, new_file_name::String)
     close(io)
 end
 
-#=
-Creates a YAML file named "[new_file_name].yaml" in
-PALS format, given a ([beamline] : Beamline) object. 
-=#
-function scibmad_to_pals(beamline::Beamline, new_file_name::String)
-    return scibmad_to_pals(Lattice(beamline), new_file_name)
-end
+# Create multiple dispatch clone for handling just a BeamLine instead of a Lattice?
