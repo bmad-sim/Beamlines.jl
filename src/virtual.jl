@@ -422,22 +422,15 @@ function set_cavity_rate!(ele::LineElement, key::Symbol, value)
 end
 
 function _set_cavity_rate!(ele, rfp::RFParams{S}, key, value) where {S}
-  
   T = promote_type(S, typeof(value))
   if T != S || rfp.harmon_master != (key == :harmon)
     # Create new RFParams with updated type and/or harmon_master
-    rfp = RFParams(
-      rate          = T(value),
-      voltage       = T(rfp.voltage),
-      phi0          = T(rfp.phi0),
-      harmon_master = (key == :harmon)
-    )
+    rfp = set(rfp, opcompose(PropertyLens(:rate)), T(value))
     ele.RFParams = rfp
   else
     # Can modify in place
     rfp.rate = value
   end
-  
   return value
 end
 

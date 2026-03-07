@@ -932,6 +932,11 @@ using ForwardDiff, GTPSA, ReverseDiff
     cav2.RFParams = cp
     @test cav2.RFParams === cp
 
+    # RFParams bug check
+    rf0 = RFCavity(L =  2.29999999999999982E+000, zero_phase = PhaseReference.AboveTransition,
+        rf_frequency =  5.91158776766067386E+008)
+    @test rf0.zero_phase == PhaseReference.AboveTransition
+
     bo = 1.23
     dbo = DefExpr(()->bo)
 
