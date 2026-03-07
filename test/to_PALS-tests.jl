@@ -1,8 +1,9 @@
 using Revise
 using Beamlines
+using tests
 
-# Create a basic FODO cell
-function test_fodo_cell()
+@testset "to_PALS.jl" begin
+    # Create a basic FODO cell
     @elements drift1 = Drift( L = 0.25)
     @elements quad1 = Quadrupole( L = 1.0, Bn1 = 1.0)
     @elements drift2 = Drift( L = 0.5)
@@ -11,13 +12,8 @@ function test_fodo_cell()
     @elements fodo_lattice = Lattice([fodo_cell])
 
     Beamlines.scibmad_to_pals(fodo_lattice, "test")
-    return nothing
-end
 
-test_fodo_cell()
-
-# Test every element
-function test_every_element()
+    # Test every element
     @elements solenoid = Solenoid( L = 1.0, Ksol = 0.2345334)
     @elements sbend = SBend( L = 3.8000605852935, g = 5.1475963740429E-3, e1 = 9.780589045E-3, e2 = 9.780589045E-3)
     @elements quad1 = Quadrupole( L = 1.0, Bn1 = 1.0)
@@ -36,13 +32,8 @@ function test_every_element()
     @elements fodo_lattice = Lattice([beamline])
 
     Beamlines.scibmad_to_pals(fodo_lattice, "test2")
-    return nothing
-end
 
-test_every_element()
-
-# Test multiple lines
-function test_multiple_lines()
+    # Test multiple lines
     @elements drift1a = Drift( L = 0.25)
     @elements quad1a = Quadrupole( L = 1.0, Bn1 = 1.0)
     @elements drift2a = Drift( L = 0.5)
@@ -58,7 +49,4 @@ function test_multiple_lines()
     @elements fodo_lattice = Lattice([beamline1, beamline2])
 
     Beamlines.scibmad_to_pals(fodo_lattice, "test3")
-    return nothing
 end
-
-test_multiple_lines()
