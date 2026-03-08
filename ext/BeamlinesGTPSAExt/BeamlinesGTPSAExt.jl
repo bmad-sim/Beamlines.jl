@@ -1,7 +1,7 @@
 module BeamlinesGTPSAExt
 using GTPSA
 using Beamlines: Species, massof, chargeof, C_LIGHT, DefExpr
-import Beamlines: R_to_E, E_to_R, pc_to_R, R_to_pc, E_to_pc, pc_to_E, scalarize
+import Beamlines: R_to_E, E_to_R, pc_to_R, R_to_pc, E_to_pc, pc_to_E, R_to_v, scalarize
 
 # Overrides for TPSA:
 R_to_E(species_ref::Species, R::TPS) = @FastGTPSA sign(R)*sign(chargeof(species_ref))*sqrt((R*C_LIGHT*chargeof(species_ref))^2 + massof(species_ref)^2)
@@ -10,6 +10,7 @@ pc_to_R(species_ref::Species, pc::TPS) = @FastGTPSA pc/C_LIGHT/chargeof(species_
 R_to_pc(species_ref::Species, R::TPS) = @FastGTPSA R*chargeof(species_ref)*C_LIGHT
 E_to_pc(species_ref::Species, E::TPS) = @FastGTPSA sign(E)*massof(species_ref)*sinh(acosh(abs(E)/massof(species_ref)))
 pc_to_E(species_ref::Species, pc::TPS) = @FastGTPSA sign(pc)*sqrt((pc)^2 + massof(species_ref)^2)
+R_to_v(species::Species, R::TPS) = @FastGTPSA chargeof(species)*C_LIGHT / sqrt(1+(massof(species)/(R*C_LIGHT))^2)
 
 # DefExpr
 for t = (:unit, :sincu, :sinhc, :sinhcu, :asinc, :asincu, :asinhc, :asinhcu, :erf, 

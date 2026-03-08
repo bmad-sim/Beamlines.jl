@@ -51,7 +51,7 @@ function Base.getproperty(c::RFParams, key::Symbol)
     if (key == :harmon) == c.harmon_master
       return c.rate
     else
-      error("RFParams does not have property $key with harmon_master = $(c.harmon_master)")
+      error("Cannot get $key in RFParams with harmon_master = $(c.harmon_master); get $key at the element level instead")
     end
   end
   error("RFParams does not have property $key")
