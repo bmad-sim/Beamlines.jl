@@ -876,7 +876,7 @@ using ForwardDiff, GTPSA, ReverseDiff
     @test RFParams(harmon_master=true).harmon_master
     @test !(RFParams(harmon_master=false).harmon_master)
     @test RFParams(harmon_master=true).rate_meaning == RateMeaning.Harmon
-    @test !(RFParams(harmon_master=false).rate_meaning) == RateMeaning.RFFrequency
+    @test RFParams(harmon_master=false).rate_meaning == RateMeaning.RFFrequency
     @test_throws ErrorException RFParams(rate=10)
     @test_throws ErrorException RFParams().harmon_master = true
     @test_throws ErrorException RFParams().rate = 10
