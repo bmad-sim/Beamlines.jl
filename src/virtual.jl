@@ -25,7 +25,7 @@ ele.BMultipoleParams        # Goes to InheritParams to get parent
 function get_BM_strength(ele::LineElement, key::Symbol)
   b = ele.BMultipoleParams
   if isnothing(b)
-    return 0f0
+    return 0f0 # Default value
   end
   return @noinline _get_BM_strength(ele, b, key)
 end
@@ -237,7 +237,7 @@ end
 function get_bend_g(ele::LineElement, ::Symbol)
   bp = ele.BendParams
   if isnothing(bp)
-    return 0f0 #error("Unable to get g: LineElement does not contain BendParams")
+    return 0f0 # Default value
   end
   return bp.g_ref
 end
@@ -259,13 +259,7 @@ end
 function _set_bend_g!(ele::LineElement, bp::BendParams{S}, bm::BMultipoleParams, value) where {S}
   T = promote_type(S, typeof(value))
   if T != S || bp.g_ref != value
-    bp = BendParams(
-      g_ref     = T(value),
-      e1        = T(bp.e1),
-      e2        = T(bp.e2),
-      edge1_int = T(bp.edge1_int),
-      edge2_int = T(bp.edge2_int)
-    )
+    bp = set(bp, opcompose(PropertyLens(:g_ref)), T(value))
     ele.BendParams = bp
   end
   strength = calc_BM_internal_strength(ele, bm, :Kn0, T(value))
@@ -395,7 +389,7 @@ end
 function get_cavity_rate(ele::LineElement, key::Symbol)
   rfp = ele.RFParams
   if isnothing(rfp)
-    return getproperty(RFParams(), :rate) # Default value
+    return 0f0 # Default value
   elseif (key == :harmon) == getfield(rfp, :harmon_master)
     return rfp.rate
   else # Need to convert
