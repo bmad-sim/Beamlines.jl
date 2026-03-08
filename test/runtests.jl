@@ -44,6 +44,7 @@ using ForwardDiff, GTPSA, ReverseDiff
     @test_throws ErrorException getfield(ele, :pdict)[UniversalParams] = 10.0
 
     @test !isactive(ele.BendParams)
+    @test ele.g == 0 # Default value
     ele.g_ref = g_ref
     @test isactive(ele.BendParams)
     @test ele.g_ref == g_ref
@@ -99,6 +100,7 @@ using ForwardDiff, GTPSA, ReverseDiff
     @test typeof(ele.x_offset) == Float64
 
     @test !isactive(ele.BMultipoleParams)
+    @test ele.Kn1 == 0 # Default value
     ele.Kn1 = 0.36
     @test isactive(ele.BMultipoleParams)
     @test ele.Kn1 == 0.36
@@ -870,6 +872,15 @@ using ForwardDiff, GTPSA, ReverseDiff
     # RFParams tests
     @test !isactive(qf.RFParams)
 
+    @test_throws ErrorException RFParams().harmon_master
+    @test RFParams(harmon_master=true).harmon_master
+    @test !(RFParams(harmon_master=false).harmon_master)
+    @test RFParams(harmon_master=true).rate_meaning == RateMeaning.Harmon
+    @test !(RFParams(harmon_master=false).rate_meaning) == RateMeaning.RFFrequency
+    @test_throws ErrorException RFParams(rate=10)
+    @test_throws ErrorException RFParams().harmon_master = true
+    @test_throws ErrorException RFParams().rate = 10
+
     # Basic RF frequency mode
     cav = RFCavity(rf_frequency=352e6, voltage=1e6, zero_phase=PhaseReference.AboveTransition)
     @test isactive(cav.RFParams)
@@ -927,6 +938,21 @@ using ForwardDiff, GTPSA, ReverseDiff
     @test rf0.harmon_master == false
     @test rf0.harmon ≈ 20
     @test rf0.rf_frequency ≈ 0.2118107321845737E+08
+
+    rf0.rf_frequency = 0.2118107321845737E+08
+    @test rf0.harmon_master == false
+    @test rf0.rf_frequency ≈ 0.2118107321845737E+08
+    @test rf0.harmon ≈ 20
+
+    rf0.harmon_master = true
+    @test rf0.harmon_master == true
+    @test rf0.rf_frequency ≈ 0.2118107321845737E+08
+    @test rf0.harmon ≈ 20
+
+    rf0.harmon = 20
+    @test rf0.harmon_master == true
+    @test rf0.rf_frequency ≈ 0.2118107321845737E+08
+    @test rf0.harmon ≈ 20
 
     # RFParams bug check
     rf0 = RFCavity(L =  2.29999999999999982E+000, zero_phase = PhaseReference.AboveTransition,
