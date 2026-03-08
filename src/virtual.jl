@@ -388,10 +388,13 @@ end
 
 function get_cavity_rate(ele::LineElement, key::Symbol)
   rfp = ele.RFParams
-  if isnothing(rfp)
+  if isnothing(rfp) || getfield(rfp, :rate_meaning) == RateMeaning.Indeterminate
     return 0f0 # Default value
-  elseif (key == :harmon) == getfield(rfp, :harmon_master)
-    return rfp.rate
+  end
+  rate_meaning = getfield(rfp, :rate_meaning)
+  rate = getfield(rfp, :rate)
+  if ((key == :harmon) && rate_meaning == RateMeaning.Harmon) || ((key == :rf_frequency) && rate_meaning == RateMeaning.RFFrequency)
+    return rate
   else # Need to convert
     bp = ele.BeamlineParams
     if isnothing(bp)
@@ -402,10 +405,10 @@ function get_cavity_rate(ele::LineElement, key::Symbol)
     circumference = bl.line[end].s_downstream
     v = R_to_v(species, bl.p_over_q_ref)
     if key == :harmon # rf_frequency is stored, user asks for harmon
-      rf_frequency = getfield(rfp, :rate)
+      rf_frequency = rate
       return rf_frequency*circumference/v
     else # harmon is stored, user asks for rf_frequency
-      harmon = getfield(rfp, :rate)
+      harmon = rate
       return harmon*v/circumference
     end
   end
@@ -413,18 +416,25 @@ end
 
 function set_cavity_rate!(ele::LineElement, key::Symbol, value)
   rfp = ele.RFParams
+  # First set: construct RF params
   if isnothing(rfp)
-    rfp = RFParams(harmon_master = (key == :harmon))
+    rfp = RFParams()
     ele.RFParams = rfp
   end
-
+  # If rate_meaning hasn't been set yet, we can set it now
+  if rfp.rate_meaning == RateMeaning.Indeterminate
+    rate_meaning = key == :harmon ? RateMeaning.Harmon : RateMeaning.RFFrequency
+    rfp = set(rfp, opcompose(PropertyLens(:rate_meaning)), rate_meaning)
+    ele.RFParams = rfp
+  end
   rate = calc_rf_internal_rate(ele, rfp, key, value)
-  @noinline _set_cavity_rate!(ele, rfp, key, rate)
+  @noinline _set_cavity_rate!(ele, rfp, rate)
   return value
 end
 
 function calc_rf_internal_rate(ele, rfp, key, value)
-  if (key == :harmon) == getfield(rfp, :harmon_master)
+  rate_meaning = getfield(rfp, :rate_meaning)
+  if ((key == :harmon) && rate_meaning == RateMeaning.Harmon) || ((key == :rf_frequency) && rate_meaning == RateMeaning.RFFrequency)
     return value
   else # Need to convert
     bp = ele.BeamlineParams
@@ -443,12 +453,12 @@ function calc_rf_internal_rate(ele, rfp, key, value)
   end
 end
 
-function _set_cavity_rate!(ele, rfp::RFParams{S}, key, value) where {S}
+function _set_cavity_rate!(ele, rfp::RFParams{S}, value) where {S}
   T = promote_type(S,typeof(value))
   if T != S
     ele.RFParams = set(rfp, opcompose(PropertyLens(:rate)), T(value))
   else
-    setfield!(rfp, :rate, value)
+    setfield!(rfp, :rate, T(value))
   end
   return
 end
@@ -469,7 +479,8 @@ function set_harmon_master!(ele::LineElement, ::Symbol, value::Bool)
       rfp = set(rfp, opcompose(PropertyLens(:rate)), rf_frequency)
     end
   end
-  rfp = set(rfp, opcompose(PropertyLens(:harmon_master)), value)
+  rfp = set(rfp, opcompose(PropertyLens(:rate_meaning)), value ? RateMeaning.Harmon : RateMeaning.RFFrequency)
+  ele.RFParams = rfp
   return value
 end
 

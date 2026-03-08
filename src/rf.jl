@@ -8,17 +8,64 @@ Sets what zero `phi0` RF phase means
 """
 @enumx PhaseReference::UInt8 Accelerating BelowTransition AboveTransition
 
-@kwdef mutable struct RFParams{T} <: AbstractParams
-    rate::T               = Float32(0.0) # RF frequency in Hz or Harmonic number
-    voltage::T            = Float32(0.0) # Voltage in V 
-    phi0::T               = Float32(0.0) # Phase at reference energy
-    const harmon_master::Bool = false    # false = frequency in Hz, true = harmonic number
-    zero_phase::PhaseReference.T = PhaseReference.Accelerating   # Determines the RF phase at phi0 = 0
-    traveling_wave::Bool = false         # Traveling wave or standing wave cavity?
-    is_crabcavity::Bool = false          # Is this a crab cavity?
-    function RFParams(args...)
-      return new{promote_type(typeof.((args[1],args[2],args[3]))...)}(args...)
+@enumx RateMeaning::Int8 RFFrequency=false Harmon=true Indeterminate=-1 
+
+mutable struct RFParams{T} <: AbstractParams
+  rate::T                           # RF frequency in Hz or Harmonic number
+  voltage::T                        # Voltage in V 
+  phi0::T                           # Phase at reference energy
+  const rate_meaning::RateMeaning.T # false = frequency in Hz, true = harmonic number, -1 = Not set
+  zero_phase::PhaseReference.T      # Determines the RF phase at phi0 = 0
+  traveling_wave::Bool              # Traveling wave or standing wave cavity?
+  is_crabcavity::Bool               # Is this a crab cavity?
+  function RFParams(args...)
+    if args[1] != 0 && args[4] == RateMeaning.Indeterminate
+      error("Unable to construct RFParams with both nonzero rate and rate_meaning = RateMeaning.Indeterminate. 
+              The meaning of rate must be known in order to have a nonzero rate field.")
     end
+    return new{promote_type(typeof.((args[1],args[2],args[3]))...)}(args...)
+  end
+end
+
+# Default kwarg ctors
+# This instead of @kwdef to allow 
+# harmon_master kwarg
+function RFParams(; 
+  rate = Float32(0.0), 
+  voltage = Float32(0.0), 
+  phi0 = Float32(0.0), 
+  rate_meaning = RateMeaning.Indeterminate, 
+  zero_phase = PhaseReference.Accelerating, 
+  traveling_wave = false, 
+  is_crabcavity = false,
+  harmon_master::Union{Nothing,Bool} = nothing,
+)
+  if !isnothing(harmon_master)
+    if rate_meaning != RateMeaning.Indeterminate
+      error("You specified both a rate_meaning and harmon_master. Please specify only one of these.")
+    end
+    rate_meaning = harmon_master ? RateMeaning.Harmon : RateMeaning.RFFrequency
+  end
+  RFParams(rate, voltage, phi0, rate_meaning, zero_phase, traveling_wave, is_crabcavity)
+end
+
+function RFParams{T}(; 
+  rate = Float32(0.0), 
+  voltage = Float32(0.0), 
+  phi0 = Float32(0.0), 
+  rate_meaning = RateMeaning.Indeterminate, 
+  zero_phase = PhaseReference.Accelerating, 
+  traveling_wave = false, 
+  is_crabcavity = false,
+  harmon_master::Union{Nothing,Bool} = nothing,
+) where T
+  if !isnothing(harmon_master)
+    if rate_meaning != RateMeaning.Indeterminate
+      error("You specified both a rate_meaning and harmon_master. Please specify only one of these.")
+    end
+    rate_meaning = harmon_master ? RateMeaning.Harmon : RateMeaning.RFFrequency
+  end
+  RFParams{T}(rate, voltage, phi0, rate_meaning, zero_phase, traveling_wave, is_crabcavity)
 end
 
 Base.eltype(::RFParams{T}) where {T} = T
@@ -28,53 +75,37 @@ function Base.isapprox(a::RFParams, b::RFParams)
     return  a.rate           ≈  b.rate && 
             a.voltage        ≈  b.voltage && 
             a.phi0           ≈  b.phi0 &&
-            a.harmon_master  == b.harmon_master &&
+            a.rate_meaning   == b.rate_meaning &&
             a.zero_phase     == b.zero_phase &&
             a.traveling_wave == b.traveling_wave &&
             a.is_crabcavity  == b.is_crabcavity
 end
 
-function Base.hasproperty(c::RFParams, key::Symbol)
-  if key in (:rate, :voltage, :phi0, :harmon_master, :zero_phase, :traveling_wave, :is_crabcavity)
-    return true
-  elseif key in (:rf_frequency, :harmon)
-    return (key == :harmon) == c.harmon_master
+# Error if writes to rate while rate_meaning is Indeterminate:
+function Base.setproperty!(rfp::RFParams{T}, key::Symbol, value) where {T}
+  if key == :harmon_master
+    error("RFParams property harmon_master is get-only at the RFParams level. Try setting it at the LineElement level.")
+  elseif key == :rate && rfp.rate_meaning == RateMeaning.Indeterminate
+    error("Cannot set rate of RFParams with rate_meaning = RateMeaning.Indeterminate")
+  elseif key in (:rate, :voltage, :phi0)
+    setfield!(rfp, key, T(value))
   else
-    return false
+    setfield!(rfp, key, value)
   end
+  return value
 end
 
-function Base.getproperty(c::RFParams, key::Symbol)
-  if key in (:rate, :voltage, :phi0, :harmon_master, :zero_phase, :traveling_wave, :is_crabcavity)
-    return getfield(c, key)
-  elseif key in (:rf_frequency, :harmon)
-    if (key == :harmon) == c.harmon_master
-      return c.rate
-    else
-      error("Cannot get $key in RFParams with harmon_master = $(c.harmon_master); get $key at the element level instead")
+function Base.getproperty(rfp::RFParams, key::Symbol)
+  if key == :harmon_master
+    if rfp.rate_meaning == RateMeaning.Indeterminate
+      error("Unable to get key harmon_master from RFParams: rate_meaning = RateMeaning.Indeterminate")
     end
+    return Bool(rfp.rate_meaning)
+  else
+    return getfield(rfp, key)
   end
-  error("RFParams does not have property $key")
 end
 
-function Base.setproperty!(c::RFParams{T}, key::Symbol, value) where {T}
-  if key in (:rate, :voltage, :phi0)
-    return setfield!(c, key, T(value))
-  elseif key in (:harmon_master, :zero_phase, :traveling_wave, :is_crabcavity)
-    return setfield!(c, key, value)
-  elseif key in (:rf_frequency, :harmon)
-    if (key == :harmon) == c.harmon_master
-      return setfield!(c, :rate, T(value))
-    else
-      error("Cannot set $key in RFParams with harmon_master = $(c.harmon_master); set $key at the element level instead")
-    end
-  end
-  error("RFParams does not have property $key")
-end
-
-isactive(rf::RFParams) = !(rf.voltage == 0)
-
-
-# Note that it is currently impossible to derive harmonic number from frequency
-# or vice versa without knowing the particle species_ref, so the virtual getter
-# function throws an error for the unspecified property.
+# Note that if rate = 0, rf_frequency = harmon = 0. So in 
+# Note that in the case where voltage != 0 but rate = 0
+isactive(rfp::RFParams) = (rfp.voltage != 0)
