@@ -944,6 +944,11 @@ using ForwardDiff, GTPSA, ReverseDiff
     @test rf0.rf_frequency ≈ 0.2118107321845737E+08
     @test rf0.harmon ≈ 20
 
+    rf0.harmon = 20
+    @test rf0.harmon_master == false
+    @test rf0.rf_frequency ≈ 0.2118107321845737E+08
+    @test rf0.harmon ≈ 20
+
     rf0.harmon_master = true
     @test rf0.harmon_master == true
     @test rf0.rf_frequency ≈ 0.2118107321845737E+08
@@ -953,6 +958,14 @@ using ForwardDiff, GTPSA, ReverseDiff
     @test rf0.harmon_master == true
     @test rf0.rf_frequency ≈ 0.2118107321845737E+08
     @test rf0.harmon ≈ 20
+
+    rf0.rf_frequency = 0.2118107321845737E+08
+    @test rf0.harmon_master == true
+    @test rf0.rf_frequency ≈ 0.2118107321845737E+08
+    @test rf0.harmon ≈ 20
+
+    @test LineElement(harmon_master=true).harmon_master == true
+    @test_throws ErrorException RFParams(harmon_master=false, rate_meaning=RateMeaning.Harmon)
 
     # RFParams bug check
     rf0 = RFCavity(L =  2.29999999999999982E+000, zero_phase = PhaseReference.AboveTransition,
