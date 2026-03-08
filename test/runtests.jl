@@ -44,6 +44,7 @@ using ForwardDiff, GTPSA, ReverseDiff
     @test_throws ErrorException getfield(ele, :pdict)[UniversalParams] = 10.0
 
     @test !isactive(ele.BendParams)
+    @test ele.g == 0 # Default value
     ele.g_ref = g_ref
     @test isactive(ele.BendParams)
     @test ele.g_ref == g_ref
@@ -99,6 +100,7 @@ using ForwardDiff, GTPSA, ReverseDiff
     @test typeof(ele.x_offset) == Float64
 
     @test !isactive(ele.BMultipoleParams)
+    @test ele.Kn1 == 0 # Default value
     ele.Kn1 = 0.36
     @test isactive(ele.BMultipoleParams)
     @test ele.Kn1 == 0.36
@@ -870,26 +872,34 @@ using ForwardDiff, GTPSA, ReverseDiff
     # RFParams tests
     @test !isactive(qf.RFParams)
 
+    @test_throws ErrorException RFParams().harmon_master
+    @test RFParams(harmon_master=true).harmon_master
+    @test !(RFParams(harmon_master=false).harmon_master)
+    @test RFParams(harmon_master=true).rate_meaning == RateMeaning.Harmon
+    @test RFParams(harmon_master=false).rate_meaning == RateMeaning.RFFrequency
+    @test_throws ErrorException RFParams(rate=10)
+    @test_throws ErrorException RFParams().harmon_master = true
+    @test_throws ErrorException RFParams().rate = 10
+
     # Basic RF frequency mode
-    cav = RFCavity(rf_frequency=352e6, voltage=1e6)
+    cav = RFCavity(rf_frequency=352e6, voltage=1e6, zero_phase=PhaseReference.AboveTransition)
     @test isactive(cav.RFParams)
     cav.voltage = 0
     @test !isactive(cav.RFParams)
     cav.voltage=1e6
     @test isactive(cav.RFParams)
+    @test cav.RFParams.harmon_master == false
     @test cav.harmon_master == false && cav.rf_frequency == 352e6
     @test_throws ErrorException cav.harmon
     cav.rf_frequency = 500e6 + 1e3im
-    @test cav.zero_phase == PhaseReference.Accelerating
+    @test cav.zero_phase == PhaseReference.AboveTransition
     @test cav.traveling_wave == false
     @test cav.is_crabcavity == false
     @test eltype(cav.RFParams) == ComplexF64
     @test eltype(typeof(cav.RFParams)) == ComplexF64
-    cav.RFParams.rf_frequency = 210.1e6
-    @test_throws ErrorException cav.RFParams.dx_rot
-    @test_throws ErrorException cav.RFParams.dx_rot = 1.0
-    @test_throws ErrorException cav.RFParams.harmon = 120
-    
+    @test cav.RFParams.rate_meaning == RateMeaning.RFFrequency
+    @test cav.rate_meaning == RateMeaning.RFFrequency
+
     # Basic Crab RF frequency mode
     cav = CrabCavity(rf_frequency=352e6, voltage=1e6)
     @test isactive(cav.RFParams)
@@ -902,35 +912,65 @@ using ForwardDiff, GTPSA, ReverseDiff
     cav.rf_frequency = 500e6 + 1e3im
     @test cav.zero_phase == PhaseReference.Accelerating
     @test cav.traveling_wave == false
-    @test cav.is_crabcavity == false
+    @test cav.is_crabcavity == true
     @test eltype(cav.RFParams) == ComplexF64
     @test eltype(typeof(cav.RFParams)) == ComplexF64
-    cav.RFParams.rf_frequency = 210.1e6
-    @test_throws ErrorException cav.RFParams.dx_rot
-    @test_throws ErrorException cav.RFParams.dx_rot = 1.0
-    @test_throws ErrorException cav.RFParams.harmon = 120
-    
 
-    # Harmonic number mode and mode switching
-    cav2 = RFCavity()
-    cav2.harmon_master = false
-    cav2.rf_frequency = 352e6
-    cav2.voltage = 200e6
-    @test cav2.RFParams.rf_frequency == 352e6 && cav2.harmon_master == false
-    @test_throws ErrorException cav2.harmon
-    cav2.harmon = 1159
+    # Harmonic number mode
+    cav2 = RFCavity(voltage = 200e6)
+    @test_throws ErrorException cav2.harmon_master
+    @test cav2.rate_meaning == RateMeaning.Indeterminate
+    cav2.harmon_master = true
+    @test cav2.rate_meaning == RateMeaning.Harmon
+    @test cav2.harmon_master == true
     cav2.harmon = 1160
     @test cav2.harmon == 1160 && cav2.harmon_master == true
-    cav2.harmon_master = false
-    @test cav2.harmon_master == false
-    @test_throws ErrorException cav2.harmon == 1160 
-  
-    # Direct property access and RFParams struct operations
-    cp = RFParams(rate=352e6, harmon_master=false)
-    @test hasproperty(cp, :rf_frequency) && !hasproperty(cp, :harmon)
-    @test_throws ErrorException cp.harmon
-    cav2.RFParams = cp
-    @test cav2.RFParams === cp
+    @test_throws ErrorException cav2.harmon_master = false # Can't switch unless in Beamline
+    @test_throws ErrorException cav2.rf_frequency = 1e6 # Can't set rf frequency if not in Beamline w harmon_master=true
+    
+    # RFParams in Beamline
+    rf0 = RFCavity(L=10, harmon=20)
+    fline = Beamline([rf0, Drift(L=20)], species_ref=Species("proton"), pc_ref=1e8)
+    @test rf0.harmon_master == true
+    @test rf0.harmon == 20
+    @test rf0.rf_frequency ≈ 0.2118107321845737E+08
+    rf0.harmon_master = false
+    @test rf0.harmon_master == false
+    @test rf0.harmon ≈ 20
+    @test rf0.rf_frequency ≈ 0.2118107321845737E+08
+
+    rf0.rf_frequency = 0.2118107321845737E+08
+    @test rf0.harmon_master == false
+    @test rf0.rf_frequency ≈ 0.2118107321845737E+08
+    @test rf0.harmon ≈ 20
+
+    rf0.harmon = 20
+    @test rf0.harmon_master == false
+    @test rf0.rf_frequency ≈ 0.2118107321845737E+08
+    @test rf0.harmon ≈ 20
+
+    rf0.harmon_master = true
+    @test rf0.harmon_master == true
+    @test rf0.rf_frequency ≈ 0.2118107321845737E+08
+    @test rf0.harmon ≈ 20
+
+    rf0.harmon = 20
+    @test rf0.harmon_master == true
+    @test rf0.rf_frequency ≈ 0.2118107321845737E+08
+    @test rf0.harmon ≈ 20
+
+    rf0.rf_frequency = 0.2118107321845737E+08
+    @test rf0.harmon_master == true
+    @test rf0.rf_frequency ≈ 0.2118107321845737E+08
+    @test rf0.harmon ≈ 20
+
+    @test LineElement(harmon_master=true).harmon_master == true
+    @test_throws ErrorException RFParams(harmon_master=false, rate_meaning=RateMeaning.Harmon)
+
+    # RFParams bug check
+    rf0 = RFCavity(L =  2.29999999999999982E+000, zero_phase = PhaseReference.AboveTransition,
+        rf_frequency =  5.91158776766067386E+008)
+    @test rf0.zero_phase == PhaseReference.AboveTransition
 
     bo = 1.23
     dbo = DefExpr(()->bo)
@@ -979,7 +1019,7 @@ using ForwardDiff, GTPSA, ReverseDiff
     integrated = Beamlines.SA[false, true, true]
     @test Beamlines.deval(ele.BMultipoleParams) ≈ BMultipoleParams(n, s, tilt, order, normalized, integrated)
     @test Beamlines.deval(ele.PatchParams) ≈ PatchParams(bo + 20, bo + 21, bo + 22, bo + 23, bo + 24, bo + 25, bo + 26)
-    @test Beamlines.deval(ele.RFParams) ≈ RFParams(bo + 27, bo + 28, bo + 29, false, PhaseReference.Accelerating, false, false)
+    @test Beamlines.deval(ele.RFParams) ≈ RFParams(bo + 27, bo + 28, bo + 29, RateMeaning.RFFrequency, PhaseReference.Accelerating, false, false)
 
     # Species addition
     bl = Beamline([LineElement(), LineElement()]; p_over_q_ref=-59.52872449027632, species_ref=Species("electron"))
@@ -1318,7 +1358,7 @@ using ForwardDiff, GTPSA, ReverseDiff
       @test scalarize(BendParams(g_ref=adnum)).g_ref == num
       @test scalarize(BMultipoleParams([adnum], [adnum], [0], [0], [true], [false])).n == [num]
       @test scalarize(PatchParams(dt=adnum)).dt == num
-      @test scalarize(RFParams(rate=adnum)).rate == num
+      @test scalarize(RFParams(rate=adnum, rate_meaning=RateMeaning.RFFrequency)).rate == num
     end
 
     qf = Quadrupole(Kn1=0.36, L=0.5)

@@ -25,7 +25,7 @@ ele.BMultipoleParams        # Goes to InheritParams to get parent
 function get_BM_strength(ele::LineElement, key::Symbol)
   b = ele.BMultipoleParams
   if isnothing(b)
-    return 0f0
+    return 0f0 # Default value
   end
   return @noinline _get_BM_strength(ele, b, key)
 end
@@ -237,7 +237,7 @@ end
 function get_bend_g(ele::LineElement, ::Symbol)
   bp = ele.BendParams
   if isnothing(bp)
-    return 0f0 #error("Unable to get g: LineElement does not contain BendParams")
+    return 0f0 # Default value
   end
   return bp.g_ref
 end
@@ -259,13 +259,7 @@ end
 function _set_bend_g!(ele::LineElement, bp::BendParams{S}, bm::BMultipoleParams, value) where {S}
   T = promote_type(S, typeof(value))
   if T != S || bp.g_ref != value
-    bp = BendParams(
-      g_ref     = T(value),
-      e1        = T(bp.e1),
-      e2        = T(bp.e2),
-      edge1_int = T(bp.edge1_int),
-      edge2_int = T(bp.edge2_int)
-    )
+    bp = set(bp, opcompose(PropertyLens(:g_ref)), T(value))
     ele.BendParams = bp
   end
   strength = calc_BM_internal_strength(ele, bm, :Kn0, T(value))
@@ -393,67 +387,100 @@ function _get_integrated_master(b)
 end
 
 function get_cavity_rate(ele::LineElement, key::Symbol)
-  c = ele.RFParams
-  if isnothing(c)
-    return 0f0
+  rfp = ele.RFParams
+  if isnothing(rfp) || getfield(rfp, :rate_meaning) == RateMeaning.Indeterminate
+    return 0f0 # Default value
   end
-  return @noinline _get_cavity_rate(c, key)
-end
-
-function _get_cavity_rate(c, key)
-  if isnothing(c)
-    error("Unable to get $key: LineElement does not contain RFParams")
-  elseif (key == :harmon) == c.harmon_master
-    return c.rate
-  else
-    error("Cannot calculate $key of RFParams since particle species_ref is unknown at Beamlines level and harmon_master=$(c.harmon_master)")
+  rate_meaning = getfield(rfp, :rate_meaning)
+  rate = getfield(rfp, :rate)
+  if ((key == :harmon) && rate_meaning == RateMeaning.Harmon) || ((key == :rf_frequency) && rate_meaning == RateMeaning.RFFrequency)
+    return rate
+  else # Need to convert
+    bp = ele.BeamlineParams
+    if isnothing(bp)
+      error("Unable to get $key from LineElement: element is NOT in a Beamline and has harmon_master = $(rfp.harmon_master)")
+    end
+    bl = bp.beamline
+    species = bl.species_ref
+    circumference = bl.line[end].s_downstream
+    v = R_to_v(species, bl.p_over_q_ref)
+    if key == :harmon # rf_frequency is stored, user asks for harmon
+      rf_frequency = rate
+      return rf_frequency*circumference/v
+    else # harmon is stored, user asks for rf_frequency
+      harmon = rate
+      return harmon*v/circumference
+    end
   end
 end
 
 function set_cavity_rate!(ele::LineElement, key::Symbol, value)
   rfp = ele.RFParams
+  # First set: construct RF params
   if isnothing(rfp)
-    rfp = RFParams(harmon_master = (key == :harmon))
+    rfp = RFParams()
     ele.RFParams = rfp
   end
-  
-  @noinline _set_cavity_rate!(ele, rfp, key, value)
+  # If rate_meaning hasn't been set yet, we can set it now
+  if rfp.rate_meaning == RateMeaning.Indeterminate
+    rate_meaning = key == :harmon ? RateMeaning.Harmon : RateMeaning.RFFrequency
+    rfp = set(rfp, opcompose(PropertyLens(:rate_meaning)), rate_meaning)
+    ele.RFParams = rfp
+  end
+  rate = calc_rf_internal_rate(ele, rfp, key, value)
+  @noinline _set_cavity_rate!(ele, rfp, rate)
   return value
 end
 
-function _set_cavity_rate!(ele, rfp::RFParams{S}, key, value) where {S}
-  
-  T = promote_type(S, typeof(value))
-  if T != S || rfp.harmon_master != (key == :harmon)
-    # Create new RFParams with updated type and/or harmon_master
-    rfp = RFParams(
-      rate          = T(value),
-      voltage       = T(rfp.voltage),
-      phi0          = T(rfp.phi0),
-      harmon_master = (key == :harmon)
-    )
-    ele.RFParams = rfp
-  else
-    # Can modify in place
-    rfp.rate = value
+function calc_rf_internal_rate(ele, rfp, key, value)
+  rate_meaning = getfield(rfp, :rate_meaning)
+  if ((key == :harmon) && rate_meaning == RateMeaning.Harmon) || ((key == :rf_frequency) && rate_meaning == RateMeaning.RFFrequency)
+    return value
+  else # Need to convert
+    bp = ele.BeamlineParams
+    if isnothing(bp)
+      error("Unable to set $key from LineElement: element is NOT in a Beamline and has harmon_master = $(rfp.harmon_master)")
+    end
+    bl = bp.beamline
+    species = bl.species_ref
+    circumference = bl.line[end].s_downstream
+    v = R_to_v(species, bl.p_over_q_ref)
+    if key == :harmon # rf_frequency is stored, user wants to set harmon
+      return value*v/circumference 
+    else # harmon is stored, user wants to set rf_frequency
+      return value*circumference/v
+    end
   end
-  
-  return value
+end
+
+function _set_cavity_rate!(ele, rfp::RFParams{S}, value) where {S}
+  T = promote_type(S,typeof(value))
+  if T != S
+    ele.RFParams = set(rfp, opcompose(PropertyLens(:rate)), T(value))
+  else
+    setfield!(rfp, :rate, T(value))
+  end
+  return
 end
 
 function set_harmon_master!(ele::LineElement, ::Symbol, value::Bool)
   rfp = ele.RFParams
   if isnothing(rfp)
-    ele.RFParams = RFParams(harmon_master = value)
-  else
-    # Create new RFParams with updated harmon_master since it's const
-    ele.RFParams = RFParams(
-      rate = rfp.rate,
-      voltage = rfp.voltage,
-      phi0 = rfp.phi0,
-      harmon_master = value
-    )
+    ele.RFParams = RFParams(harmon_master=value)
+    return value
+  else # Need to convert internal
+    if value # store harmon internally now
+      # Use the regular getter - changing harmon_master doesn't need to 
+      # be super optimized
+      harmon = ele.harmon
+      rfp = set(rfp, opcompose(PropertyLens(:rate)), harmon)
+    else
+      rf_frequency = ele.rf_frequency
+      rfp = set(rfp, opcompose(PropertyLens(:rate)), rf_frequency)
+    end
   end
+  rfp = set(rfp, opcompose(PropertyLens(:rate_meaning)), value ? RateMeaning.Harmon : RateMeaning.RFFrequency)
+  ele.RFParams = rfp
   return value
 end
 
