@@ -153,14 +153,25 @@ function pals_format(line_element)
             format_dict[:length] = getproperty(parameter_group, :L)
         end
 
-        # Put [ tracking_method ] inside of a [ SciBMad ] dictionary inside of  [ TrackingP ]
+        # Put [ tracking_method ] inside of a [ SciBmad ] dictionary inside of [ TrackingP ]
         if (hasproperty(parameter_group, :tracking_method))
-            format_dict[:TrackingP] = OrderedDict(:SciBmad => OrderedDict(:tracking_method => getproperty(parameter_group, :tracking_method)))
-            #=
-            if (getproperty(parameter_group, :tracking_method) == Symbol("SciBmadStandard()")) # Strip off parentheses
-                format_dict[:TrackingP] = OrderedDict(:SciBMad => OrderedDict(:tracking_method => getproperty(parameter_group, :tracking_method)))
+            tracking_method = getproperty(parameter_group, :tracking_method) # Get the tracking method
+            tracking_method_type = typeof(tracking_method) # Get the type of the tracking method
+
+            # Create a dictionary to store the tracking information, store the type of tracking method first
+            tracking_information = OrderedDict( 
+                :tracking_method => Symbol(tracking_method_type)
+            )
+
+            # At the same level, populate the tracking information with the arguments of the tracking struct
+            for field_name in fieldnames(tracking_method_type)
+                tracking_information[field_name] = Symbol(getfield(tracking_method, field_name))
             end
-            =#
+
+            # Put all the tracking information under the [ SciBmad ] dictionary
+            format_dict[:TrackingP] = OrderedDict(
+                :SciBmad => tracking_information
+            )
         end
 
         # We do not put the name as an element of the dictionary
@@ -203,10 +214,10 @@ end
 """
 Creates a YAML file named "[new_file_name].yaml" in PALS format representing [lattice]
 
-This function is the main workhorse and purpose of this file, converting SciBMad-style
+This function is the main workhorse and purpose of this file, converting SciBmad-style
 [lattice] elements into PALS-style .yaml files to be used for other purposes.
 
-- [lattice] is the SciBMad Lattice that will be turned into a PALS YAML file.
+- [lattice] is the SciBmad Lattice that will be turned into a PALS YAML file.
 - [new_file_name] is a String which COMES BEFORE ".pals.txt" that the resulting
     file will be named.
 """
