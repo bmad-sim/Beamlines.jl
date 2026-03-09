@@ -109,3 +109,21 @@ end
 # Note that if rate = 0, rf_frequency = harmon = 0. So in 
 # Note that in the case where voltage != 0 but rate = 0
 isactive(rfp::RFParams) = (rfp.voltage != 0)
+
+function Base.show(io::IO, a::RFParams)
+  fields = fieldnames(RFParams)
+  width = length("traveling_wave")
+  println(io, nameof(typeof(a)))
+  if a.rate_meaning == RateMeaning.RFFrequency
+    println(io, " ", rpad("rf_frequency", width), " = ", a.rate)
+  elseif a.rate_meaning == RateMeaning.Harmon
+    println(io, " ", rpad("harmon", width), " = ", a.rate)
+  end
+  for field in fields
+    if field == :rate || field == :rate_meaning
+      continue
+    end
+    println(io, " ", rpad(String(field), width), " = ", getproperty(a, field))
+  end
+  return
+end
