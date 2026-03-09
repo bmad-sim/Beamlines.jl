@@ -15,7 +15,7 @@ function isdefault(field, value)
     # If more defaults need to be accounted for, this may be expanded
     value_type = typeof(value)
 
-    if (value_type <: Dict)
+    if (value_type <: OrderedDict)
         # A default dictionary is empty, regardless of its [field]
         return isempty(value)
 
@@ -33,7 +33,7 @@ function isdefault(field, value)
 end
 
 #= This maps types of AbstractParams to the symbol representing its PALS-format name =#
-const PARAMTYPES_TO_PALSNAMES_MAP = Dict{Type{<:AbstractParams}, Symbol}(
+const PARAMTYPES_TO_PALSNAMES_MAP = OrderedDict{Type{<:AbstractParams}, Symbol}(
     BMultipoleParams => :MagneticMultipoleP,
     ApertureParams => :ApertureP,
     MetaParams => :MetaP,
@@ -55,9 +55,9 @@ associated with elements with them.
 - [format_dict] is the dictionary to be modified which represents the information about a line element.
 - [parameter_group] is an AbstractParams object containing the parameters to extract to [acc].
 """
-function params_to_dict!(format_dict::Dict, parameter_group::T) where {T<:AbstractParams}
+function params_to_dict!(format_dict::OrderedDict, parameter_group::T) where {T<:AbstractParams}
     # The accumulator dictionary 
-    acc = Dict()
+    acc = OrderedDict()
     parameter_type = nothing # This holds the type of the parameter group
 
     for parameter_name in propertynames(parameter_group)
@@ -85,9 +85,9 @@ end
 
 
 # Handle BMultipoleParams
-function params_to_dict!(format_dict::Dict, parameter_group::BMultipoleParams) 
+function params_to_dict!(format_dict::OrderedDict, parameter_group::BMultipoleParams) 
     # The accumulator dictionary 
-    acc = Dict()
+    acc = OrderedDict()
 
     #= This code is from the override of [ show() ] in multipole.jl =#
     for bm in parameter_group
@@ -125,7 +125,7 @@ accelerator element, along with all parameters assocaited with it.
 """
 function pals_format(line_element) 
     # The accumulator dictionary which will become the final return dictionary
-    format_dict = Dict()
+    format_dict = OrderedDict()
 
     #=
     Access [line_element]'s parameter groups.
@@ -134,34 +134,45 @@ function pals_format(line_element)
     =#
     parameter_groups = getfield(line_element, :pdict)
 
+    # Put UniversalParams first, if they exist
+    if UniversalParams in keys(parameter_groups)
+        #=
+        Special case: Universal Parameters contains basic information that's 
+        not displayed inside of another dictionary, it should be at the "top level",
+        so handle it here instead of in the helper.
+        =#
+        parameter_group = parameter_groups[UniversalParams]
+        
+        # Extract [ kind ], if present
+        if (hasproperty(parameter_group, :kind))
+            format_dict[:kind] = Symbol(getproperty(parameter_group, :kind))
+        end
+
+        # Replace [ L ] with [ length ], if it's present
+        if (hasproperty(parameter_group, :L))
+            format_dict[:length] = getproperty(parameter_group, :L)
+        end
+
+        # Put [ tracking_method ] inside of a [ SciBMad ] dictionary inside of  [ TrackingP ]
+        if (hasproperty(parameter_group, :tracking_method))
+            format_dict[:TrackingP] = OrderedDict(:SciBmad => OrderedDict(:tracking_method => getproperty(parameter_group, :tracking_method)))
+            #=
+            if (getproperty(parameter_group, :tracking_method) == Symbol("SciBmadStandard()")) # Strip off parentheses
+                format_dict[:TrackingP] = OrderedDict(:SciBMad => OrderedDict(:tracking_method => getproperty(parameter_group, :tracking_method)))
+            end
+            =#
+        end
+
+        # We do not put the name as an element of the dictionary
+    end
+
     for parameter_group in values(parameter_groups)
         # Loop through every parameter group [line_element] has
 
         if (typeof(parameter_group) == UniversalParams)
-            #=
-            Special case: Universal Parameters contains basic information that's 
-            not displayed inside of another dictionary, it should be at the "top level",
-            so handle it here instead of in the helper.
-            =#
-            
-            # Extract [ kind ], if present
-            if (hasproperty(parameter_group, :kind))
-                format_dict[:kind] = Symbol(getproperty(parameter_group, :kind))
-            end
+            # These have already been handled, continue
+            continue;
 
-            # Replace [ L ] with [ length ], if it's present
-            if (hasproperty(parameter_group, :L))
-                format_dict[:length] = getproperty(parameter_group, :L)
-            end
-
-            # Put [ tracking_method ] inside of a [ SciBMad ] dictionary inside of  [ TrackingP ]
-            if (hasproperty(parameter_group, :tracking_method))
-                format_dict[:TrackingP] = Dict(:SciBMad => Dict(:tracking_method => getproperty(parameter_group, :tracking_method)))
-            end
-
-            #= TODO Handle Beamline parameters here? =#
-
-            # We do not put the name as an element of the dictionary
         elseif (typeof(parameter_group) == BeamlineParams)
             # Special case: Beamline Parameters should be handled and grouped under TrackingP
             # this was (should be) already handled in UniversalParams case
@@ -185,7 +196,7 @@ function pals_format(line_element)
         end
     end
 
-    return Dict(line_element.name => format_dict)
+    return OrderedDict(line_element.name => format_dict)
 end
 
 
@@ -249,8 +260,8 @@ function scibmad_to_pals(lattice::Lattice, new_file_name::String)
         push!(branches, Symbol(beamline_name))
         line_counter += 1
         push!(facility, 
-            Dict(
-                Symbol(beamline_name) => Dict(
+            OrderedDict(
+                Symbol(beamline_name) => OrderedDict(
                     :kind => :Beamline,
                     :line => line
                 )
@@ -259,20 +270,25 @@ function scibmad_to_pals(lattice::Lattice, new_file_name::String)
     end
     # Push the lattice entry onto [ facility ]
     push!(facility, 
-        Dict(
-            :lattice => Dict(
+        OrderedDict(
+            :lattice => OrderedDict(
                 :kind => :Lattice,
                 :branches => branches
             )
         )
     )
     # Push the lattice on as the last element of the PALS file being "used"
-    push!(facility, Dict(:use => :lattice))
+    push!(facility, OrderedDict(:use => :lattice))
 
     # Encase [facility] in the proper PALS formatting
-    data_to_write = Dict(
-        :PALS => Dict(
+    data_to_write = OrderedDict(
+        :PALS => OrderedDict(
             :version => :null, # Update with version
+            :notes => ["This file was generated by the `scibmad_to_pals()` function."],
+            :extension_names => OrderedDict(
+                :names => [:SciBmad],
+                :prefixes => [:SciBmad_]
+            ),
             :facility => facility
         )
     )
