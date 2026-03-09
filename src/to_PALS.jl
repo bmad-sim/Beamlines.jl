@@ -16,7 +16,10 @@ Symbols' default value is Symbol("")
 - [value] is the value stored at [field]
 """
 function isdefault(field, value)
-    # If more defaults need to be accounted for, this may be expanded
+    # If more defaults need to be accounted for, this may be expanded.
+
+    # [ field ] is an argument so that way defaults that may be unique
+    # to the information of a specific field can be accounted for.
     value_type = typeof(value)
 
     if (value_type <: OrderedDict)
