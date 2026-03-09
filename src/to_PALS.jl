@@ -1,3 +1,7 @@
+# This is a reference to the number of the next available placeholder
+# number to be assigned to unnamed elements
+const PLACEHOLDER_NUM = Ref(1)
+
 """
 Returns true if [value] is the default value that [field] can represent.
 
@@ -61,12 +65,13 @@ function params_to_dict!(format_dict::OrderedDict, parameter_group::T) where {T<
     parameter_type = nothing # This holds the type of the parameter group
 
     for parameter_name in propertynames(parameter_group)
-        if (parameter_type == nothing)
+        if (isnothing(parameter_type))
             # Set the type of the parameter
             if haskey(PROPERTIES_MAP, parameter_name)
                 parameter_type = PROPERTIES_MAP[parameter_name]
             end
         end
+
         if (hasproperty(parameter_group, parameter_name))
             # Get the value stored at that property
             parameter_value = getproperty(parameter_group, parameter_name)
@@ -222,6 +227,9 @@ This function is the main workhorse and purpose of this file, converting SciBmad
     file will be named.
 """
 function scibmad_to_pals(lattice::Lattice, new_file_name::String)
+    # Wipe the placeholder number ref back to 1 to undo any previous changes
+    PLACEHOLDER_NUM[] = 1
+
     # Create a new PALS yaml file in write mode
     io = open(new_file_name * ".pals.yaml", "w")
 
@@ -248,7 +256,21 @@ function scibmad_to_pals(lattice::Lattice, new_file_name::String)
             # For every element in [beamline]'s line...
 
             # Get the element's name
-            name = Symbol(line_element.name)
+            if (hasproperty(line_element, :name) && (!isempty(line_element.name)))
+                # If the [line_element] has a [name] property, then use it as the name
+                name = Symbol(line_element.name)
+            else
+                # If the [line_element] does not have a [name] property, then
+                # make its name "__unnamed__N", where N is the next unnused placeholder number
+                name = Symbol(string("__unnamed__", PLACEHOLDER_NUM[]))
+
+                # Set the property of this element to the unnamed placeholder so that
+                # duplicates are properly handled
+                line_element.name = String(name)
+
+                # Increase the placeholder number by 1
+                PLACEHOLDER_NUM[] += 1
+            end
 
             # Add the element's name to the beamline
             push!(line, name)
