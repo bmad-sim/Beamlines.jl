@@ -8,15 +8,13 @@ PALS:
     prefixes:
       - SciBmad_
   facility:
-    - drift1:
+    - __unnamed__1:
         kind: Drift
         length: 0.25
         TrackingP:
           SciBmad:
-            tracking_method: CustomTrackingMethod
-            param1: A
-            param2: 4
-    - quad1:
+            tracking_method: SciBmadStandard
+    - __unnamed__2:
         kind: Quadrupole
         length: 1.0
         TrackingP:
@@ -24,13 +22,13 @@ PALS:
             tracking_method: SciBmadStandard
         MagneticMultipoleP:
           Bn1: 1.0
-    - drift2:
+    - __unnamed__3:
         kind: Drift
         length: 0.5
         TrackingP:
           SciBmad:
             tracking_method: SciBmadStandard
-    - quad2:
+    - __unnamed__4:
         kind: Quadrupole
         length: 1.0
         TrackingP:
@@ -41,11 +39,11 @@ PALS:
     - beamline1:
         kind: Beamline
         line:
-          - drift1
-          - quad1
-          - drift2
-          - quad2
-          - drift1
+          - __unnamed__1
+          - __unnamed__2
+          - __unnamed__3
+          - __unnamed__4
+          - __unnamed__1
     - lattice:
         kind: Lattice
         branches:
