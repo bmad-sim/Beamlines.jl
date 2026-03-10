@@ -12,13 +12,11 @@ PALS:
     - solenoid:
         kind: Solenoid
         length: 1.0
-        MagneticMultipoleP:
+        SolenoidP:
           Ksol: 0.142634259959
     - sbend:
         kind: SBend
         length: 2.0
-        MagneticMultipoleP:
-          Kn0: 0.0041897690181481
         BendP:
           g_ref: 0.0041897690181481
           tilt_ref: 0.0
@@ -26,6 +24,8 @@ PALS:
           e2: 0.006295379021
           edge1_int: 0.0
           edge2_int: 0.0
+        MagneticMultipoleP:
+          Kn0: 0.0041897690181481
     - quadrupole:
         kind: Quadrupole
         length: 3.0

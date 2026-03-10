@@ -206,9 +206,38 @@ function pals_format(line_element)
 
             # Represent the parameter group as a dictionary and add it to [format_dict]
             params_to_dict!(format_dict, parameter_group)
+
         end
     end
     
+    # Move solenoid parameters to a new parameter group called SolenoidP
+    if (haskey(format_dict, :MagneticMultipoleP))
+        # If MagneticMultipoleP has been initialized
+
+        # Access the MagneticMultipoleP dictionary
+        magnet_dict = format_dict[:MagneticMultipoleP]
+        if (haskey(magnet_dict, :Ksol))
+            # If the dictionary contains the parameter [ Ksol ]
+
+            # Create a new parameter dictionary in format_dict called [ SolenoidP ], containing [ Ksol ]
+            format_dict[:SolenoidP] = OrderedDict(
+                :Ksol => magnet_dict[:Ksol]
+            )
+
+            # Remove [ Ksol ] from the [ MagneticMultipoleP ] dictionary
+            delete!(magnet_dict, :Ksol)
+        elseif (haskey(magnet_dict, :Bsol))
+            # If the dictionary contains the parameter [ Bsol ]
+
+            # Create a new parameter dictionary in format_dict called [ SolenoidP ], containing [ Bsol ]
+            format_dict[:SolenoidP] = OrderedDict(
+                :Bsol => magnet_dict[:Bsol]
+            )
+            # Remove [ Bsol ] from the [ MagneticMultipoleP ] dictionary
+            delete!(magnet_dict, :Bsol)
+        end
+    end
+
     # Remove any unpopulated elements from the format_dict before returning. 
     for key in keys(format_dict)
         if (isdefault(key, format_dict[key]))
@@ -339,5 +368,10 @@ function scibmad_to_pals(lattice::Lattice, new_file_name::String)
     # Flush the PALS yaml file
     close(io)
 end
+
+#= TODO Email Matt, CC David and Joe =#
+#= TODO Handle Nested Beamlines =#
+#= TODO Deferred Expression =#
+#= TODO Put `Ksol` elements inside of `SolenoidP` instead of `MagneticMultipoleP`? =#
 
 # Create multiple dispatch clone for handling just a BeamLine instead of a Lattice?
