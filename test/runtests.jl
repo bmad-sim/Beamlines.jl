@@ -1527,6 +1527,7 @@ end
     # Check if the created file matches the expected
     @test test_file == expected_file
 
+    
     #= ------------------------------------ =#
     # Test non-standard tracking method
     
