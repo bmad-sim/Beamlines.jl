@@ -1385,7 +1385,7 @@ end
     # Create the test file
     Beamlines.scibmad_to_pals(fodo_lattice, "test_fodo_cell")
     
-    # Load the test file and the master test file into strings
+    # Load the test file and the expected file 
     expected_file = YAML.load_file("test_fodo_cell_expected.pals.yaml")
     test_file = YAML.load_file("test_fodo_cell.pals.yaml")
     
@@ -1408,7 +1408,7 @@ end
     # Create the test file
     Beamlines.scibmad_to_pals(fodo_lattice, "test_unnamed_fodo_cell")
     
-    # Load the test file and the master test file into strings
+    # Load the test file and the expected file 
     expected_file = YAML.load_file("test_unnamed_fodo_cell_expected.pals.yaml")
     test_file = YAML.load_file("test_unnamed_fodo_cell.pals.yaml")
     
@@ -1439,7 +1439,7 @@ end
     # Create the test file
     Beamlines.scibmad_to_pals(lattice, "test_every_element")
     
-    # Load the test file and the master test file into strings
+    # Load the test file and the expected file 
     expected_file = YAML.load_file("test_every_element_expected.pals.yaml")
     test_file = YAML.load_file("test_every_element.pals.yaml")
     
@@ -1469,7 +1469,7 @@ end
     # Create the test file
     Beamlines.scibmad_to_pals(fodo_lattice, "test_two_beamlines")
     
-    # Load the test file and the master test file into strings
+    # Load the test file and the expected file 
     expected_file = YAML.load_file("test_two_beamlines_expected.pals.yaml")
     test_file = YAML.load_file("test_two_beamlines.pals.yaml")
     
@@ -1492,7 +1492,7 @@ end
     # Create the test file
     Beamlines.scibmad_to_pals(fodo_lattice, "test_custom_tracking")
     
-    # Load the test file and the master test file into strings
+    # Load the test file and the expected file
     expected_file = YAML.load_file("test_custom_tracking_expected.pals.yaml")
     test_file = YAML.load_file("test_custom_tracking.pals.yaml")
     
