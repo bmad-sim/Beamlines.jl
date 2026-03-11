@@ -2,6 +2,17 @@
 # number to be assigned to unnamed elements
 const PLACEHOLDER_NUM = Ref(1)
 
+#= This maps types of `AbstractParams` to the symbol representing its PALS-format name =#
+const PARAMTYPES_TO_PALSNAMES_MAP = OrderedDict{Type{<:AbstractParams}, Symbol}(
+    BMultipoleParams => :MagneticMultipoleP,
+    ApertureParams => :ApertureP,
+    MetaParams => :MetaP,
+    AlignmentParams => :BodyShiftP,
+    BendParams => :BendP,
+    RFParams => :RFP,
+    PatchParams => :PatchP
+)
+
 """
 Returns true if `value` is the default value that `field` can represent.
 
@@ -38,17 +49,6 @@ function isdefault(field, value)
     # If nothing above has been satisfied, it's not a default value
     return false
 end
-
-#= This maps types of `AbstractParams` to the symbol representing its PALS-format name =#
-const PARAMTYPES_TO_PALSNAMES_MAP = OrderedDict{Type{<:AbstractParams}, Symbol}(
-    BMultipoleParams => :MagneticMultipoleP,
-    ApertureParams => :ApertureP,
-    MetaParams => :MetaP,
-    AlignmentParams => :BodyShiftP,
-    BendParams => :BendP,
-    RFParams => :RFP,
-    PatchParams => :PatchP
-)
 
 """
 Modifies `format_dict` to have a new entry which stores a dictionary whose keys are parameter
