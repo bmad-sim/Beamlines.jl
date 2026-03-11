@@ -2,7 +2,7 @@
 # number to be assigned to unnamed elements
 const PLACEHOLDER_NUM = Ref(1)
 
-#= This maps types of `AbstractParams` to the symbol representing its PALS-format name =#
+# This maps types of `AbstractParams` to the symbol representing its PALS-format name
 const PARAMTYPES_TO_PALSNAMES_MAP = OrderedDict{Type{<:AbstractParams}, Symbol}(
     BMultipoleParams => :MagneticMultipoleP,
     ApertureParams => :ApertureP,
