@@ -23,8 +23,8 @@ cut out elements that store no information (besides default values).
 `Vector`s' default value is []
 `Symbol`s' default value is Symbol("")
 
-- `field` is a `Symbol` representing the name of a parameter.
-- `value` is the value stored at `field`
+- Argument: `field` is a `Symbol` representing the name of a parameter.
+- Argument: `value` is the value stored at `field`
 """
 function isdefault(field, value)
     # If more defaults need to be accounted for, this may be expanded.
@@ -59,8 +59,8 @@ This function is used as a helper to `scibmad_to_pals()` to create the dictionar
 that store the fields and field values of a parameter group and populate the dictionaries
 associated with elements with them.
 
-- `format_dict` is the dictionary to be modified which represents the information about a line element.
-- `parameter_group` is an AbstractParams object containing the parameters to extract to `acc`.
+- Argument: `format_dict` is the dictionary to be modified which represents the information about a line element.
+- Argument: `parameter_group` is an AbstractParams object containing the parameters to extract to `acc`.
 """
 function params_to_dict!(format_dict::OrderedDict, parameter_group::T) where {T<:AbstractParams}
     # The accumulator dictionary 
@@ -129,7 +129,7 @@ whose keys are `line_element`'s fields. This is the format desired by PALS.
 This function is used as a helper to `scibmad_to_pals()` to create the entry for a single
 accelerator element, along with all parameters assocaited with it.
 
-- `line_element` is the LineElement being formatted into PALS.
+- Argument: `line_element` is the LineElement being formatted into PALS.
 """
 function pals_format(line_element::LineElement) 
     # The accumulator dictionary which will become the final return dictionary
@@ -258,9 +258,9 @@ Creates a YAML file named "[new_file_name].yaml" in PALS format representing `la
 This function is the main workhorse and purpose of this file, converting SciBmad-style
 `lattice` elements into PALS-style .yaml files to be used for other purposes.
 
-- `lattice` is the SciBmad `Lattice` that will be turned into a PALS YAML file.
-- `new_file_name` is a `String` which COMES BEFORE ".pals.txt" that the resulting
-    file will be named.
+- Argument: `lattice` is the SciBmad `Lattice` that will be turned into a PALS YAML file.
+- Argument: `new_file_name` is a `String` which COMES BEFORE ".pals.txt" that the resulting
+            file will be named.
 """
 function scibmad_to_pals(lattice::Lattice, new_file_name::String)
     # Wipe the placeholder number ref back to 1 to undo any previous changes
