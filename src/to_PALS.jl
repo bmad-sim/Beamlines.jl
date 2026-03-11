@@ -3,35 +3,35 @@
 const PLACEHOLDER_NUM = Ref(1)
 
 """
-Returns true if [value] is the default value that [field] can represent.
+Returns true if `value` is the default value that `field` can represent.
 
-This function is used as a helper function for [ scibmad_to_pals() ] to 
+This function is used as a helper function for `scibmad_to_pals()` to 
 cut out elements that store no information (besides default values).
 
 Dictionaries' default value is {}
 Vectors' default value is []
 Symbols' default value is Symbol("")
 
-- [field] is a Symbol representing the name of a parameter.
-- [value] is the value stored at [field]
+- `field` is a `Symbol` representing the name of a parameter.
+- `value` is the value stored at `field`
 """
 function isdefault(field, value)
     # If more defaults need to be accounted for, this may be expanded.
 
-    # [ field ] is an argument so that way defaults that may be unique
+    # `field` is an argument so that way defaults that may be unique
     # to the information of a specific field can be accounted for.
     value_type = typeof(value)
 
     if (value_type <: OrderedDict)
-        # A default dictionary is empty, regardless of its [field]
+        # A default dictionary is empty, regardless of its `field`
         return isempty(value)
 
     elseif (value_type <: Vector)
-        # A default vector is empty, regardless of its [field]
+        # A default vector is empty, regardless of its `field`
         return isempty(value)
 
     elseif (value_type == Symbol)
-        # Any symbol's default value is the empty symbol, regardless of its [field]
+        # Any symbol's default value is the empty symbol, regardless of its `field`
         return value === Symbol("")
     end
 
@@ -39,7 +39,7 @@ function isdefault(field, value)
     return false
 end
 
-#= This maps types of AbstractParams to the symbol representing its PALS-format name =#
+#= This maps types of `AbstractParams` to the symbol representing its PALS-format name =#
 const PARAMTYPES_TO_PALSNAMES_MAP = OrderedDict{Type{<:AbstractParams}, Symbol}(
     BMultipoleParams => :MagneticMultipoleP,
     ApertureParams => :ApertureP,
@@ -51,16 +51,16 @@ const PARAMTYPES_TO_PALSNAMES_MAP = OrderedDict{Type{<:AbstractParams}, Symbol}(
 )
 
 """
-Modifies [format_dict] to have a new entry which stores a dictionary whose keys are parameter
-names from [parameter_group] and whose values are the initialized values corresponding
+Modifies `format_dict` to have a new entry which stores a dictionary whose keys are parameter
+names from `parameter_group` and whose values are the initialized values corresponding
 to those parameter names.
 
-This function is used as a helper to [ scibmad_to_pals() ] to create the dictionaries
+This function is used as a helper to `scibmad_to_pals()` to create the dictionaries
 that store the fields and field values of a parameter group and populate the dictionaries
 associated with elements with them.
 
-- [format_dict] is the dictionary to be modified which represents the information about a line element.
-- [parameter_group] is an AbstractParams object containing the parameters to extract to [acc].
+- `format_dict` is the dictionary to be modified which represents the information about a line element.
+- `parameter_group` is an AbstractParams object containing the parameters to extract to `acc`.
 """
 function params_to_dict!(format_dict::OrderedDict, parameter_group::T) where {T<:AbstractParams}
     # The accumulator dictionary 
@@ -79,7 +79,7 @@ function params_to_dict!(format_dict::OrderedDict, parameter_group::T) where {T<
             # Get the value stored at that property
             parameter_value = getproperty(parameter_group, parameter_name)
 
-            # If it's a string, make it a symbol to remove quotation marks
+            # If it's a `String`, make it a `Symbol` to remove quotation marks
             if (typeof(parameter_value) == String)
                 parameter_value = Symbol(parameter_value)
             end
@@ -97,7 +97,7 @@ function params_to_dict!(format_dict::OrderedDict, parameter_group::BMultipolePa
     # The accumulator dictionary 
     acc = OrderedDict()
 
-    #= This code is from the override of [ show() ] in multipole.jl =#
+    #= This code is from the override of `show()` in multipole.jl =#
     for bm in parameter_group
         n = bm.n
         s = bm.s
@@ -115,59 +115,59 @@ function params_to_dict!(format_dict::OrderedDict, parameter_group::BMultipolePa
             acc[sym] = tilt
         end
     end
-    #= End code from the override of [ show() ] in multipole.jl =#
+    #= End code from the override of `show()` in multipole.jl =#
 
-    # Modify [format_dict]
+    # Modify `format_dict`
     format_dict[:MagneticMultipoleP] = acc
 end
 
 
 """
-Return a dictionary whose single key is [line_element]'s name, storing another dictionary
-whose keys are [line_element]'s fields. This is the format desired by PALS.
+Return a dictionary whose single key is `line_element`'s name, storing another dictionary
+whose keys are `line_element`'s fields. This is the format desired by PALS.
 
-This function is used as a helper to [ scibmad_to_pals() ] to create the entry for a single
+This function is used as a helper to `scibmad_to_pals()` to create the entry for a single
 accelerator element, along with all parameters assocaited with it.
 
-- [line_element] is the LineElement being formatted into PALS.
+- `line_element` is the LineElement being formatted into PALS.
 """
 function pals_format(line_element) 
     # The accumulator dictionary which will become the final return dictionary
     format_dict = OrderedDict()
 
     #=
-    Access [line_element]'s parameter groups.
-    Reminder: A LineElement's [pdict] is a dictionary mapping AbstractParams types to objects 
+    Access `line_element`'s parameter groups.
+    Reminder: A LineElement's `pdict` is a dictionary mapping AbstractParams types to objects 
     containing the initialized parameters of [line_element]
     =#
     parameter_groups = getfield(line_element, :pdict)
 
-    # Put UniversalParams first, if they exist
+    # Put `UniversalParams` first, if they exist
     if UniversalParams in keys(parameter_groups)
         #=
-        Special case: Universal Parameters contains basic information that's 
+        Special case: `Universal Parameters` contains basic information that's 
         not displayed inside of another dictionary, it should be at the "top level",
         so handle it here instead of in the helper.
         =#
         parameter_group = parameter_groups[UniversalParams]
         
-        # Extract [ kind ], if present
+        # Extract `kind`, if present
         if (hasproperty(parameter_group, :kind))
             format_dict[:kind] = Symbol(getproperty(parameter_group, :kind))
         end
 
-        # Replace [ L ] with [ length ], if it's present
+        # Replace `L` with `length`, if it's present
         if (hasproperty(parameter_group, :L))
             format_dict[:length] = getproperty(parameter_group, :L)
         end
 
-        # Put [ tracking_method ] inside of a [ SciBmad ] dictionary inside of [ TrackingP ]
+        # Put `tracking_method` inside of a "SciBmad" dictionary inside of `TrackingP`
         if (hasproperty(parameter_group, :tracking_method))
             tracking_method = getproperty(parameter_group, :tracking_method) # Get the tracking method
             tracking_method_type = typeof(tracking_method) # Get the type of the tracking method
 
             if (tracking_method_type != SciBmadStandard)
-                # If the tracking method is SciBMadStandard, don't display the [ TrackingP ] dictionary
+                # If the tracking method is `SciBMadStandard`, don't display the "TrackingP" dictionary
 
                 # Create a dictionary to store the tracking information, store the type of tracking method first
                 tracking_information = OrderedDict( 
@@ -179,7 +179,7 @@ function pals_format(line_element)
                     tracking_information[field_name] = Symbol(getfield(tracking_method, field_name))
                 end
 
-                # Put all the tracking information under the [ SciBmad ] dictionary
+                # Put all the tracking information under the `SciBmad` dictionary
                 format_dict[:TrackingP] = OrderedDict(
                     :SciBmad => tracking_information
                 )
@@ -190,55 +190,55 @@ function pals_format(line_element)
     end
 
     for parameter_group in values(parameter_groups)
-        # Loop through every parameter group [line_element] has
+        # Loop through every parameter group `line_element` has
 
         if (typeof(parameter_group) == UniversalParams)
             # These have already been handled, continue
             continue;
 
         elseif (typeof(parameter_group) == BeamlineParams)
-            # Special case: Beamline Parameters should be handled and grouped under TrackingP
-            # this was (should be) already handled in UniversalParams case
+            # Special case: Beamline Parameters should be handled and grouped under "TrackingP"
+            # this was (should be) already handled in `UniversalParams` case
 
             continue
         else
             # General case: Any other group of parameters
 
-            # Represent the parameter group as a dictionary and add it to [format_dict]
+            # Represent the parameter group as a dictionary and add it to `format_dict`
             params_to_dict!(format_dict, parameter_group)
 
         end
     end
     
-    # Move solenoid parameters to a new parameter group called SolenoidP
+    # Move solenoid parameters to a new parameter group called "SolenoidP"
     if (haskey(format_dict, :MagneticMultipoleP))
-        # If MagneticMultipoleP has been initialized
+        # If "MagneticMultipoleP" has been initialized
 
-        # Access the MagneticMultipoleP dictionary
+        # Access the "MagneticMultipoleP" dictionary
         magnet_dict = format_dict[:MagneticMultipoleP]
         if (haskey(magnet_dict, :Ksol))
-            # If the dictionary contains the parameter [ Ksol ]
+            # If the dictionary contains the parameter `Ksol`
 
-            # Create a new parameter dictionary in format_dict called [ SolenoidP ], containing [ Ksol ]
+            # Create a new parameter dictionary in format_dict called "SolenoidP", containing `Ksol`
             format_dict[:SolenoidP] = OrderedDict(
                 :Ksol => magnet_dict[:Ksol]
             )
 
-            # Remove [ Ksol ] from the [ MagneticMultipoleP ] dictionary
+            # Remove `Ksol` from the "MagneticMultipoleP" dictionary
             delete!(magnet_dict, :Ksol)
         elseif (haskey(magnet_dict, :Bsol))
-            # If the dictionary contains the parameter [ Bsol ]
+            # If the dictionary contains the parameter `Bsol`
 
-            # Create a new parameter dictionary in format_dict called [ SolenoidP ], containing [ Bsol ]
+            # Create a new parameter dictionary in format_dict called `SolenoidP`, containing "Bsol"
             format_dict[:SolenoidP] = OrderedDict(
                 :Bsol => magnet_dict[:Bsol]
             )
-            # Remove [ Bsol ] from the [ MagneticMultipoleP ] dictionary
+            # Remove `Bsol` from the "MagneticMultipoleP" dictionary
             delete!(magnet_dict, :Bsol)
         end
     end
 
-    # Remove any unpopulated elements from the format_dict before returning. 
+    # Remove any unpopulated elements from `format_dict` before returning. 
     for key in keys(format_dict)
         if (isdefault(key, format_dict[key]))
             # If this is an empty field or default value
@@ -253,25 +253,25 @@ end
 
 
 """
-Creates a YAML file named "[new_file_name].yaml" in PALS format representing [lattice]
+Creates a YAML file named "[new_file_name].yaml" in PALS format representing `lattice`
 
 This function is the main workhorse and purpose of this file, converting SciBmad-style
-[lattice] elements into PALS-style .yaml files to be used for other purposes.
+`lattice` elements into PALS-style .yaml files to be used for other purposes.
 
-- [lattice] is the SciBmad Lattice that will be turned into a PALS YAML file.
-- [new_file_name] is a String which COMES BEFORE ".pals.txt" that the resulting
+- `lattice` is the SciBmad `Lattice` that will be turned into a PALS YAML file.
+- `new_file_name` is a `String` which COMES BEFORE ".pals.txt" that the resulting
     file will be named.
 """
 function scibmad_to_pals(lattice::Lattice, new_file_name::String)
     # Wipe the placeholder number ref back to 1 to undo any previous changes
     PLACEHOLDER_NUM[] = 1
-
+    
     # Create a new PALS yaml file in write mode
     io = open(new_file_name * ".pals.yaml", "w")
 
     # If a key is in this set, then it's already been created
     created_elements = Set{Symbol}()
-    # created_branches = Set{Symbol}()  # Not needed until BeamLines have a [ name ]
+    # created_branches = Set{Symbol}()  # Not needed until BeamLines have a `name`
 
     # Create a list which represents the overall construction of the particle accelerator
     facility = []
@@ -281,61 +281,76 @@ function scibmad_to_pals(lattice::Lattice, new_file_name::String)
     line_counter = 1 # Counter used for naming BeamLines
 
     for beamline in lattice.beamlines
-        # For every branch (BeamLine) in the lattice...
+        # For every (branch :: `BeamLine`) in the lattice...
 
-        # Until beamlines get their own [ name ] field,
+        # Until beamlines get their own `name` field,
         # it may be confusing to see if they already exist
 
         line = [] # Accumulator for what's in a beamline
 
         for line_element in beamline.line
-            # For every element in [beamline]'s line...
+            # For every element in `beamline`'s line...
 
-            # Get the element's name
-            if (hasproperty(line_element, :name) && (!isempty(line_element.name)))
-                # If the [line_element] has a [name] property, then use it as the name
-                name = Symbol(line_element.name)
+            if (typeof(line_element) == Beamline)
+                # If this is a `Beamline`
+
+                # Check if this beamline has already been created
+                if (!hasproperty(line_element, :name) || !(Symbol(line_element.name) in created_elements)) 
+                    error("A beamline must be initialized before it can be put inside another beamline")
+                end
+
+                # Add this beamline to the larger beamline
+                push!(line, Symbol(line_element.name))
             else
-                # If the [line_element] does not have a [name] property, then
-                # make its name "__unnamed__N", where N is the next unnused placeholder number
-                name = Symbol(string("__unnamed__", PLACEHOLDER_NUM[]))
+                # If this is not a Beamline
 
-                # Set the property of this element to the unnamed placeholder so that
-                # duplicates are properly handled
-                line_element.name = String(name)
+                # Get the element's name
+                if (hasproperty(line_element, :name) && (!isempty(line_element.name)))
+                    # If the [line_element] has a [name] property, then use it as the name
+                    name = Symbol(line_element.name)
+                else
+                    # If the [line_element] does not have a [name] property, then
+                    # make its name "__unnamed__N", where N is the next unnused placeholder number
+                    name = Symbol(string("__unnamed__", PLACEHOLDER_NUM[]))
 
-                # Increase the placeholder number by 1
-                PLACEHOLDER_NUM[] += 1
-            end
+                    # Set the property of this element to the unnamed placeholder so that
+                    # duplicates are properly handled
+                    line_element.name = String(name)
 
-            # Add the element's name to the beamline
-            push!(line, name)
+                    # Increase the placeholder number by 1
+                    PLACEHOLDER_NUM[] += 1
+                end
 
-            # Check to see if the element already exists
-            if (!(name in created_elements))
-                # If this line element has not already been created...
+                # Add the element's name to the beamline
+                push!(line, name)
 
-                # Push the line element onto [facility]
-                push!(facility, pals_format(line_element))
+                # Check to see if the element already exists
+                if (!(name in created_elements))
+                    # If this line element has not already been created...
 
-                # Push the line element's name onto the set of unique elements
-                push!(created_elements, name)
+                    # Push the line element onto [facility]
+                    push!(facility, pals_format(line_element))
+
+                    # Push the line element's name onto the set of unique elements
+                    push!(created_elements, name)
+                end
             end
         end
 
         # Name beamlines using default-namer (for now), increment the counter
         # for the namer, and push the beamline onto [ facility ]
-        beamline_name = string("beamline", line_counter)
-        push!(branches, Symbol(beamline_name))
+        beamline_name = Symbol(string("beamline", line_counter))
+        push!(branches, beamline_name)
         line_counter += 1
         push!(facility, 
             OrderedDict(
-                Symbol(beamline_name) => OrderedDict(
+                beamline_name => OrderedDict(
                     :kind => :Beamline,
                     :line => line
                 )
             )
         )
+        push!(created_elements, beamline_name)
     end
     # Push the lattice entry onto [ facility ]
     push!(facility, 
@@ -369,9 +384,7 @@ function scibmad_to_pals(lattice::Lattice, new_file_name::String)
     close(io)
 end
 
-#= TODO Email Matt, CC David and Joe =#
 #= TODO Handle Nested Beamlines =#
 #= TODO Deferred Expression =#
-#= TODO Put `Ksol` elements inside of `SolenoidP` instead of `MagneticMultipoleP`? =#
 
 # Create multiple dispatch clone for handling just a BeamLine instead of a Lattice?
