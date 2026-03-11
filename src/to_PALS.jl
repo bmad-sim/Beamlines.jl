@@ -294,6 +294,8 @@ function scibmad_to_pals(lattice::Lattice, new_file_name::String)
             if (typeof(line_element) == Beamline)
                 # If this is a `Beamline`
 
+                error("`scibmad_to_pals()` does not support beamlines inside of beamlines yet.")
+
                 # Check if this beamline has already been created
                 if (!hasproperty(line_element, :name) || !(Symbol(line_element.name) in created_elements)) 
                     error("A beamline must be initialized before it can be put inside another beamline")
