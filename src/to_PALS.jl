@@ -131,7 +131,7 @@ accelerator element, along with all parameters assocaited with it.
 
 - `line_element` is the LineElement being formatted into PALS.
 """
-function pals_format(line_element) 
+function pals_format(line_element::LineElement) 
     # The accumulator dictionary which will become the final return dictionary
     format_dict = OrderedDict()
 
@@ -308,10 +308,10 @@ function scibmad_to_pals(lattice::Lattice, new_file_name::String)
 
                 # Get the element's name
                 if (hasproperty(line_element, :name) && (!isempty(line_element.name)))
-                    # If the [line_element] has a [name] property, then use it as the name
+                    # If the `line_element` has a `name` property, then use it as the name
                     name = Symbol(line_element.name)
                 else
-                    # If the [line_element] does not have a [name] property, then
+                    # If the `line_element` does not have a `name` property, then
                     # make its name "__unnamed__N", where N is the next unnused placeholder number
                     name = Symbol(string("__unnamed__", PLACEHOLDER_NUM[]))
 
@@ -354,7 +354,7 @@ function scibmad_to_pals(lattice::Lattice, new_file_name::String)
         )
         push!(created_elements, beamline_name)
     end
-    # Push the lattice entry onto [ facility ]
+    # Push the `lattice` entry onto `facility`
     push!(facility, 
         OrderedDict(
             :lattice => OrderedDict(
@@ -363,10 +363,10 @@ function scibmad_to_pals(lattice::Lattice, new_file_name::String)
             )
         )
     )
-    # Push the lattice on as the last element of the PALS file being "used"
+    # Push `lattice` on as the last element of the PALS file being "used"
     push!(facility, OrderedDict(:use => :lattice))
 
-    # Encase [facility] in the proper PALS formatting
+    # Encase `facility`` in the proper PALS formatting
     data_to_write = OrderedDict(
         :PALS => OrderedDict(
             :version => :null, # Update with version
@@ -389,4 +389,4 @@ end
 #= TODO Handle Nested Beamlines =#
 #= TODO Deferred Expression =#
 
-# Create multiple dispatch clone for handling just a BeamLine instead of a Lattice?
+# Create multiple dispatch clone for handling just a `BeamLine` instead of a `Lattice`?
