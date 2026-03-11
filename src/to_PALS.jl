@@ -50,6 +50,7 @@ function isdefault(field, value)
     return false
 end
 
+
 """
 Modifies `format_dict` to have a new entry which stores a dictionary whose keys are parameter
 names from `parameter_group` and whose values are the initialized values corresponding
@@ -90,7 +91,6 @@ function params_to_dict!(format_dict::OrderedDict, parameter_group::T) where {T<
 
     format_dict[PARAMTYPES_TO_PALSNAMES_MAP[parameter_type]] = acc
 end
-
 
 # Handle BMultipoleParams
 function params_to_dict!(format_dict::OrderedDict, parameter_group::BMultipoleParams) 
