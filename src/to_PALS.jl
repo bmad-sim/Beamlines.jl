@@ -8,9 +8,9 @@ Returns true if `value` is the default value that `field` can represent.
 This function is used as a helper function for `scibmad_to_pals()` to 
 cut out elements that store no information (besides default values).
 
-Dictionaries' default value is {}
-Vectors' default value is []
-Symbols' default value is Symbol("")
+`Dict`s' default value is {}
+`Vector`s' default value is []
+`Symbol`s' default value is Symbol("")
 
 - `field` is a `Symbol` representing the name of a parameter.
 - `value` is the value stored at `field`
