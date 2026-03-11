@@ -15,6 +15,7 @@ Symbols' default value is Symbol("")
 - `field` is a `Symbol` representing the name of a parameter.
 - `value` is the value stored at `field`
 """
+
 function isdefault(field, value)
     # If more defaults need to be accounted for, this may be expanded.
 
@@ -265,7 +266,7 @@ This function is the main workhorse and purpose of this file, converting SciBmad
 function scibmad_to_pals(lattice::Lattice, new_file_name::String)
     # Wipe the placeholder number ref back to 1 to undo any previous changes
     PLACEHOLDER_NUM[] = 1
-    
+
     # Create a new PALS yaml file in write mode
     io = open(new_file_name * ".pals.yaml", "w")
 
