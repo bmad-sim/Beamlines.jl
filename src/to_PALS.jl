@@ -14,7 +14,8 @@ const PARAMTYPES_TO_PALSNAMES_MAP = OrderedDict{Type{<:AbstractParams}, Symbol}(
 )
 
 """
-Returns true if `value` is the default value that `field` can represent.
+Returns `true` if `value` is the default value that `field` can represent.
+Returns `false` otherwise.
 
 This function is used as a helper function for `scibmad_to_pals()` to 
 cut out elements that store no information (besides default values).
