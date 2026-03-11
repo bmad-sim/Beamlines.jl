@@ -15,7 +15,6 @@ cut out elements that store no information (besides default values).
 - `field` is a `Symbol` representing the name of a parameter.
 - `value` is the value stored at `field`
 """
-
 function isdefault(field, value)
     # If more defaults need to be accounted for, this may be expanded.
 
