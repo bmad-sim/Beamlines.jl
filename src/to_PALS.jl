@@ -144,7 +144,7 @@ This function is used as a helper to `scibmad_to_pals()` to create the entry for
 accelerator element, along with all parameters associated with it.
 
 ## Arguments
-    - `line_element`    -- The `LineElement` being formatted into PALS.
+- `line_element`    -- The `LineElement` being formatted into PALS.
 """
 function pals_format(line_element::LineElement) 
     # The accumulator dictionary which will become the final return dictionary
