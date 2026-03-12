@@ -130,7 +130,7 @@ whose keys are `line_element`'s fields. This is the format desired by PALS.
 This function is used as a helper to `scibmad_to_pals()` to create the entry for a single
 accelerator element, along with all parameters assocaited with it.
 
-- Argument: `line_element` is the LineElement being formatted into PALS.
+- Argument: `line_element` is the `LineElement` being formatted into PALS.
 """
 function pals_format(line_element::LineElement) 
     # The accumulator dictionary which will become the final return dictionary
@@ -138,15 +138,15 @@ function pals_format(line_element::LineElement)
 
     #=
     Access `line_element`'s parameter groups.
-    Reminder: A LineElement's `pdict` is a dictionary mapping AbstractParams types to objects 
-    containing the initialized parameters of [line_element]
+    Reminder: A `LineElement`'s `pdict` is a dictionary mapping AbstractParams types to objects 
+    containing the initialized parameters of `line_element``
     =#
     parameter_groups = getfield(line_element, :pdict)
 
     # Put `UniversalParams` first, if they exist
     if UniversalParams in keys(parameter_groups)
         #=
-        Special case: `Universal Parameters` contains basic information that's 
+        Special case: `UniversalParams` contains basic information that's 
         not displayed inside of another dictionary, it should be at the "top level",
         so handle it here instead of in the helper.
         =#
@@ -162,7 +162,7 @@ function pals_format(line_element::LineElement)
             format_dict[:length] = getproperty(parameter_group, :L)
         end
 
-        # Put `tracking_method` inside of a "SciBmad" dictionary inside of `TrackingP`
+        # Put `tracking_method` inside of a "SciBmad" dictionary inside of "TrackingP"
         if (hasproperty(parameter_group, :tracking_method))
             tracking_method = getproperty(parameter_group, :tracking_method) # Get the tracking method
             tracking_method_type = typeof(tracking_method) # Get the type of the tracking method
