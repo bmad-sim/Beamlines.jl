@@ -334,7 +334,7 @@ function scibmad_to_pals(lattice::Lattice, new_file_name::String)
                 if (!(name in created_elements))
                     # If this line element has not already been created...
 
-                    # Push the line element onto [facility]
+                    # Push the line element onto `facility`
                     push!(facility, pals_format(line_element))
 
                     # Push the line element's name onto the set of unique elements
