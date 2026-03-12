@@ -341,7 +341,7 @@ function scibmad_to_pals(lattice::Lattice, new_file_name::String)
         end
 
         # Name beamlines using default-namer (for now), increment the counter
-        # for the namer, and push the beamline onto [ facility ]
+        # for the namer, and push the beamline onto `facility`
         beamline_name = Symbol(string("beamline", line_counter))
         push!(branches, beamline_name)
         line_counter += 1
