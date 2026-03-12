@@ -370,7 +370,7 @@ function scibmad_to_pals(lattice::Lattice, new_file_name::String)
     # Push `lattice` on as the last element of the PALS file being "used"
     push!(facility, OrderedDict(:use => :lattice))
 
-    # Encase `facility`` in the proper PALS formatting
+    # Encase `facility` in the proper PALS formatting
     data_to_write = OrderedDict(
         :PALS => OrderedDict(
             :version => :null, # Update with version
