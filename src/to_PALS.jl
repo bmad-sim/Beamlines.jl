@@ -264,7 +264,7 @@ This function is the main workhorse and purpose of this file, converting SciBmad
 
 ## Arguments
     - `lattice`         -- The SciBmad `Lattice` that will be turned into a PALS YAML file.
-    - `new_file_name`   -- A `String` which COMES BEFORE ".pals.txt" that the resulting file will be named.
+    - `new_file_name`   -- A `String` which COMES BEFORE ".pals.yaml" that the resulting file will be named.
 """
 function scibmad_to_pals(lattice::Lattice, new_file_name::String)
     # Wipe the placeholder number ref back to 1 to undo any previous changes
@@ -307,7 +307,7 @@ function scibmad_to_pals(lattice::Lattice, new_file_name::String)
 
                 # Add this beamline to the larger beamline
                 push!(line, Symbol(line_element.name))
-                
+
             else
                 # If this is not a Beamline
 
