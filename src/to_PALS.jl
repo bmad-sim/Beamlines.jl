@@ -14,6 +14,8 @@ const PARAMTYPES_TO_PALSNAMES_MAP = OrderedDict{Type{<:AbstractParams}, Symbol}(
 )
 
 """
+    Internal: isdefault(field::Symbol, value)
+
 Returns `true` if `value` is the default value that `field` can represent.
 Returns `false` otherwise.
 
@@ -25,10 +27,10 @@ cut out elements that store no information (besides default values).
 `Symbol`s' default value is Symbol("")
 
 ## Arguments
-    - `field`   -- A `Symbol` representing the name of a parameter.
-    - `value`   -- The value stored at `field`
+- `field`   -- A `Symbol` representing the name of a parameter.
+- `value`   -- The value stored at `field`
 """
-function isdefault(field, value)
+function isdefault(field::Symbol, value)
     # If more defaults need to be accounted for, this may be expanded.
 
     # `field` is an argument so that way defaults that may be unique
@@ -54,6 +56,8 @@ end
 
 
 """
+    Internal: params_to_dict!(format_dict::OrderedDict, parameter_group::T) where {T<:AbstractParams}
+
 Modifies `format_dict` to have a new entry which stores a dictionary whose keys are parameter
 names from `parameter_group` and whose values are the initialized values corresponding
 to those parameter names.
@@ -63,8 +67,8 @@ that store the fields and field values of a parameter group and populate the dic
 associated with elements with them.
 
 ## Arguments
-    - `format_dict`     -- The dictionary to be modified which represents the information about a line element.
-    - `parameter_group` -- An AbstractParams object containing the parameters to extract to `acc`.
+- `format_dict`     -- The dictionary to be modified which represents the information about a line element.
+- `parameter_group` -- An AbstractParams object containing the parameters to extract to `acc`.
 """
 function params_to_dict!(format_dict::OrderedDict, parameter_group::T) where {T<:AbstractParams}
     # The accumulator dictionary 
@@ -126,6 +130,8 @@ end
 
 
 """
+    Internal: pals_format(line_element::LineElement) 
+
 Return a dictionary whose single key is `line_element`'s name, storing another dictionary
 whose keys are `line_element`'s fields. This is the format desired by PALS.
 
@@ -257,14 +263,16 @@ end
 
 
 """
+    Internal: scibmad_to_pals(lattice::Lattice, new_file_name::String)
+
 Creates a YAML file named "[new_file_name].yaml" in PALS format representing `lattice`
 
 This function is the main workhorse and purpose of this file, converting SciBmad-style
 `lattice` elements into PALS-style .yaml files to be used for other purposes.
 
 ## Arguments
-    - `lattice`         -- The SciBmad `Lattice` that will be turned into a PALS YAML file.
-    - `new_file_name`   -- A `String` which COMES BEFORE ".pals.yaml" that the resulting file will be named.
+- `lattice`         -- The SciBmad `Lattice` that will be turned into a PALS YAML file.
+- `new_file_name`   -- A `String` which COMES BEFORE ".pals.yaml" that the resulting file will be named.
 """
 function scibmad_to_pals(lattice::Lattice, new_file_name::String)
     # Wipe the placeholder number ref back to 1 to undo any previous changes
