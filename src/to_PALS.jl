@@ -136,7 +136,7 @@ Return a dictionary whose single key is `line_element`'s name, storing another d
 whose keys are `line_element`'s fields. This is the format desired by PALS.
 
 This function is used as a helper to `scibmad_to_pals()` to create the entry for a single
-accelerator element, along with all parameters assocaited with it.
+accelerator element, along with all parameters associated with it.
 
 ## Arguments
     - `line_element`    -- The `LineElement` being formatted into PALS.
