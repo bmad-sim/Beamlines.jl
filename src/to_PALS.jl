@@ -267,7 +267,7 @@ end
 
 Creates a YAML file named "[new_file_name].yaml" in PALS format representing `lattice`
 
-This function converts SciBmad style `lattice` elements into PALS-formatted YAML files.
+This function converts SciBmad style `Lattice` elements into PALS-formatted YAML files.
 
 ## Arguments
 - `lattice`         -- The SciBmad `Lattice` that will be turned into a PALS YAML file.
