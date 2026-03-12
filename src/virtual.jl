@@ -32,8 +32,12 @@ end
 
 function _get_BM_strength(ele, b::BMultipoleParams, key)
   normal, order, normalized, integrated = BMULTIPOLE_STRENGTH_MAP[key]
-  if isnothing(b) || !(order in b.order)
-    error("Unable to get property $key from $b::$(typeof(b))")
+  if isnothing(b) || !(order in b.order) # Default
+    if !isnothing(b)
+      return zero(first(b.n))
+    else
+      return 0f0
+    end
   end
   i = o2i(b,order)
   strength = deval(normal ? b.n[i] : b.s[i])
