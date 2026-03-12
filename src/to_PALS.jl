@@ -141,8 +141,8 @@ function pals_format(line_element::LineElement)
 
     #=
     Access `line_element`'s parameter groups.
-    Reminder: A `LineElement`'s `pdict` is a dictionary mapping AbstractParams types to objects 
-    containing the initialized parameters of `line_element``
+    Reminder: A `LineElement`'s `pdict` is a dictionary mapping `AbstractParams` types to objects 
+    containing the initialized parameters of `line_element`
     =#
     parameter_groups = getfield(line_element, :pdict)
 
