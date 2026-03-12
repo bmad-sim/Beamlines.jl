@@ -3,7 +3,7 @@
 const PLACEHOLDER_NUM = Ref(1)
 
 # This maps types of `AbstractParams` to the symbol representing its PALS-format name
-const PARAMTYPES_TO_PALSNAMES_MAP = OrderedDict{Type{<:AbstractParams}, Symbol}(
+const PARAMTYPES_TO_PALSNAMES_MAP = Dict{Type{<:AbstractParams}, Symbol}(
     BMultipoleParams => :MagneticMultipoleP,
     ApertureParams => :ApertureP,
     MetaParams => :MetaP,
@@ -12,6 +12,11 @@ const PARAMTYPES_TO_PALSNAMES_MAP = OrderedDict{Type{<:AbstractParams}, Symbol}(
     RFParams => :RFP,
     PatchParams => :PatchP
 )
+
+#= TODO =#
+# This maps symbols of names of fields to values, representing the 
+# default value in PALS of that field.
+const DEFAULT_VALUES_MAP = Dict{Symbol, Any}()
 
 """
     Internal: isdefault(field::Symbol, value)
