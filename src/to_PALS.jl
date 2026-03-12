@@ -22,8 +22,8 @@ Returns `false` otherwise.
 This function is used as a helper function for `scibmad_to_pals()` to 
 cut out elements that store no information (besides default values).
 
-`Dict`s' default value is {}
-`Vector`s' default value is []
+`Dict`s' default value is {},
+`Vector`s' default value is [],
 `Symbol`s' default value is Symbol("")
 
 ## Arguments
