@@ -68,7 +68,7 @@ associated with elements with them.
 
 ## Arguments
 - `format_dict`     -- The dictionary to be modified which represents the information about a line element.
-- `parameter_group` -- An AbstractParams object containing the parameters to extract to `acc`.
+- `parameter_group` -- An `AbstractParams`` object containing the parameters to extract to `acc`.
 """
 function params_to_dict!(format_dict::OrderedDict, parameter_group::T) where {T<:AbstractParams}
     # The accumulator dictionary 
