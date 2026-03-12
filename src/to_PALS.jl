@@ -198,19 +198,18 @@ function pals_format(line_element::LineElement)
 
         if (typeof(parameter_group) == UniversalParams)
             # These have already been handled, continue
-            continue;
+            continue
 
         elseif (typeof(parameter_group) == BeamlineParams)
             # Special case: Beamline Parameters should be handled and grouped under "TrackingP"
             # this was (should be) already handled in `UniversalParams` case
-
             continue
+
         else
             # General case: Any other group of parameters
 
             # Represent the parameter group as a dictionary and add it to `format_dict`
             params_to_dict!(format_dict, parameter_group)
-
         end
     end
     
@@ -230,6 +229,7 @@ function pals_format(line_element::LineElement)
 
             # Remove `Ksol` from the "MagneticMultipoleP" dictionary
             delete!(magnet_dict, :Ksol)
+
         elseif (haskey(magnet_dict, :Bsol))
             # If the dictionary contains the parameter `Bsol`
 
@@ -307,6 +307,7 @@ function scibmad_to_pals(lattice::Lattice, new_file_name::String)
 
                 # Add this beamline to the larger beamline
                 push!(line, Symbol(line_element.name))
+                
             else
                 # If this is not a Beamline
 
