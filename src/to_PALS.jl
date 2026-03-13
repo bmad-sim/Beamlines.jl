@@ -14,9 +14,62 @@ const PARAMTYPES_TO_PALSNAMES_MAP = Dict{Type{<:AbstractParams}, Symbol}(
 )
 
 #= TODO =#
-# This maps symbols of names of fields to values, representing the 
-# default value in PALS of that field.
-const DEFAULT_VALUES_MAP = Dict{Symbol, Any}()
+#= 
+This maps symbols of names of parameter names as they appear in 
+SciBmad to the symbol of the name in PALS. If a SciBmad parameter
+name isn't in this dictionary, it means that its name in PALS
+is the same (or this needs to be updated). Symbols that map to
+symbols that have "SciBmad" at the beginning indicate parameters
+in SciBmad that don't have an equivalent in PALS.
+=#
+const SCIBMAD_NAME_TO_PALS_NAME_MAP = Dict{Symbol, Symbol}(
+    # PatchP...
+    :dx => :x_offset,
+    :dy => :y_offset,
+    :dz => :z_offset,
+    :dx_rot => :x_rot,
+    :dy_rot => :y_rot,
+    :dz_rot => :z_rot,
+    :dt => :SciBmad_dt,     # *
+    # ApertureP...
+    :x1_limit => :x_min,
+    :x2_limit => :x_max,
+    :y1_limit => :y_min,
+    :y2_limit => :y_max,
+    :aperture_shape => :shape,
+    :aperture_at => :location,
+    # RFP...
+    :harmon_master => :harmon,
+    :traveling_wave => :SciBmad_traveling_wave,     # *
+    :is_crabcavity => :SciBmad_is_crabcavity,   # *
+    # (MapParams) [No PALS group]
+    :transport_map => :SciBmad_transport_map,   # *
+    :transport_map_params => :SciBmad_transport_map_params,     # *
+    # (FourPotentialParams) [No PALS group]
+    :four_potential => :SciBmad_four_potential,     # *
+)
+
+#= TODO =#
+#= 
+This maps symbols of names of fields to values, representing the 
+default value in PALS of that field, storing defaults that are
+"abnormal" for their type, like nonzero values for numeric parameters.
+=#
+const ABNORMAL_DEFAULT_VALUES_MAP = Dict{Symbol, Any}(
+    # PatchP...
+    :flexible => false
+    # RFP...
+    :cavity_type => :STANDING_WAVE
+    :n_cell => 1
+    :zero_phase => :ACCELERATING
+    # ApertureP... (some elements have mismatched names between SciBmad and PALS)
+    :x1_limit => :null 
+    :x2_limit => :null
+    :y1_limit => :null 
+    :y2_limit => :null 
+    :aperture_shape => ""
+    :aperture_at => :ENTRANCE_END
+)
 
 """
     Internal: isdefault(field::Symbol, value)
@@ -86,6 +139,11 @@ function params_to_dict!(format_dict::OrderedDict, parameter_group::T) where {T<
             if haskey(PROPERTIES_MAP, parameter_name)
                 parameter_type = PROPERTIES_MAP[parameter_name]
             end
+        end
+
+        if (haskey(SCIBMAD_NAME_TO_PALS_NAME_MAP, parameter_name))
+            # Convert the SciBmad parameter name to the equivalent PALS name
+            parameter_name = SCIBMAD_NAME_TO_PALS_NAME_MAP[parameter_name]
         end
 
         if (hasproperty(parameter_group, parameter_name))
