@@ -110,6 +110,7 @@ using ForwardDiff, GTPSA, ReverseDiff
     @test ele.BMultipoleParams.normalized[1]
     @test ele.BMultipoleParams.order[1] == 2
     @test ele.BMultipoleParams[2] == BMultipole(0.36,0.,0.,2,true,false)
+    @test ele.Kn2 == 0 # Default value
     @test_throws ErrorException ele.BMultipoleParams[3]
     
     ele.L = 2.0
