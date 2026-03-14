@@ -24,15 +24,16 @@ ele.BMultipoleParams        # Goes to InheritParams to get parent
 
 function get_BM_strength(ele::LineElement, key::Symbol)
   b = ele.BMultipoleParams
+  if isnothing(b)
+    return 0f0
+  end
   return @noinline _get_BM_strength(ele, b, key)
 end
 
 function _get_BM_strength(ele, b::BMultipoleParams, key)
   normal, order, normalized, integrated = BMULTIPOLE_STRENGTH_MAP[key]
   # Default
-  if isnothing(b)
-    return 0f0
-  elseif !(order in b.order)
+  if !(order in b.order)
     return zero(first(b.n))
   end
   i = o2i(b,order)
