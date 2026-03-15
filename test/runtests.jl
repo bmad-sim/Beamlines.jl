@@ -3,7 +3,6 @@ using Beamlines: isactive
 using Test
 using ForwardDiff, GTPSA, ReverseDiff
 using YAML
-using Revise
 
 @testset "Beamlines.jl" begin
     L = 5.0f0
