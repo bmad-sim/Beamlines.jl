@@ -2,6 +2,7 @@
 # number to be assigned to unnamed elements
 const PLACEHOLDER_NUM = Ref(1)
 
+
 # This maps types of `AbstractParams` to the symbol representing its PALS-format name
 const PARAMTYPES_TO_PALSNAMES_MAP = Dict{Type{<:AbstractParams}, Symbol}(
     BMultipoleParams => :MagneticMultipoleP,
@@ -13,7 +14,7 @@ const PARAMTYPES_TO_PALSNAMES_MAP = Dict{Type{<:AbstractParams}, Symbol}(
     PatchParams => :PatchP
 )
 
-#= TODO =#
+
 #= 
 This maps symbols of names of parameter names as they appear in 
 SciBmad to the symbol of the name in PALS. If a SciBmad parameter
@@ -49,26 +50,22 @@ const SCIBMAD_NAME_TO_PALS_NAME_MAP = Dict{Symbol, Symbol}(
     :four_potential => :SciBmad_four_potential,     # *
 )
 
-#= TODO =#
+
 #= 
 This maps symbols of names of fields to values, representing the 
 default value in PALS of that field, storing defaults that are
 "abnormal" for their type, like nonzero values for numeric parameters.
 =#
 const ABNORMAL_DEFAULT_VALUES_MAP = Dict{Symbol, Any}(
-    # PatchP...
-    :flexible => false
     # RFP...
-    :cavity_type => :STANDING_WAVE
-    :n_cell => 1
-    :zero_phase => :ACCELERATING
-    # ApertureP... (some elements have mismatched names between SciBmad and PALS)
-    :x1_limit => :null 
-    :x2_limit => :null
-    :y1_limit => :null 
-    :y2_limit => :null 
-    :aperture_shape => ""
-    :aperture_at => :ENTRANCE_END
+    :zero_phase => "ACCELERATING",
+    # ApertureP... 
+    :x1_limit => "null",
+    :x2_limit => "null",
+    :y1_limit => "null",
+    :y2_limit => "null",
+    :aperture_shape => "",
+    :aperture_at => "ENTRANCE_END"
 )
 
 """
@@ -78,34 +75,40 @@ Returns `true` if `value` is the default value that `field` can represent.
 Returns `false` otherwise.
 
 This function is used as a helper function for `scibmad_to_pals()` to 
-cut out elements that store no information (besides default values).
-
-`Dict`s' default value is {},
-`Vector`s' default value is [],
-`Symbol`s' default value is Symbol("")
+cut out elements that store no information or default values.
 
 ## Arguments
 - `field`   -- A `Symbol` representing the name of a parameter.
 - `value`   -- The value stored at `field`
 """
 function isdefault(field::Symbol, value)
-    # If more defaults need to be accounted for, this may be expanded.
-
-    # `field` is an argument so that way defaults that may be unique
-    # to the information of a specific field can be accounted for.
     value_type = typeof(value)
 
-    if (value_type <: OrderedDict)
-        # A default dictionary is empty, regardless of its `field`
+    if (haskey(ABNORMAL_DEFAULT_VALUES_MAP, field))
+        # If `field` has an abnormal default value, return true if `value` equals it
+
+        return (ABNORMAL_DEFAULT_VALUES_MAP[field] == value)
+
+    elseif (value_type <: OrderedDict)
+        # A default `Dict` is empty
+        return isempty(value)
+
+    elseif (value_type <: Number)
+        # A default `Number` is 0
+        return (0.0 == value)
+
+    elseif (value_type == Symbol)
+        # A default `Symbol` is the empty symbol
+        return value === Symbol("")
+
+    elseif (value_type == String)
+        # A default `String` is the empty string
         return isempty(value)
 
     elseif (value_type <: Vector)
-        # A default vector is empty, regardless of its `field`
+        # A default `Vector` is empty
         return isempty(value)
 
-    elseif (value_type == Symbol)
-        # Any symbol's default value is the empty symbol, regardless of its `field`
-        return value === Symbol("")
     end
 
     # If nothing above has been satisfied, it's not a default value
@@ -141,25 +144,32 @@ function params_to_dict!(format_dict::OrderedDict, parameter_group::T) where {T<
             end
         end
 
-        if (haskey(SCIBMAD_NAME_TO_PALS_NAME_MAP, parameter_name))
-            # Convert the SciBmad parameter name to the equivalent PALS name
-            parameter_name = SCIBMAD_NAME_TO_PALS_NAME_MAP[parameter_name]
-        end
-
         if (hasproperty(parameter_group, parameter_name))
             # Get the value stored at that property
             parameter_value = getproperty(parameter_group, parameter_name)
 
-            # If it's a `String`, make it a `Symbol` to remove quotation marks
-            if (typeof(parameter_value) == String)
-                parameter_value = Symbol(parameter_value)
-            end
+            if (!isdefault(parameter_name, parameter_value))
+                # If this parameter is not its default value, represent it
 
-            acc[parameter_name] = parameter_value
+                # If it's a `String`, make it a `Symbol` to remove quotation marks
+                if (typeof(parameter_value) == String)
+                    parameter_value = Symbol(parameter_value)
+                end
+
+                if (haskey(SCIBMAD_NAME_TO_PALS_NAME_MAP, parameter_name))
+                    # Convert the SciBmad parameter name to the equivalent PALS name
+                    parameter_name = SCIBMAD_NAME_TO_PALS_NAME_MAP[parameter_name]
+                end
+
+                acc[parameter_name] = parameter_value
+            end
         end
     end
 
-    format_dict[PARAMTYPES_TO_PALSNAMES_MAP[parameter_type]] = acc
+    if (!isdefault(Symbol(""), acc))
+        # If acc is not an empty dictionary, add it to `format_dict`
+        format_dict[PARAMTYPES_TO_PALSNAMES_MAP[parameter_type]] = acc
+    end
 end
 
 # Handle BMultipoleParams
@@ -188,7 +198,10 @@ function params_to_dict!(format_dict::OrderedDict, parameter_group::BMultipolePa
     #= End code from the override of `show()` in multipole.jl =#
 
     # Modify `format_dict`
-    format_dict[:MagneticMultipoleP] = acc
+    if (!isdefault(Symbol(""), acc))
+        # If acc is not an empty dictionary, add it to `format_dict`
+        format_dict[:MagneticMultipoleP] = acc
+    end
 end
 
 

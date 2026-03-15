@@ -21,11 +21,8 @@ PALS:
           Kn0: 0.0041897690181481
         BendP:
           g_ref: 0.0041897690181481
-          tilt_ref: 0.0
           e1: 0.006295379021
           e2: 0.006295379021
-          edge1_int: 0.0
-          edge2_int: 0.0
     - quadrupole:
         kind: Quadrupole
         length: 3.0
@@ -52,7 +49,6 @@ PALS:
           Kn4: 4.4353
     - marker:
         kind: Marker
-        length: 0.0
     - kicker:
         kind: HKicker
         length: 8.0
@@ -63,24 +59,14 @@ PALS:
         kind: CrabCavity
         length: 10.0
         RFP:
-          rate: 0.0
-          voltage: 0.0
-          phi0: 0.0
-          harmon_master: false
           zero_phase: Accelerating
-          traveling_wave: false
-          is_crabcavity: true
+          SciBmad_is_crabcavity: true
     - patch:
         kind: Patch
         length: 11.0
         PatchP:
-          dt: 1.0
-          dx: 0.0
-          dy: 0.0
-          dz: 0.0
-          dx_rot: 0.0988312
-          dy_rot: 0.0
-          dz_rot: 0.0
+          SciBmad_dt: 1.0
+          x_rot: 0.0988312
     - beamline1:
         kind: Beamline
         line:

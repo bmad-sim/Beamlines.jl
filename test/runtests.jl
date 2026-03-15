@@ -3,6 +3,7 @@ using Beamlines: isactive
 using Test
 using ForwardDiff, GTPSA, ReverseDiff
 using YAML
+using Revise
 
 @testset "Beamlines.jl" begin
     L = 5.0f0
@@ -1397,21 +1398,21 @@ end
 
     #= ------------------------------------ =#
     # Test a FODO cell without names
-    
+
     drift1 = Drift( L = 0.25 )
-    quad1 = Quadrupole( L = 1.0, Bn1 = 1.0)
+    quad1 = Quadrupole( L = 1.0, Bn1 = 1.0 )
     drift2 = Drift( L = 0.5)
-    quad2 = Quadrupole( L = 1.0, Bn1 = -1.0)
-    fodo_cell = Beamline( [drift1, quad1, drift2, quad2, drift1])
+    quad2 = Quadrupole( L = 1.0, Bn1 = -1.0 )
+    fodo_cell = Beamline( [drift1, quad1, drift2, quad2, drift1] )
     fodo_lattice = Lattice( [fodo_cell] )
 
     # Create the test file
     Beamlines.scibmad_to_pals(fodo_lattice, "test_unnamed_fodo_cell")
-    
+
     # Load the test file and the expected file 
     expected_file = YAML.load_file("test_unnamed_fodo_cell_expected.pals.yaml")
     test_file = YAML.load_file("test_unnamed_fodo_cell.pals.yaml")
-    
+
     # Check if the created file exists
     @test isfile("test_unnamed_fodo_cell.pals.yaml")
     # Check if the created file matches the expected
@@ -1500,6 +1501,48 @@ end
     @test isfile("test_custom_tracking.pals.yaml")
     # Check if the created file matches the expected
     @test test_file == expected_file
+
+
+    #= ------------------------------------ =#
+    # Test not representing default values 
+
+    @elements drift_a = Drift( L = 0.25 )
+    @elements quad_a = Quadrupole( L = 1.0, Bn1 = 0.0)
+    @elements sbend_a = SBend(L = 2.0, g = 0.0, e1 = 0.0, e2 = 0.0)
+    @elements beamline = Beamline( [drift_a, quad_a, sbend_a])
+    @elements fodo_lattice = Lattice( [beamline] )
+
+    # Create the test file
+    Beamlines.scibmad_to_pals(fodo_lattice, "test_default_values")
+
+    # Load the test file and the expected file 
+    expected_file = YAML.load_file("test_default_values_expected.pals.yaml")
+    test_file = YAML.load_file("test_default_values.pals.yaml")
+
+    # Check if the created file exists
+    @test isfile("test_default_values.pals.yaml")
+    # Check if the created file matches the expected
+    @test test_file == expected_file
+
+
+    #= ------------------------------------ =#
+    # Test changing SciBmad names to PALS names
+
+    @elements patch_test = Patch(dx = 1.0, dy = 1.0, dz = 1.0, dx_rot = 1.0, dy_rot = 1.0, dz_rot = 1.0, dt = 1.0)
+    @elements beamline = Beamline( [patch_test] )
+    @elements fodo_lattice = Lattice( [beamline] )
+
+    # Create the test file
+    Beamlines.scibmad_to_pals(fodo_lattice, "test_name_conversion")
     
+    # Load the test file and the expected file 
+    expected_file = YAML.load_file("test_name_conversion_expected.pals.yaml")
+    test_file = YAML.load_file("test_name_conversion.pals.yaml")
+    
+    # Check if the created file exists
+    @test isfile("test_name_conversion.pals.yaml")
+    # Check if the created file matches the expected
+    @test test_file == expected_file
+
     return nothing
 end
