@@ -89,6 +89,10 @@ function isdefault(field::Symbol, value)
 
         return (ABNORMAL_DEFAULT_VALUES_MAP[field] == value)
 
+    elseif (field == :is_crabcavity)
+        # This field shouldn't be represented at all
+        return true
+        
     elseif (value_type <: OrderedDict)
         # A default `Dict` is empty
         return isempty(value)

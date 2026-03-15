@@ -60,7 +60,6 @@ PALS:
         length: 10.0
         RFP:
           zero_phase: Accelerating
-          SciBmad_is_crabcavity: true
     - patch:
         kind: Patch
         length: 11.0
