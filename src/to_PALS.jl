@@ -92,7 +92,7 @@ function isdefault(field::Symbol, value)
     elseif (field == :is_crabcavity)
         # This field shouldn't be represented at all
         return true
-        
+
     elseif (value_type <: OrderedDict)
         # A default `Dict` is empty
         return isempty(value)
@@ -256,24 +256,20 @@ function pals_format(line_element::LineElement)
             tracking_method = getproperty(parameter_group, :tracking_method) # Get the tracking method
             tracking_method_type = typeof(tracking_method) # Get the type of the tracking method
 
-            if (tracking_method_type != SciBmadStandard)
-                # If the tracking method is `SciBMadStandard`, don't display the "TrackingP" dictionary
+            # Create a dictionary to store the tracking information, store the type of tracking method first
+            tracking_information = OrderedDict( 
+                :tracking_method => Symbol(tracking_method_type)
+            )
 
-                # Create a dictionary to store the tracking information, store the type of tracking method first
-                tracking_information = OrderedDict( 
-                    :tracking_method => Symbol(tracking_method_type)
-                )
-
-                # At the same level, populate the tracking information with the arguments of the tracking struct
-                for field_name in fieldnames(tracking_method_type)
-                    tracking_information[field_name] = Symbol(getfield(tracking_method, field_name))
-                end
-
-                # Put all the tracking information under the `SciBmad` dictionary
-                format_dict[:TrackingP] = OrderedDict(
-                    :SciBmad => tracking_information
-                )
+            # At the same level, populate the tracking information with the arguments of the tracking struct
+            for field_name in fieldnames(tracking_method_type)
+                tracking_information[field_name] = Symbol(getfield(tracking_method, field_name))
             end
+
+            # Put all the tracking information under the `SciBmad` dictionary
+            format_dict[:TrackingP] = OrderedDict(
+                :SciBmad => tracking_information
+            )
         end
 
         # We do not put the name as an element of the dictionary
