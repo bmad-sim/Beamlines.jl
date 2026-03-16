@@ -1299,6 +1299,21 @@ using ForwardDiff, GTPSA, ReverseDiff
 
     @test ele.MetaParams ≈ MetaParams()
 
+    # IBSParams
+    ele = LineElement(ibs_num_particles = Int64(1e11))
+    @test ele.ibs_num_particles == Int64(1e11)
+    @test ele.ibs_damping_on = true
+    @test ele.ibs_fluctuations_on = true
+
+    ele.ibs_num_particles = Int64(1e12)
+    ele.ibs_damping_on = false
+    ele.ibs_fluctuations_on = false
+    @test ele.ibs_num_particles == Int64(1e12)
+    @test ele.ibs_damping_on == false
+    @test ele.ibs_fluctuations_on == false
+
+    @test !(ele ≈ LineElement(ibs_num_particles = Int64(1e12)))
+
     # Scalarize
     d1 = Descriptor(1,1)
     t = TPS(3)

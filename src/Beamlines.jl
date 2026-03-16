@@ -14,6 +14,7 @@ export AbstractParams,
        MapParams,
        FourPotentialParams,
        MetaParams,
+       IBSParams,
        ApertureAt,
        ApertureShape,
        PhaseReference,
@@ -93,6 +94,7 @@ include("alignment.jl")
 include("patch.jl")
 include("aperture.jl")
 include("misc.jl")
+include("collective.jl")
 include("keymaps.jl")
 include("element-name-handling.jl")
 

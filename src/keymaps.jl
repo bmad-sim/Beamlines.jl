@@ -88,6 +88,10 @@ const PROPERTIES_MAP = Dict{Symbol,Type{<:AbstractParams}}(
   :alias => MetaParams,
   :label => MetaParams,
   :description => MetaParams,
+
+  :ibs_num_particles => IBSParams,
+  :ibs_damping_on => IBSParams,
+  :ibs_fluctuations_on => IBSParams,
 )
 
 const PARAMS_MAP = Dict{Symbol,Type{<:AbstractParams}}(
@@ -102,4 +106,5 @@ const PARAMS_MAP = Dict{Symbol,Type{<:AbstractParams}}(
   :MapParams => MapParams,
   :FourPotentialParams => FourPotentialParams,
   :MetaParams => MetaParams,
+  :IBSParams => IBSParams,
 )
