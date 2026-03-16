@@ -189,7 +189,13 @@ Patch(; kwargs...)      = LineElement(; kind="Patch", kwargs...)
 
 
 # Default tracking method:
-struct SciBmadStandard end
+@kwdef struct SciBmadStandard
+  radiation_damping_on::Bool = false
+  radiation_fluctuations_on::Bool = false
+  ibs_num_particles::Int = 0
+  ibs_damping_on::Bool = true
+  ibs_fluctuations_on::Bool = true # both are on by default so they are on when ibs_num_particles > 0
+end
 
 @kwdef mutable struct UniversalParams <: AbstractParams
   kind            = ""
