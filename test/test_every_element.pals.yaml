@@ -17,12 +17,12 @@ PALS:
     - sbend:
         kind: SBend
         length: 2.0
+        MagneticMultipoleP:
+          Kn0: 0.0041897690181481
         BendP:
           g_ref: 0.0041897690181481
           e1: 0.006295379021
           e2: 0.006295379021
-        MagneticMultipoleP:
-          Kn0: 0.0041897690181481
     - quadrupole:
         kind: Quadrupole
         length: 3.0
@@ -59,6 +59,7 @@ PALS:
         kind: CrabCavity
         length: 10.0
         RFP:
+          rate_meaning: Indeterminate
           zero_phase: Accelerating
     - patch:
         kind: Patch
