@@ -1347,6 +1347,13 @@ using ForwardDiff, GTPSA, ReverseDiff
 
     @test ele.MetaParams ≈ MetaParams()
 
+    # SciBmadStandard fields
+    ele = LineElement()
+    @test !ele.tracking_method.radiation_damping_on
+    @test !ele.tracking_method.radiation_fluctuations_on
+    @test !ele.tracking_method.ibs_damping_on
+    @test !ele.tracking_method.ibs_fluctuations_on
+
     # Scalarize
     d1 = Descriptor(1,1)
     t = TPS(3)
