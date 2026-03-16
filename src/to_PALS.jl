@@ -92,7 +92,7 @@ function isdefault(field::Symbol, value)
     elseif (field == :is_crabcavity)
         # This field shouldn't be represented at all
         return true
-
+        
     elseif (value_type <: OrderedDict)
         # A default `Dict` is empty
         return isempty(value)
@@ -255,6 +255,8 @@ function pals_format(line_element::LineElement)
         if (hasproperty(parameter_group, :tracking_method))
             tracking_method = getproperty(parameter_group, :tracking_method) # Get the tracking method
             tracking_method_type = typeof(tracking_method) # Get the type of the tracking method
+            
+            # If the tracking method is `SciBMadStandard`, don't display the "TrackingP" dictionary
 
             # Create a dictionary to store the tracking information, store the type of tracking method first
             tracking_information = OrderedDict( 

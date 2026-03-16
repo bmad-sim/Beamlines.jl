@@ -11,6 +11,13 @@ PALS:
   facility:
     - patch_test:
         kind: Patch
+        TrackingP:
+          SciBmad:
+            tracking_method: SciBmadStandard
+            radiation_damping_on: false
+            radiation_fluctuations_on: false
+            ibs_damping_on: false
+            ibs_fluctuations_on: false
         PatchP:
           SciBmad_dt: 1.0
           x_offset: 1.0
