@@ -72,7 +72,7 @@ end
 # used at the element level, so I will leave it out for now unless there 
 # is a burning desire to have it.
 function Base.hasproperty(b::BMultipoleParams, key::Symbol)
-  if key in fieldnames(BMultipoleParams)
+  if key in (:n, :s, :tilt, :order, :normalized, :integrated)
     return true
   elseif haskey(BMULTIPOLE_TILT_MAP, key) && BMULTIPOLE_TILT_MAP[key] in b.order
     return true
@@ -82,7 +82,7 @@ function Base.hasproperty(b::BMultipoleParams, key::Symbol)
 end
 
 function Base.getproperty(b::BMultipoleParams{T}, key::Symbol) where {T}
-  if key in fieldnames(BMultipoleParams)
+  if key in (:n, :s, :tilt, :order, :normalized, :integrated)
     return getfield(b, key)
   elseif haskey(BMULTIPOLE_TILT_MAP, key)
     ord = BMULTIPOLE_TILT_MAP[key]
@@ -98,7 +98,7 @@ function Base.getproperty(b::BMultipoleParams{T}, key::Symbol) where {T}
 end
 
 function Base.setproperty!(b::BMultipoleParams{T}, key::Symbol, value) where {T}
-  if key in fieldnames(BMultipoleParams)
+  if key in (:n, :s, :tilt, :order, :normalized, :integrated)
     return setfield!(b, key, value) # Will error because immutable struct
   elseif haskey(BMULTIPOLE_TILT_MAP, key)
     ord = BMULTIPOLE_TILT_MAP[key]

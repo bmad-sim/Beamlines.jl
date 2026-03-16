@@ -3,7 +3,27 @@
   transport_map_params::P = nothing
 end
 
-Base.isapprox(a::MapParams, b::MapParams) = a.transport_map == b.transport_map
+function Base.isapprox(a::MapParams, b::MapParams)
+  if xor(isnothing(a.transport_map_params), isnothing(b.transport_map_params))
+    return false
+  elseif isnothing(a.transport_map_params) && isnothing(b.transport_map_params)
+    return true
+  else
+    return a.transport_map == b.transport_map && 
+          all(a.transport_map_params .≈ b.transport_map_params)
+  end
+end
+
+
+# === THIS BLOCK WAS PARTIALLY WRITTEN BY CLAUDE ===
+# Generated function for arbitrary-length tuples
+@generated function deval(mp::MapParams{F,P}) where {F,P<:Tuple}
+    N = length(P.parameters)
+    # Use getfield with literal integer arguments
+    exprs = [:(deval(Base.getfield(mp.transport_map_params, $i))) for i in 1:N]
+    return :(MapParams(mp.transport_map, tuple($(exprs...))))
+end
+# === END CLAUDE ===
 
 @kwdef struct FourPotentialParams{F<:Function} <: AbstractParams
   four_potential::F = (x, y, s, t) -> (0, 0, 0, 0) # Returns phi, Ax, Ay, Az

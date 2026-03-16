@@ -30,6 +30,8 @@ end
 deval(d::DefExpr) = d()
 deval(d) = d
 
+Base.:+(da::DefExpr) = da
+Base.:-(da::DefExpr) = DefExpr(()->-da())
 Base.:+(da::DefExpr, b)   = DefExpr(()-> da() + b   )
 Base.:+(a,   db::DefExpr) = DefExpr(()-> a    + db())
 Base.:+(da::DefExpr, db::DefExpr) = DefExpr(()-> da() + db())

@@ -77,12 +77,15 @@ const PROPERTIES_MAP = Dict{Symbol,Type{<:AbstractParams}}(
 
   :voltage => RFParams,
   :phi0 => RFParams,
+  :rate_meaning => RFParams,
   :harmon_master => RFParams,
   :zero_phase => RFParams,
   :traveling_wave => RFParams,
   :is_crabcavity => RFParams,
 
   :transport_map => MapParams,
+  :transport_map_params => MapParams,
+
   :four_potential => FourPotentialParams,
   
   :alias => MetaParams,
