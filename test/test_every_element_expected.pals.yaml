@@ -12,11 +12,25 @@ PALS:
     - solenoid:
         kind: Solenoid
         length: 1.0
+        TrackingP:
+          SciBmad:
+            tracking_method: SciBmadStandard
+            radiation_damping_on: false
+            radiation_fluctuations_on: false
+            ibs_damping_on: false
+            ibs_fluctuations_on: false
         SolenoidP:
           Ksol: 0.142634259959
     - sbend:
         kind: SBend
         length: 2.0
+        TrackingP:
+          SciBmad:
+            tracking_method: SciBmadStandard
+            radiation_damping_on: false
+            radiation_fluctuations_on: false
+            ibs_damping_on: false
+            ibs_fluctuations_on: false
         MagneticMultipoleP:
           Kn0: 0.0041897690181481
         BendP:
@@ -26,43 +40,114 @@ PALS:
     - quadrupole:
         kind: Quadrupole
         length: 3.0
+        TrackingP:
+          SciBmad:
+            tracking_method: SciBmadStandard
+            radiation_damping_on: false
+            radiation_fluctuations_on: false
+            ibs_damping_on: false
+            ibs_fluctuations_on: false
         MagneticMultipoleP:
           Kn1: 0.1776428377
     - sextupole:
         kind: Sextupole
         length: 4.0
+        TrackingP:
+          SciBmad:
+            tracking_method: SciBmadStandard
+            radiation_damping_on: false
+            radiation_fluctuations_on: false
+            ibs_damping_on: false
+            ibs_fluctuations_on: false
         MagneticMultipoleP:
           Kn2: 2.465563152
     - drift:
         kind: Drift
         length: 5.0
+        TrackingP:
+          SciBmad:
+            tracking_method: SciBmadStandard
+            radiation_damping_on: false
+            radiation_fluctuations_on: false
+            ibs_damping_on: false
+            ibs_fluctuations_on: false
     - octupole:
         kind: Octupole
         length: 6.0
+        TrackingP:
+          SciBmad:
+            tracking_method: SciBmadStandard
+            radiation_damping_on: false
+            radiation_fluctuations_on: false
+            ibs_damping_on: false
+            ibs_fluctuations_on: false
         MagneticMultipoleP:
           Kn3: 0.567856444535
     - multipole:
         kind: Multipole
         length: 7.0
+        TrackingP:
+          SciBmad:
+            tracking_method: SciBmadStandard
+            radiation_damping_on: false
+            radiation_fluctuations_on: false
+            ibs_damping_on: false
+            ibs_fluctuations_on: false
         MagneticMultipoleP:
           Bn1L: 4.31233
           Kn4: 4.4353
     - marker:
         kind: Marker
+        TrackingP:
+          SciBmad:
+            tracking_method: SciBmadStandard
+            radiation_damping_on: false
+            radiation_fluctuations_on: false
+            ibs_damping_on: false
+            ibs_fluctuations_on: false
     - kicker:
         kind: HKicker
         length: 8.0
+        TrackingP:
+          SciBmad:
+            tracking_method: SciBmadStandard
+            radiation_damping_on: false
+            radiation_fluctuations_on: false
+            ibs_damping_on: false
+            ibs_fluctuations_on: false
     - rfcavity:
         kind: RFCavity
         length: 9.0
+        TrackingP:
+          SciBmad:
+            tracking_method: SciBmadStandard
+            radiation_damping_on: false
+            radiation_fluctuations_on: false
+            ibs_damping_on: false
+            ibs_fluctuations_on: false
     - crabcavity:
         kind: CrabCavity
         length: 10.0
+        TrackingP:
+          SciBmad:
+            tracking_method: SciBmadStandard
+            radiation_damping_on: false
+            radiation_fluctuations_on: false
+            ibs_damping_on: false
+            ibs_fluctuations_on: false
         RFP:
+          rate_meaning: Indeterminate
           zero_phase: Accelerating
     - patch:
         kind: Patch
         length: 11.0
+        TrackingP:
+          SciBmad:
+            tracking_method: SciBmadStandard
+            radiation_damping_on: false
+            radiation_fluctuations_on: false
+            ibs_damping_on: false
+            ibs_fluctuations_on: false
         PatchP:
           SciBmad_dt: 1.0
           x_rot: 0.0988312
