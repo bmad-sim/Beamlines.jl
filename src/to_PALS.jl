@@ -109,8 +109,8 @@ function isdefault(field::Symbol, value)
         # A default `String` is the empty string
         return isempty(value)
 
-    elseif (value_type <: Vector)
-        # A default `Vector` is empty
+    elseif (value_type <: AbstractArray)
+        # A default `Array` is empty
         return isempty(value)
 
     end
