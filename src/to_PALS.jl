@@ -11,7 +11,9 @@ const PARAMTYPES_TO_PALSNAMES_MAP = Dict{Type{<:AbstractParams}, Symbol}(
     AlignmentParams => :BodyShiftP,
     BendParams => :BendP,
     RFParams => :RFP,
-    PatchParams => :PatchP
+    PatchParams => :PatchP,
+    InheritParams => :SciBmad_InheritParams,
+    MapParams => :SciBmad_MapParams
 )
 
 
@@ -43,6 +45,7 @@ const SCIBMAD_NAME_TO_PALS_NAME_MAP = Dict{Symbol, Symbol}(
     :harmon_master => :harmon,
     :traveling_wave => :SciBmad_traveling_wave,     # *
     :is_crabcavity => :SciBmad_is_crabcavity,   # *
+    :phi0 => :phase
     # (MapParams) [No PALS group]
     :transport_map => :SciBmad_transport_map,   # *
     :transport_map_params => :SciBmad_transport_map_params,     # *
@@ -58,14 +61,14 @@ default value in PALS of that field, storing defaults that are
 =#
 const ABNORMAL_DEFAULT_VALUES_MAP = Dict{Symbol, Any}(
     # RFP...
-    :zero_phase => "ACCELERATING",
+    :zero_phase => PhaseReference.Accelerating,
     # ApertureP... 
     :x1_limit => "null",
     :x2_limit => "null",
     :y1_limit => "null",
     :y2_limit => "null",
     :aperture_shape => "",
-    :aperture_at => "ENTRANCE_END"
+    :aperture_at => "entrance_end"
 )
 
 """
@@ -87,7 +90,11 @@ function isdefault(field::Symbol, value)
     if (haskey(ABNORMAL_DEFAULT_VALUES_MAP, field))
         # If `field` has an abnormal default value, return true if `value` equals it
 
-        return (ABNORMAL_DEFAULT_VALUES_MAP[field] == value)
+        if (typeof(value) == String)
+            return (ABNORMAL_DEFAULT_VALUES_MAP[field] == lowercase(value))
+        else
+            return (ABNORMAL_DEFAULT_VALUES_MAP[field] == value)
+        end
 
     elseif (field == :is_crabcavity)
         # This field shouldn't be represented at all
@@ -158,6 +165,16 @@ function params_to_dict!(format_dict::OrderedDict, parameter_group::T) where {T<
                 # If it's a `String`, make it a `Symbol` to remove quotation marks
                 if (typeof(parameter_value) == String)
                     parameter_value = Symbol(parameter_value)
+                end
+
+                if (parameter_name == :zero_phase)
+                    # If this is the `zero_phase` parameter, convert its name
+
+                    if (parameter_value == PhaseReference.BelowTransition) 
+                        parameter_value = "BELOW_TRANSITION"
+                    else 
+                        parameter_value = "ABOVE_TRANSITION"
+                    end
                 end
 
                 if (haskey(SCIBMAD_NAME_TO_PALS_NAME_MAP, parameter_name))
@@ -476,6 +493,7 @@ function scibmad_to_pals(lattice::Lattice, new_file_name::String)
     close(io)
 end
 
+#= TODO More default names. Checked: bend.jl, =#
 #= TODO Handle Nested Beamlines =#
 #= TODO Deferred Expression =#
 
