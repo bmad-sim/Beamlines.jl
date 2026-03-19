@@ -177,7 +177,7 @@ function params_to_dict!(format_dict::OrderedDict, parameter_group::RFParams)
     # The accumulator dictionary 
     acc = OrderedDict()
 
-    # Put in `voltage` if not default
+    # Put in "voltage" if not default
     voltage = getproperty(parameter_group, :voltage)
     if (!isdefault(:voltage, voltage))
         acc[:voltage] = getproperty(parameter_group, :voltage)
@@ -202,16 +202,20 @@ function params_to_dict!(format_dict::OrderedDict, parameter_group::RFParams)
     end
     # Do not display if accelerating because that's a default value
 
-    #= TODO What to do if `rate_meaning` isn't set? =#
     # Put in either "frequency" or "harmon"
     rate_meaning = getproperty(parameter_group, :rate_meaning)
+    rate = getproperty(parameter_group, :rate)
+    if ((rate != 0) && (rate_meaning != RateMeaning.Indeterminate))
+        # If `rate` is zero or `rate_meaning` is indeterminate, 
+        # don't display either "frequency" or "harmon"
 
-    if (rate_meaning == RateMeaning.RFFrequency)
-        acc[:frequency] = getproperty(parameter_group, :rate)
+        if (rate_meaning == RateMeaning.RFFrequency)
+            acc[:frequency] = getproperty(parameter_group, :rate)
 
-    elseif (rate_meaning == RateMeaning.Harmon)
-        acc[:harmon] = getproperty(parameter_group, :rate)
+        elseif (rate_meaning == RateMeaning.Harmon)
+            acc[:harmon] = getproperty(parameter_group, :rate)
 
+        end
     end
 
     # Put in "SciBmad_traveling_wave"
