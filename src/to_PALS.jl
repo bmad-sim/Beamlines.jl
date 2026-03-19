@@ -41,11 +41,6 @@ const SCIBMAD_NAME_TO_PALS_NAME_MAP = Dict{Symbol, Symbol}(
     :y2_limit => :y_max,
     :aperture_shape => :shape,
     :aperture_at => :location,
-    # RFP...
-    :harmon_master => :harmon,
-    :traveling_wave => :SciBmad_traveling_wave,     # *
-    :is_crabcavity => :SciBmad_is_crabcavity,   # *
-    :phi0 => :phase
     # (MapParams) [No PALS group]
     :transport_map => :SciBmad_transport_map,   # *
     :transport_map_params => :SciBmad_transport_map_params,     # *
@@ -60,8 +55,6 @@ default value in PALS of that field, storing defaults that are
 "abnormal" for their type, like nonzero values for numeric parameters.
 =#
 const ABNORMAL_DEFAULT_VALUES_MAP = Dict{Symbol, Any}(
-    # RFP...
-    :zero_phase => PhaseReference.Accelerating,
     # ApertureP... 
     :x1_limit => "null",
     :x2_limit => "null",
@@ -95,10 +88,6 @@ function isdefault(field::Symbol, value)
         else
             return (ABNORMAL_DEFAULT_VALUES_MAP[field] == value)
         end
-
-    elseif (field == :is_crabcavity)
-        # This field shouldn't be represented at all
-        return true
         
     elseif (value_type <: OrderedDict)
         # A default `Dict` is empty
@@ -167,16 +156,6 @@ function params_to_dict!(format_dict::OrderedDict, parameter_group::T) where {T<
                     parameter_value = Symbol(parameter_value)
                 end
 
-                if (parameter_name == :zero_phase)
-                    # If this is the `zero_phase` parameter, convert its name
-
-                    if (parameter_value == PhaseReference.BelowTransition) 
-                        parameter_value = "BELOW_TRANSITION"
-                    else 
-                        parameter_value = "ABOVE_TRANSITION"
-                    end
-                end
-
                 if (haskey(SCIBMAD_NAME_TO_PALS_NAME_MAP, parameter_name))
                     # Convert the SciBmad parameter name to the equivalent PALS name
                     parameter_name = SCIBMAD_NAME_TO_PALS_NAME_MAP[parameter_name]
@@ -190,6 +169,54 @@ function params_to_dict!(format_dict::OrderedDict, parameter_group::T) where {T<
     if (!isdefault(Symbol(""), acc))
         # If acc is not an empty dictionary, add it to `format_dict`
         format_dict[PARAMTYPES_TO_PALSNAMES_MAP[parameter_type]] = acc
+    end
+end
+
+# Handle RFParams
+function params_to_dict!(format_dict::OrderedDict, parameter_group::RFParams)
+    # The accumulator dictionary 
+    acc = OrderedDict()
+
+    # Put in `voltage` if not default
+    voltage = getproperty(parameter_group, :voltage)
+    if (!isdefault(:voltage, voltage))
+        acc[:voltage] = getproperty(parameter_group, :voltage)
+    end
+
+    # Put in "phase" if not default
+    phase = getproperty(parameter_group, :phi0)
+    if (!isdefault(:phi0, phase))
+        acc[:phase] = getproperty(parameter_group, :phi0)
+    end
+
+    # Put in "zero_phase" and adjust formatting if not default
+    zero_phase = getproperty(parameter_group, :zero_phase)
+    if (zero_phase == PhaseReference.BelowTransition)
+        # If this is below transition
+        acc[:zero_phase] = :BELOW_TRANSITION
+
+    elseif (zero_phase == PhaseReference.AfterTransition)
+        # If this is after transition
+        acc[:zero_phase] = :AFTER_TRANSITION
+
+    end
+    # Do not display if accelerating because that's a default value
+
+    #= TODO What to do if `rate_meaning` isn't set? =#
+    # Put in either "frequency" or "harmon"
+    rate_meaning = getproperty(parameter_group, :rate_meaning)
+
+    if (rate_meaning == RateMeaning.RFFrequency)
+        acc[:frequency] = getproperty(parameter_group, :rate)
+
+    elseif (rate_meaning == RateMeaning.Harmon)
+        acc[:harmon] = getproperty(parameter_group, :rate)
+
+    end
+
+    # Put in "SciBmad_traveling_wave"
+    if (getproperty(parameter_group, :traveling_wave))
+        acc[:SciBmad_traveling_wave] = true
     end
 end
 
