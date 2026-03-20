@@ -426,7 +426,7 @@ end
 """
     Internal: scibmad_to_pals(lattice::Lattice, new_file_name::String)
 
-Creates a YAML file named "[new_file_name].yaml" in PALS format representing `lattice`
+Creates a YAML file named "`new_file_name`.yaml" in PALS format representing `lattice`
 
 This function converts SciBmad style `Lattice` elements into PALS-formatted YAML files.
 
