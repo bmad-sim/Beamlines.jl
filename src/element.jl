@@ -338,6 +338,10 @@ function _setproperty!(pdict::ParamDict, p::AbstractParams, key::Symbol, value)
   return pdict[PROPERTIES_MAP[key]] = replace(p, key, value)
 end
 
+function Base.deepcopy_internal(ele::LineElement, stackdict::IdDict)
+  return get!(()->deepcopy_no_beamline(ele), stackdict, ele)::LineElement
+end
+
 function deepcopy_no_beamline(ele::LineElement)
   newele = LineElement()
   pdict = getfield(ele, :pdict)
