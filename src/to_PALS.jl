@@ -562,8 +562,8 @@ function scibmad_to_pals(lattice::Lattice, new_file_name::String)
     close(io)
 end
 
-#= TODO More default names. Checked: bend.jl, =#
 #= TODO Handle Nested Beamlines =#
+#= TODO Handle Named Beamlines =#
 #= TODO Deferred Expression =#
 
 # Create multiple dispatch clone for handling just a `BeamLine` instead of a `Lattice`?
