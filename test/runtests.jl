@@ -1419,6 +1419,14 @@ struct CustomTrackingMethod
     param2::Int
 end
 
+# A tracking method struct used for testing
+struct SaganCavity 
+    num_cells::Int
+    L_active::Int
+    radiation_damping_on::Bool
+    radiation_fluctuations_on::Bool
+end
+
 @testset "to_PALS.jl" begin
     #= ------------------------------------ =#
     # Test a basic FODO cell
@@ -1588,6 +1596,32 @@ end
     
     # Check if the created file exists
     @test isfile("test_name_conversion.pals.yaml")
+    # Check if the created file matches the expected
+    @test test_file == expected_file
+
+
+    #= ------------------------------------ =#
+    # Test RFP being properly displayed
+
+    @elements m = Marker()
+    @elements beamline1 = Beamline( [m] ) 
+    @elements sc1 = RFCavity(L = 2.0, harmon_master = false, voltage = 2.0e9, rate = 1.0e9, phi0 = 0.1, zero_phase = PhaseReference.Accelerating, tracking_method = SaganCavity(2, -1.0, false, false))
+    @elements beamline2 = Beamline( [sc1] )
+    @elements sc2 = RFCavity(L = 2.0, harmon_master = false, rate = 1.0e9, voltage = 2.0e9, zero_phase = PhaseReference.BelowTransition, tracking_method = SaganCavity(3, 0.0, false, false))
+    @elements beamline3 = Beamline( [sc2] )
+    @elements sc3 = RFCavity(L = 0.0, harmon_master = false, rate = 1.0e9, voltage = 2.0e9, zero_phase = PhaseReference.AboveTransition, tracking_method = SaganCavity(4, 0.0, false, false))
+    @elements beamline4 = Beamline( [sc3] )
+    @elements lattice = Lattice( [beamline1, beamline2, beamline3, beamline4 ])
+
+    # Create the test file
+    Beamlines.scibmad_to_pals(lattice, "test_sagan_cavities")
+    
+    # Load the test file and the expected file 
+    expected_file = YAML.load_file("test_sagan_cavities_expected.pals.yaml")
+    test_file = YAML.load_file("test_sagan_cavities.pals.yaml")
+    
+    # Check if the created file exists
+    @test isfile("test_sagan_cavities.pals.yaml")
     # Check if the created file matches the expected
     @test test_file == expected_file
 

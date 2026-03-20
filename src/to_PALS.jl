@@ -206,7 +206,7 @@ function params_to_dict!(format_dict::OrderedDict, parameter_group::RFParams)
         # If this is below transition
         acc[:zero_phase] = :BELOW_TRANSITION
 
-    elseif (zero_phase == PhaseReference.AfterTransition)
+    elseif (zero_phase == PhaseReference.AboveTransition)
         # If this is after transition
         acc[:zero_phase] = :AFTER_TRANSITION
 
@@ -232,6 +232,11 @@ function params_to_dict!(format_dict::OrderedDict, parameter_group::RFParams)
     # Put in "SciBmad_traveling_wave"
     if (getproperty(parameter_group, :traveling_wave))
         acc[:SciBmad_traveling_wave] = true
+    end
+
+    if (!isdefault(Symbol(""), acc))
+        # If acc is not an empty dictionary, add it to `format_dict`
+        format_dict[:RFP] = acc
     end
 end
 
@@ -342,7 +347,7 @@ function pals_format(line_element::LineElement)
                 end
             end
 
-            if (tracking_method_type != SciBmadStandard || size(tracking_information) > 1)
+            if (tracking_method_type != SciBmadStandard || length(tracking_information) > 1)
                 # Always display tracking methods that aren't `SciBmadStandard`, if it is 
                 # `SciBmadStandard`, still include it if it has any non-default parameters
 
