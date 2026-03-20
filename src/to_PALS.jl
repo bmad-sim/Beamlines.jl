@@ -27,7 +27,6 @@ const TRACKING_METHOD_MAP = Dict{DataType, Dict{Symbol, Any}}(
     ),
 )
 
-
 #= 
 This maps symbols of names of parameter names as they appear in 
 SciBmad to the symbol of the name in PALS. If a SciBmad parameter
@@ -59,7 +58,6 @@ const SCIBMAD_NAME_TO_PALS_NAME_MAP = Dict{Symbol, Symbol}(
     :four_potential => :SciBmad_four_potential,     # *
 )
 
-
 #= 
 This maps symbols of names of fields to values, representing the 
 default value in PALS of that field, storing defaults that are
@@ -74,6 +72,7 @@ const ABNORMAL_DEFAULT_VALUES_MAP = Dict{Symbol, Any}(
     :aperture_shape => "",
     :aperture_at => "entrance_end"
 )
+
 
 """
     Internal: isdefault(field::Symbol, value)
