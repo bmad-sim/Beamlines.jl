@@ -25,11 +25,25 @@ end
 end
 # === END CLAUDE ===
 
-@kwdef struct FourPotentialParams{F<:Function} <: AbstractParams
-  four_potential::F = (x, y, s, t) -> (0, 0, 0, 0) # Returns phi, Ax, Ay, Az
+@kwdef mutable struct FourPotentialParams{F<:Function} <: AbstractParams
+  four_potential::F = (x, y, s, t) -> ((0, 0, 0, 0), (0, 0, 0,
+                                                      0, 0, 0,
+                                                      0, 0, 0,
+                                                      0, 0, 0)) 
+  # Returns ((ϕ, Ax, Ay, As), (∂ϕ/∂x,  ∂ϕ/∂y,  ∂ϕ/∂t,
+  #                            ∂Ax/∂x, ∂Ax/∂y, ∂Ax/∂t,
+  #                            ∂Ay/∂x, ∂Ay/∂y, ∂Ay/∂t,
+  #                            ∂As/∂x, ∂As/∂y, ∂As/∂t).
+  # If four_potential[2] is nothing, the derivatives are computed by 
+  # automatic differentiation during tracking, which is probably slower.
+  normalized_four_potential::Bool = false 
+  # true means the potential/derivatives are p_over_q_ref * four_potential;
+  # false means the potential/derivatives are four_potential.
 end
 
-Base.isapprox(a::FourPotentialParams, b::FourPotentialParams) = a.four_potential == b.four_potential
+function Base.isapprox(a::FourPotentialParams, b::FourPotentialParams)
+  return a.four_potential == b.four_potential && a.normalized_four_potential == b.normalized_four_potential
+end
 
 @kwdef mutable struct MetaParams <: AbstractParams
   alias::String = ""
