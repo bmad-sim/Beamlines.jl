@@ -86,36 +86,27 @@ end
       end
     end
 
-    bl = new(ReadOnlyVector(convert(Vector{LineElement}, vec(line))), species_ref, NULL_LATTICE, -1, RefMeaning.p_over_q_ref, nothing)
+    # For Python sanity and linear-indexing guarantee
+    line = convert(Vector{LineElement}, vec(line))
 
-    # Check if any are in a Beamline already
+    bl = new(ReadOnlyVector(Vector{LineElement}(undef, length(line))), species_ref, NULL_LATTICE, -1, RefMeaning.p_over_q_ref, nothing)
+
     for i in eachindex(bl.line)
-      if i != 1 && haskey(getfield(bl.line[i], :pdict), InitialBeamlineParams)
-        reverse_bl_construction!(bl, i)
+      if i != 1 && haskey(getfield(line[i], :pdict), InitialBeamlineParams)
         error("Cannot construct Beamline: element $i contains an InitialBeamlineParams 
                which can only be placed in the first element of a Beamline. To include 
                reference energy/species changes in the middle of an accelerator, use the 
                Lattice constructor instead which will automatically construct separate 
                Beamlines for each InitialBeamlineParams.")
       end
-      if haskey(getfield(bl.line[i], :pdict), BeamlineParams)
-        if bl.line[i].beamline != bl # Different Beamline - need to error
-          reverse_bl_construction!(bl, i)
-          error("Cannot construct Beamline: element $i with name $(bl.line[i].name) is already in a Beamline")
-        else # Duplicate element
-          # .parent overrides ReadOnlyArray
-          bl.line.parent[i] = LineElement(ParamDict(InheritParams=>InheritParams(bl.line[i])))
-        end
-      end
-      # HARD put in because may need to override InheritParams
+      bl.line.parent[i] = LineElement(ParamDict(InheritParams=>InheritParams(line[i])))
       getfield(bl.line[i], :pdict)[BeamlineParams] = BeamlineParams(bl, i)
     end
-
 
     # Now at end set the stuff (in case construction needed to be reversed due to error)
     if !isnothing(ibp)
       setproperty!(bl, refmeaning_to_sym(ibp.ref_meaning), getfield(ibp, :ref))
-      delete!(getfield(bl.line[1], :pdict), InitialBeamlineParams) # always delete it
+      # delete!(getfield(bl.line[1], :pdict), InitialBeamlineParams) # always delete it
     end
 
     # Beamline ctor kwargs override any InitialBeamlineParams
@@ -191,16 +182,6 @@ function Base.show(io::IO, bl::Beamline)
   return
 end
 
-function reverse_bl_construction!(bl::Beamline, idx)
-  for i in idx:-1:1
-    ele = bl.line[i]
-    if !isnothing(ele.BeamlineParams) && ele.BeamlineParams.beamline === bl
-      ele.BeamlineParams = nothing
-    end
-  end
-  return
-end
-
 const Lattice = _Lattice{Beamline}
 const NULL_LATTICE = Lattice(Beamline[])
 
@@ -220,13 +201,7 @@ function Lattice(
   kwarg_idx = findfirst(t->!isnothing(t), kwargs)
   kwarg_val = isnothing(kwarg_idx) ? nothing : kwargs[kwarg_idx]
   kwarg_sym = isnothing(kwarg_idx) ? :p_over_q_ref : kwarg_syms[kwarg_idx] 
-
-  # Check if any elements already in Beamline
-  if any(t->haskey(getfield(t, :pdict), BeamlineParams), line)
-    error("Unable to construct Lattice using Lattice(::Vector{LineElement}) constructor:
-           at least one LineElement is already in a Beamline. Please use the 
-           Lattice(::Vector{Beamline}) constructor instead.")
-  end
+  
   # Determine all indices with InitialBeamlineParams
   idxs = findall(t->haskey(getfield(t, :pdict), InitialBeamlineParams), line)
   # If none, then only single Beamline
