@@ -58,21 +58,6 @@ const SCIBMAD_NAME_TO_PALS_NAME_MAP = Dict{Symbol, Symbol}(
     :four_potential => :SciBmad_four_potential,     # *
 )
 
-#= 
-This maps symbols of names of fields to values, representing the 
-default value in PALS of that field, storing defaults that are
-"abnormal" for their type, like nonzero values for numeric parameters.
-=#
-const ABNORMAL_DEFAULT_VALUES_MAP = Dict{Symbol, Any}(
-    # ApertureP... 
-    :x1_limit => "null",
-    :x2_limit => "null",
-    :y1_limit => "null",
-    :y2_limit => "null",
-    :aperture_shape => "",
-    :aperture_at => "entrance_end"
-)
-
 
 """
     Internal: isdefault(field::Symbol, value)
@@ -89,17 +74,8 @@ cut out elements that store no information or default values.
 """
 function isdefault(field::Symbol, value)
     value_type = typeof(value)
-
-    if (haskey(ABNORMAL_DEFAULT_VALUES_MAP, field))
-        # If `field` has an abnormal default value, return true if `value` equals it
-
-        if (typeof(value) == String)
-            return (ABNORMAL_DEFAULT_VALUES_MAP[field] == lowercase(value))
-        else
-            return (ABNORMAL_DEFAULT_VALUES_MAP[field] == value)
-        end
         
-    elseif (value_type <: OrderedDict)
+    if (value_type <: OrderedDict)
         # A default `Dict` is empty
         return isempty(value)
 
@@ -179,6 +155,66 @@ function params_to_dict!(format_dict::OrderedDict, parameter_group::T) where {T<
     if (!isdefault(Symbol(""), acc))
         # If acc is not an empty dictionary, add it to `format_dict`
         format_dict[PARAMTYPES_TO_PALSNAMES_MAP[parameter_type]] = acc
+    end
+end
+
+# Handle ApertureParams
+function params_to_dict!(format_dict::OrderedDict, parameter_group::ApertureParams)
+    # The accumulator dictionary 
+    acc = OrderedDict()
+
+    # Put in x and y limits
+    x1_limit = getproperty(parameter_group, :x1_limit)
+    if (x1_limit != -Inf32)
+        acc[:x_min] = x1_limit
+    end
+
+    x2_limit = getproperty(parameter_group, :x2_limit)
+    if (x2_limit != Inf32)
+        acc[:x_max] = x1_limit
+    end
+
+    y1_limit = getproperty(parameter_group, :y1_limit)
+    if (y1_limit != -Inf32)
+        acc[:y_min] = y1_limit
+    end
+
+    y2_limit = getproperty(parameter_group, :y2_limit)
+    if (y2_limit != Inf32)
+        acc[:y_max] = y2_limit
+    end
+
+    # Put in aperture shape
+    aperture_shape = getproperty(parameter_group, :aperture_shape)
+    if (aperture_shape == ApertureShape.Rectangular)
+        acc[:shape] = :RECTANGULAR
+    elseif (aperture_shape != ApertureShape.Elliptical)
+        error("SciBmad does not support aperture shapes that aren't elliptical or rectangular")
+    end
+
+    # Put in aperture location
+    aperture_at = getproperty(parameter_group, :aperture_at)
+    if (aperture_at == ApertureAt.Exit)
+        acc[:location] = :EXIT_END
+    elseif (aperture_at == ApertureAt.BothEnds)
+        acc[:location] = :BOTH_ENDS
+    elseif (aperture_at != ApertureAt.Entrance)
+        error("SciBmad does not support locations besides entrance, exit, or both ends.")
+    end
+
+    # Put in `aperture_shifts_with_body`
+    if (getproperty(parameter_group, :aperture_shifts_with_body))
+        acc[:aperture_shifts_with_body] = true
+    end
+
+    # Put in `aperture_active`
+    if (!getproperty(parameter_group, :aperture_active))
+        acc[:aperture_active] = false
+    end
+
+    if (!isdefault(Symbol(""), acc))
+        # If acc is not an empty dictionary, add it to `format_dict`
+        format_dict[:ApertureP] = acc
     end
 end
 
