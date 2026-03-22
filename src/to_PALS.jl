@@ -16,6 +16,19 @@ const PARAMTYPES_TO_PALSNAMES_MAP = Dict{Type{<:AbstractParams}, Symbol}(
     MapParams => :SciBmad_MapParams
 )
 
+# This is a dictionary mapping the names of the parameters of the abstract
+# Yoshida tracking method to their default values.
+const ABSTRACT_YOSHIDA_DEFAULTS = Dict{Symbol, Any}(
+    :order => 4,
+    :num_steps => 1,
+    :ds_step => -1.0,
+    :radiation_damping_on => false,
+    :radiation_fluctuations_on => false,
+    :fringe_at => 1, # This corresponds to the BOTH_ENDS entry in the enum
+    :ibs_damping_on => false,
+    :ibs_fluctuations_on => false
+)
+
 # This maps tracking method types to dictionaries of
 # that type's default values
 const TRACKING_METHOD_MAP = Dict{DataType, Dict{Symbol, Any}}(
@@ -25,6 +38,20 @@ const TRACKING_METHOD_MAP = Dict{DataType, Dict{Symbol, Any}}(
         :ibs_damping_on => false,
         :ibs_fluctuations_on => false
     ),
+    SaganCavity => Dict(
+        :num_cells => 0,
+        :L_active => 0.0,
+        :radiation_damping_on => false,
+        :radiation_fluctuations_on => false
+    ),
+    Exact => Dict(
+        :fringe_at => 1
+    ),
+    Yoshida => ABTRACT_YOSHIDA_DEFAULTS,
+    MatrixKick => ABSTRACT_YOSHIDA_DEFAULTS,
+    BendKick => ABSTRACT_YOSHIDA_DEFAULTS,
+    SolenoidKick => ABSTRACT_YOSHIDA_DEFAULTS,
+    DriftKick => ABSTRACT_YOSHIDA_DEFAULTS,
 )
 
 #= 
@@ -598,8 +625,8 @@ function scibmad_to_pals(lattice::Lattice, new_file_name::String)
     close(io)
 end
 
-#= TODO Handle Nested Beamlines =#
 #= TODO Handle Named Beamlines =#
 #= TODO Deferred Expression =#
+#= TODO L_active, tracking param on SciBmad, RFP on PALS =#
 
 # Create multiple dispatch clone for handling just a `BeamLine` instead of a `Lattice`?
