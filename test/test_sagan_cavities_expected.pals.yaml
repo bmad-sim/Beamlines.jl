@@ -22,13 +22,11 @@ PALS:
           SciBmad:
             tracking_method: SaganCavity
             num_cells: 2
-            L_active: -1
-            radiation_damping_on: false
-            radiation_fluctuations_on: false
         RFP:
           voltage: 2.0e9
           phase: 0.1
           frequency: 1.0e9
+          L_active: -1
     - beamline2:
         kind: Beamline
         line:
@@ -40,9 +38,6 @@ PALS:
           SciBmad:
             tracking_method: SaganCavity
             num_cells: 3
-            L_active: 0
-            radiation_damping_on: false
-            radiation_fluctuations_on: false
         RFP:
           voltage: 2.0e9
           zero_phase: BELOW_TRANSITION
@@ -57,9 +52,6 @@ PALS:
           SciBmad:
             tracking_method: SaganCavity
             num_cells: 4
-            L_active: 0
-            radiation_damping_on: false
-            radiation_fluctuations_on: false
         RFP:
           voltage: 2.0e9
           zero_phase: AFTER_TRANSITION

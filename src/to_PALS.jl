@@ -31,27 +31,27 @@ const ABSTRACT_YOSHIDA_DEFAULTS = Dict{Symbol, Any}(
 
 # This maps tracking method types to dictionaries of
 # that type's default values
-const TRACKING_METHOD_MAP = Dict{DataType, Dict{Symbol, Any}}(
-    SciBmadStandard => Dict(
+const TRACKING_METHOD_MAP = Dict{Symbol, Dict{Symbol, Any}}(
+    :SciBmadStandard => Dict(
         :radiation_damping_on => false,
         :radiation_fluctuations_on => false,
         :ibs_damping_on => false,
-        :ibs_fluctuations_on => false
+        :ibs_fluctuations_on => false,
     ),
-    SaganCavity => Dict(
+    :SaganCavity => Dict(
         :num_cells => 0,
         :L_active => 0.0,
         :radiation_damping_on => false,
         :radiation_fluctuations_on => false
     ),
-    Exact => Dict(
+    :Exact => Dict(
         :fringe_at => 1
     ),
-    Yoshida => ABTRACT_YOSHIDA_DEFAULTS,
-    MatrixKick => ABSTRACT_YOSHIDA_DEFAULTS,
-    BendKick => ABSTRACT_YOSHIDA_DEFAULTS,
-    SolenoidKick => ABSTRACT_YOSHIDA_DEFAULTS,
-    DriftKick => ABSTRACT_YOSHIDA_DEFAULTS,
+    :Yoshida => ABSTRACT_YOSHIDA_DEFAULTS,
+    :MatrixKick => ABSTRACT_YOSHIDA_DEFAULTS,
+    :BendKick => ABSTRACT_YOSHIDA_DEFAULTS,
+    :SolenoidKick => ABSTRACT_YOSHIDA_DEFAULTS,
+    :DriftKick => ABSTRACT_YOSHIDA_DEFAULTS,
 )
 
 #= 
@@ -381,17 +381,18 @@ function pals_format(line_element::LineElement)
         if (hasproperty(parameter_group, :tracking_method))
             tracking_method = getproperty(parameter_group, :tracking_method) # Get the tracking method
             tracking_method_type = typeof(tracking_method) # Get the type of the tracking method
+            tracking_method_type_symbol = Symbol(tracking_method_type)
 
             # Get the dictionary of default values
-            if (haskey(TRACKING_METHOD_MAP, tracking_method_type))
-                def_dict = TRACKING_METHOD_MAP[tracking_method_type]
+            if (haskey(TRACKING_METHOD_MAP, tracking_method_type_symbol))
+                def_dict = TRACKING_METHOD_MAP[tracking_method_type_symbol]
             else
                 def_dict = nothing
             end
 
             # Create a dictionary to store the tracking information, store the type of tracking method first
             tracking_information = OrderedDict( 
-                :tracking_method => Symbol(tracking_method_type)
+                :tracking_method => tracking_method_type_symbol
             )
 
             # At the same level, populate the tracking information with the arguments of the tracking struct
@@ -482,11 +483,15 @@ function pals_format(line_element::LineElement)
         if (tracking_dict[:tracking_method] == :SaganCavity)
             # If the tracking method is `SaganCavity`
 
-            # Copy the `L_active` key-value pair into the "RFP" dictionary
-            format_dict[:RFP][:L_active] = tracking_dict[:L_active]
+            if (haskey(tracking_dict, :L_active))
+                # If the `L_active` key is in `tracking_dict`
 
-            # Remove `L_active` from the tracking method
-            delete!(tracking_dict, :L_active)
+                # Copy the `L_active` key-value pair into the "RFP" dictionary
+                format_dict[:RFP][:L_active] = tracking_dict[:L_active]
+
+                # Remove `L_active` from the tracking method
+                delete!(tracking_dict, :L_active)
+            end
         end
     end
 
