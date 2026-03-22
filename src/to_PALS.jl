@@ -472,6 +472,24 @@ function pals_format(line_element::LineElement)
         end
     end
 
+    # If this has the `SaganCavity` tracking method, move the `L_active` parameter 
+    # from it to the RFP dictionary
+    if (haskey(format_dict, :TrackingP))
+        # If "TrackingP" has been initialized
+
+        # Access the "TrackingP" dictionary
+        tracking_dict = format_dict[:TrackingP][:SciBmad]
+        if (tracking_dict[:tracking_method] == :SaganCavity)
+            # If the tracking method is `SaganCavity`
+
+            # Copy the `L_active` key-value pair into the "RFP" dictionary
+            format_dict[:RFP][:L_active] = tracking_dict[:L_active]
+
+            # Remove `L_active` from the tracking method
+            delete!(tracking_dict, :L_active)
+        end
+    end
+
     # Remove any unpopulated elements from `format_dict` before returning. 
     for key in keys(format_dict)
         if (isdefault(key, format_dict[key]))
