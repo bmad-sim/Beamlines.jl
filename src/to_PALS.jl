@@ -650,6 +650,5 @@ end
 
 #= TODO Handle Named Beamlines =#
 #= TODO Deferred Expression =#
-#= TODO L_active, tracking param on SciBmad, RFP on PALS =#
 
 # Create multiple dispatch clone for handling just a `BeamLine` instead of a `Lattice`?
