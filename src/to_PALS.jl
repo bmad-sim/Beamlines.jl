@@ -400,7 +400,14 @@ function pals_format(line_element::LineElement)
                 field_value = getfield(tracking_method, field_name)
 
                 if (!isnothing(def_dict))
-                    if (def_dict[field_name] != field_value)
+                    if (typeof(field_value) <: Enum)
+                        # If the field is an enum value
+
+                        if (def_dict[field_name]) != Int(field_value)
+                            # If the field (converting from `Enum`` to an `Int`) is the default value, don't display it
+                            tracking_information[field_name] = Symbol(field_value)
+                        end
+                    elseif (def_dict[field_name] != field_value)
                         # If the field is the default value, don't display it
                         tracking_information[field_name] = Symbol(field_value)
                     end
