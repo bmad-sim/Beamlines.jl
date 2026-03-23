@@ -255,7 +255,7 @@ function params_to_dict!(format_dict::OrderedDict, parameter_group::RFParams)
 
     # Put in "SciBmad_traveling_wave"
     if (getproperty(parameter_group, :traveling_wave))
-        acc[:SciBmad_traveling_wave] = true
+        acc[:cavity_type] = true
     end
 
     if (!isdefault(Symbol(""), acc))
