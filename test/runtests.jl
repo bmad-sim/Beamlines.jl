@@ -1331,6 +1331,7 @@ using ForwardDiff, GTPSA, ReverseDiff
     @test ele1.normalized_four_potential    
     @test !ele2.normalized_four_potential
     @test !(ele1 ≈ ele2)
+    @test ele1.four_potential_params == nothing
 
     # MetaParams
     alias = "matt"
