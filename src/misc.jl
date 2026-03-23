@@ -43,8 +43,16 @@ end
 end
 
 function Base.isapprox(a::FourPotentialParams, b::FourPotentialParams)
-  return (a.four_potential == b.four_potential && a.normalized_four_potential == b.normalized_four_potential
-  && all(a.four_potential_params .≈ b.four_potential_params))
+  if xor(isnothing(a.four_potential_params), isnothing(b.four_potential_params))
+    return false
+  elseif isnothing(a.four_potential_params) && isnothing(b.four_potential_params)
+    return (a.four_potential == b.four_potential && 
+           a.normalized_four_potential == b.normalized_four_potential)
+  else
+    return (a.four_potential == b.four_potential && 
+            a.normalized_four_potential == b.normalized_four_potential &&
+            all(a.four_potential_params .≈ b.four_potential_params))
+  end
 end
 
 @kwdef mutable struct MetaParams <: AbstractParams
