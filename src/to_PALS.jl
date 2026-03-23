@@ -221,7 +221,7 @@ function params_to_dict!(format_dict::OrderedDict, parameter_group::RFParams)
     # Put in "phase" if not default
     phase = getproperty(parameter_group, :phi0)
     if (!isdefault(:phi0, phase))
-        acc[:phase] = getproperty(parameter_group, :phi0)
+        acc[:phase] = (getproperty(parameter_group, :phi0)/(2*pi)) # Convert units
     end
 
     # Put in "zero_phase" and adjust formatting if not default
