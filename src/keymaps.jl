@@ -88,7 +88,7 @@ const PROPERTIES_MAP = Dict{Symbol,Type{<:AbstractParams}}(
 
   :four_potential => FourPotentialParams,
   :four_potential_params => FourPotentialParams,
-  :normalized_four_potential => FourPotentialParams,
+  :four_potential_normalized => FourPotentialParams,
   
   :alias => MetaParams,
   :label => MetaParams,
