@@ -16,44 +16,6 @@ const PARAMTYPES_TO_PALSNAMES_MAP = Dict{Type{<:AbstractParams}, Symbol}(
     MapParams => :SciBmad_MapParams
 )
 
-# This is a dictionary mapping the names of the parameters of the abstract
-# Yoshida tracking method to their default values.
-const ABSTRACT_YOSHIDA_DEFAULTS = Dict{Symbol, Any}(
-    :order => 4,
-    :num_steps => 1,
-    :ds_step => -1.0,
-    :radiation_damping_on => false,
-    :radiation_fluctuations_on => false,
-    :fringe_at => 1, # This corresponds to the BOTH_ENDS entry in the enum
-    :ibs_damping_on => false,
-    :ibs_fluctuations_on => false
-)
-
-# This maps tracking method types to dictionaries of
-# that type's default values
-const TRACKING_METHOD_MAP = Dict{Symbol, Dict{Symbol, Any}}(
-    :SciBmadStandard => Dict(
-        :radiation_damping_on => false,
-        :radiation_fluctuations_on => false,
-        :ibs_damping_on => false,
-        :ibs_fluctuations_on => false,
-    ),
-    :SaganCavity => Dict(
-        :num_cells => 0,
-        :L_active => 0.0,
-        :radiation_damping_on => false,
-        :radiation_fluctuations_on => false
-    ),
-    :Exact => Dict(
-        :fringe_at => 1
-    ),
-    :Yoshida => ABSTRACT_YOSHIDA_DEFAULTS,
-    :MatrixKick => ABSTRACT_YOSHIDA_DEFAULTS,
-    :BendKick => ABSTRACT_YOSHIDA_DEFAULTS,
-    :SolenoidKick => ABSTRACT_YOSHIDA_DEFAULTS,
-    :DriftKick => ABSTRACT_YOSHIDA_DEFAULTS,
-)
-
 #= 
 This maps symbols of names of parameter names as they appear in 
 SciBmad to the symbol of the name in PALS. If a SciBmad parameter
@@ -381,40 +343,42 @@ function pals_format(line_element::LineElement)
         if (hasproperty(parameter_group, :tracking_method))
             tracking_method = getproperty(parameter_group, :tracking_method) # Get the tracking method
             tracking_method_type = typeof(tracking_method) # Get the type of the tracking method
-            tracking_method_type_symbol = Symbol(tracking_method_type)
 
-            # Get the dictionary of default values
-            if (haskey(TRACKING_METHOD_MAP, tracking_method_type_symbol))
-                def_dict = TRACKING_METHOD_MAP[tracking_method_type_symbol]
-            else
-                def_dict = nothing
+            # Create a default version of the tracking method to check against
+            if (hasmethod(tracking_method_type, Tuple{}))
+                # If a default version of the tracking method exists, create it
+                default_tracking_method = tracking_method_type()
+
+            else 
+                # If a default version of the tracking method does not exist, set this to nothing
+                default_tracking_method = nothing
+                
             end
 
             # Create a dictionary to store the tracking information, store the type of tracking method first
             tracking_information = OrderedDict( 
-                :tracking_method => tracking_method_type_symbol
+                :tracking_method => Symbol(tracking_method_type)
             )
 
             # At the same level, populate the tracking information with the arguments of the tracking struct
-            for field_name in fieldnames(tracking_method_type)
-                field_value = getfield(tracking_method, field_name)
+            if (!isnothing(default_tracking_method))
+                # If there's a valid default, only display non-default parameters
+                for field_name in fieldnames(tracking_method_type)
+                    field_value = getfield(tracking_method, field_name)
 
-                if (!isnothing(def_dict))
-                    if (typeof(field_value) <: Enum)
-                        # If the field is an enum value
+                    if (field_value != getfield(default_tracking_method, field_name))
+                        # If this is not a default value, display it
 
-                        if (def_dict[field_name]) != Int(field_value)
-                            # If the field (converting from `Enum`` to an `Int`) is the default value, don't display it
-                            tracking_information[field_name] = Symbol(field_value)
-                        end
-                    elseif (def_dict[field_name] != field_value)
-                        # If the field is the default value, don't display it
                         tracking_information[field_name] = Symbol(field_value)
                     end
-                else
-                    # If we don't have a default values dictionary, display everything
-                    tracking_information[field_name] = Symbol(field_value)
                 end
+
+            else
+                # If there is no valid default, display everything
+                for field_name in fieldnames(tracking_method_type)
+                    tracking_information[field_name] = Symbol(getfield(tracking_method, field_name))
+                end
+
             end
 
             if (tracking_method_type != SciBmadStandard || length(tracking_information) > 1)
@@ -480,25 +444,33 @@ function pals_format(line_element::LineElement)
         end
     end
 
-    # If this has the `SaganCavity` tracking method, move the `L_active` parameter 
-    # from it to the RFP dictionary
+    # Move the `L_active` and `num_cells` fields to RFP, if present
     if (haskey(format_dict, :TrackingP))
         # If "TrackingP" has been initialized
 
         # Access the "TrackingP" dictionary
         tracking_dict = format_dict[:TrackingP][:SciBmad]
-        if (tracking_dict[:tracking_method] == :SaganCavity)
-            # If the tracking method is `SaganCavity`
 
-            if (haskey(tracking_dict, :L_active))
-                # If the `L_active` key is in `tracking_dict`
+        # Handle `L_active`
+        if (haskey(tracking_dict, :L_active))
+            # If the `L_active` key is in `tracking_dict`
 
-                # Copy the `L_active` key-value pair into the "RFP" dictionary
-                format_dict[:RFP][:L_active] = tracking_dict[:L_active]
+            # Copy the `L_active` key-value pair into the "RFP" dictionary
+            format_dict[:RFP][:L_active] = tracking_dict[:L_active]
 
-                # Remove `L_active` from the tracking method
-                delete!(tracking_dict, :L_active)
-            end
+            # Remove `L_active` from the tracking method
+            delete!(tracking_dict, :L_active)
+        end
+
+        # Handle `num_cells`
+        if (haskey(tracking_dict, :num_cells))
+            # If the `num_cells` key is in `tracking_dict`
+
+            # Copy the `num_cells` key-value pair into the "RFP" dictionary
+            format_dict[:RFP][:num_cells] = tracking_dict[:num_cells]
+
+            # Remove `num_cells` from the tracking method
+            delete!(tracking_dict, :num_cells)
         end
     end
 

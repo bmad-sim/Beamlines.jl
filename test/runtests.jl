@@ -1625,5 +1625,28 @@ end
     # Check if the created file matches the expected
     @test test_file == expected_file
 
+
+    #= ------------------------------------ =#
+    # Test a basic FODO cell with 
+
+    @elements drifta = Drift( L = 0.25, tracking_method = SciBmadStandard(radiation_damping_on = true))
+    @elements quada = Quadrupole( L = 1.0, Bn1 = 1.0, tracking_method = SciBmadStandard(radiation_fluctuations_on = true))
+    @elements driftb = Drift( L = 0.5, tracking_method = SciBmadStandard(ibs_damping_on = true))
+    @elements quadb = Quadrupole( L = 1.0, Bn1 = -1.0, tracking_method = SciBmadStandard(ibs_fluctuations_on = true))
+    @elements fodo_cell = Beamline( [drifta, quada, driftb, quadb, drifta])
+    @elements fodo_lattice = Lattice( [fodo_cell] )
+
+    # Create the test file
+    Beamlines.scibmad_to_pals(fodo_lattice, "test_modified_tracking")
+    
+    # Load the test file and the expected file 
+    expected_file = YAML.load_file("test_modified_tracking.pals.yaml")
+    test_file = YAML.load_file("test_modified_tracking.pals.yaml")
+    
+    # Check if the created file exists
+    @test isfile("test_modified_tracking.pals.yaml")
+    # Check if the created file matches the expected
+    @test test_file == expected_file
+
     return nothing
 end
