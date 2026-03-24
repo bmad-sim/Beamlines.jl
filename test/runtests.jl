@@ -1328,9 +1328,9 @@ using ForwardDiff, GTPSA, ReverseDiff
     @test ele1.four_potential == g
     @test ele2.four_potential == g
     @test ele1 ≈ ele2
-    ele1.normalized_four_potential = true 
-    @test ele1.normalized_four_potential    
-    @test !ele2.normalized_four_potential
+    ele1.four_potential_normalized = true 
+    @test ele1.four_potential_normalized    
+    @test !ele2.four_potential_normalized
     @test !(ele1 ≈ ele2)
     @test ele1.four_potential_params == nothing
     h = (x,y,s,t,p)->((p[1],p[2],p[3],p[4]), nothing)
@@ -1343,7 +1343,7 @@ using ForwardDiff, GTPSA, ReverseDiff
     @test !(ele1 ≈ ele2)
     ele2.four_potential_params = [100, 200, 300, 400]
     @test !(ele1 ≈ ele2)
-    ele1.normalized_four_potential = false
+    ele1.four_potential_normalized = false
     @test ele1 ≈ ele2
 
     # MetaParams
