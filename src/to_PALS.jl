@@ -682,5 +682,3 @@ end
 
 #= TODO Handle Named Beamlines =#
 #= TODO Deferred Expression =#
-
-# Create multiple dispatch clone for handling just a `BeamLine` instead of a `Lattice`?

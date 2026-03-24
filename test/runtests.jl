@@ -1627,7 +1627,7 @@ end
 
 
     #= ------------------------------------ =#
-    # Test a basic FODO cell with 
+    # Test a basic FODO cell with non-default tracking method parameters
 
     @elements drifta = Drift( L = 0.25, tracking_method = SciBmadStandard(radiation_damping_on = true))
     @elements quada = Quadrupole( L = 1.0, Bn1 = 1.0, tracking_method = SciBmadStandard(radiation_fluctuations_on = true))
