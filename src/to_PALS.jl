@@ -13,7 +13,8 @@ const PARAMTYPES_TO_PALSNAMES_MAP = Dict{Type{<:AbstractParams}, Symbol}(
     RFParams => :RFP,
     PatchParams => :PatchP,
     InheritParams => :SciBmad_InheritParams,
-    MapParams => :SciBmad_MapParams
+    MapParams => :SciBmad_MapParams,
+    BeamlineParams => :ReferenceP
 )
 
 #= 
@@ -55,13 +56,13 @@ Returns `true` if `value` is the default value that `field` can represent.
 Returns `false` otherwise.
 
 This function is used as a helper function for `scibmad_to_pals()` to 
-cut out elements that store no information or default values.
+cut out elements that store the standard "default" value of their type.
 
 ## Arguments
 - `field`   -- A `Symbol` representing the name of a parameter.
 - `value`   -- The value stored at `field`
 """
-function isdefault(field::Symbol, value)
+function isdefault(value)
     value_type = typeof(value)
         
     if (value_type <: OrderedDict)
@@ -123,7 +124,7 @@ function params_to_dict!(format_dict::OrderedDict, parameter_group::T) where {T<
             # Get the value stored at that property
             parameter_value = getproperty(parameter_group, parameter_name)
 
-            if (!isdefault(parameter_name, parameter_value))
+            if (!isdefault(parameter_value))
                 # If this parameter is not its default value, represent it
 
                 # If it's a `String`, make it a `Symbol` to remove quotation marks
@@ -141,9 +142,66 @@ function params_to_dict!(format_dict::OrderedDict, parameter_group::T) where {T<
         end
     end
 
-    if (!isdefault(Symbol(""), acc))
+    if (!isdefault(acc))
         # If acc is not an empty dictionary, add it to `format_dict`
         format_dict[PARAMTYPES_TO_PALSNAMES_MAP[parameter_type]] = acc
+    end
+end
+
+# Handle BeamlineParams
+function params_to_dict!(format_dict::OrderedDict, parameter_group::BeamlineParams)
+    # The accumulator dictionaries
+    referencep_acc = OrderedDict()
+    refchangep_acc = OrderedDict()
+
+    # Try to add `species_ref`
+    try
+        species_ref = getproperty(parameter_group, :species_ref)
+        if (!isdefault(species_ref))
+            referencep_acc[:species_ref] = species_ref.name
+        end
+    catch
+        nothing
+    end
+
+    # Try to add `pc_ref`
+    try
+        pc_ref = getproperty(parameter_group, :pc_ref)
+        if (!isdefault(pc_ref))
+            referencep_acc[:pc_ref] = pc_ref
+        end
+    catch
+        nothing
+    end
+
+    # Try to add `E_tot_ref`
+    try
+        e_ref = getproperty(parameter_group, :E_ref)
+        if (!isdefault(e_ref))
+            referencep_acc[:E_tot_ref] = e_ref
+        end
+    catch
+        nothing
+    end
+
+    # Try to add `dE_ref`
+    try
+        de_ref = getproperty(parameter_group, :dE_ref)
+        if (!isdefault(dE_ref))
+            refchangep_acc[:dE_ref] = de_ref
+        end
+    catch
+        nothing
+    end 
+
+    if (!isdefault(referencep_acc))
+        # If `referencep_acc` is not an empty dictionary, add it to `format_dict`
+        format_dict[:ReferenceP] = referencep_acc
+    end
+
+    if (!isdefault(refchangep_acc))
+        # If `refchangep_acc` is not an empty dictionary, add it to `format_dict`
+        format_dict[:ReferenceChangeP] = refchangep_acc
     end
 end
 
@@ -201,7 +259,7 @@ function params_to_dict!(format_dict::OrderedDict, parameter_group::AperturePara
         acc[:aperture_active] = false
     end
 
-    if (!isdefault(Symbol(""), acc))
+    if (!isdefault(acc))
         # If acc is not an empty dictionary, add it to `format_dict`
         format_dict[:ApertureP] = acc
     end
@@ -214,13 +272,13 @@ function params_to_dict!(format_dict::OrderedDict, parameter_group::RFParams)
 
     # Put in "voltage" if not default
     voltage = getproperty(parameter_group, :voltage)
-    if (!isdefault(:voltage, voltage))
+    if (!isdefault(voltage))
         acc[:voltage] = getproperty(parameter_group, :voltage)
     end
 
     # Put in "phase" if not default
     phase = getproperty(parameter_group, :phi0)
-    if (!isdefault(:phi0, phase))
+    if (!isdefault(phase))
         acc[:phase] = (getproperty(parameter_group, :phi0)/(2*pi)) # Convert units
     end
 
@@ -258,7 +316,7 @@ function params_to_dict!(format_dict::OrderedDict, parameter_group::RFParams)
         acc[:cavity_type] = true
     end
 
-    if (!isdefault(Symbol(""), acc))
+    if (!isdefault(acc))
         # If acc is not an empty dictionary, add it to `format_dict`
         format_dict[:RFP] = acc
     end
@@ -290,7 +348,7 @@ function params_to_dict!(format_dict::OrderedDict, parameter_group::BMultipolePa
     #= End code from the override of `show()` in multipole.jl =#
 
     # Modify `format_dict`
-    if (!isdefault(Symbol(""), acc))
+    if (!isdefault(acc))
         # If acc is not an empty dictionary, add it to `format_dict`
         format_dict[:MagneticMultipoleP] = acc
     end
@@ -402,11 +460,6 @@ function pals_format(line_element::LineElement)
             # These have already been handled, continue
             continue
 
-        elseif (typeof(parameter_group) == BeamlineParams)
-            # Special case: Beamline Parameters should be handled and grouped under "TrackingP"
-            # this was (should be) already handled in `UniversalParams` case
-            continue
-
         else
             # General case: Any other group of parameters
 
@@ -476,7 +529,7 @@ function pals_format(line_element::LineElement)
 
     # Remove any unpopulated elements from `format_dict` before returning. 
     for key in keys(format_dict)
-        if (isdefault(key, format_dict[key]))
+        if (isdefault(format_dict[key]))
             # If this is an empty field or default value
 
             # Remove this key value
