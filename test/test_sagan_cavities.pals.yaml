@@ -25,7 +25,7 @@ PALS:
             radiation_fluctuations_on: false
         RFP:
           voltage: 2.0e9
-          phase: 0.1
+          phase: 0.015915494309189534
           frequency: 1.0e9
           L_active: -1
           num_cells: 2
