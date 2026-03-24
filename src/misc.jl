@@ -26,14 +26,14 @@ end
 # === END CLAUDE ===
 
 @kwdef mutable struct FourPotentialParams{F<:Function, P} <: AbstractParams
-  four_potential::F = (x, y, s, t, p=nothing) -> ((0, 0, 0, 0), (0, 0, 0,
-                                                                 0, 0, 0,
-                                                                 0, 0, 0,
-                                                                 0, 0, 0)) 
-  # Returns ((ϕ, Ax, Ay, As), (∂ϕ/∂x,  ∂ϕ/∂y,  ∂ϕ/∂t,
-  #                            ∂Ax/∂x, ∂Ax/∂y, ∂Ax/∂t,
-  #                            ∂Ay/∂x, ∂Ay/∂y, ∂Ay/∂t,
-  #                            ∂As/∂x, ∂As/∂y, ∂As/∂t).
+  four_potential::F = (x, y, s, t, p=nothing) -> ((0, 0, 0, 0), (0, 0, 0, 0,
+                                                                 0, 0, 0, 0,
+                                                                 0, 0, 0, 0,
+                                                                 0, 0, 0, 0)) 
+  # Returns ((ϕ, Ax, Ay, As), (∂ϕ/∂x,  ∂ϕ/∂y,  ∂ϕ/∂s,  ∂ϕ/∂t,
+  #                            ∂Ax/∂x, ∂Ax/∂y, ∂Ax/∂s, ∂Ax/∂t,
+  #                            ∂Ay/∂x, ∂Ay/∂y, ∂Ay/∂s, ∂Ay/∂t,
+  #                            ∂As/∂x, ∂As/∂y, ∂As/∂s, ∂As/∂t).
   # If four_potential[2] is nothing, the derivatives are computed by 
   # automatic differentiation during tracking, which is probably slower.
   four_potential_params::P = nothing
