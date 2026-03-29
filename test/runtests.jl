@@ -219,10 +219,15 @@ using ForwardDiff, GTPSA, ReverseDiff
     ele.Kn1 = 0.36
     ele.L = 2.0
     bl = Beamline([a,ele])
-    @test bl.line[1] === a
-    @test bl.line[2] === ele
+    @test !(bl.line[1] === a)
+    @test bl.line[1] ≈ a
+    @test !(bl.line[2] === ele)
+    @test bl.line[2] ≈ ele
     @test_throws ErrorException bl.p_over_q_ref
     @test_throws ErrorException a.p_over_q_ref
+
+    a = bl.line[1]
+    ele = bl.line[2]
 
     @test a.beamline_index == 1
     @test a.beamline === bl
@@ -587,9 +592,9 @@ using ForwardDiff, GTPSA, ReverseDiff
     qd = Quadrupole(Kn1=-0.36, L=0.5)
 
     fodo = Beamline([qf, d, qd, d, qf, d, qd, d], p_over_q_ref=60)
-    @test qf === fodo.line[1]
-    @test d === fodo.line[2]
-    @test qd === fodo.line[3]
+    @test !(qf === fodo.line[1])
+    @test !(d === fodo.line[2])
+    @test !(qd === fodo.line[3])
     @test !(d === fodo.line[4] )
     @test !(qf === fodo.line[5])
     @test !(qd === fodo.line[7])
@@ -636,6 +641,7 @@ using ForwardDiff, GTPSA, ReverseDiff
     @test qf ≈ qf2
 
     # s-position
+    qf = fodo.line[1]
     @test qf.s == 0
     @test qf.s_downstream == 0.5
     @test qf2.s == 3
@@ -699,6 +705,8 @@ using ForwardDiff, GTPSA, ReverseDiff
 
       fodo = Beamline([qf, d, qd, d], p_over_q_ref=DefExpr(()->p_over_q_ref))
 
+      qf = fodo.line[1]
+      qd = fodo.line[3]
       @test fodo.p_over_q_ref == p_over_q_ref
       @test qf.p_over_q_ref == p_over_q_ref
 
@@ -783,6 +791,9 @@ using ForwardDiff, GTPSA, ReverseDiff
       fodo = Beamline([qf, d, qd, d], p_over_q_ref=DefExpr(()->p_over_q_ref))
 
       @test fodo.p_over_q_ref == p_over_q_ref
+      @test_throws ErrorException qf.p_over_q_ref
+      qf = fodo.line[1]
+      qd = fodo.line[2]
       @test qf.p_over_q_ref == p_over_q_ref
 
       p_over_q_ref = 40.

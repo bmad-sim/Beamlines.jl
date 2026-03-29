@@ -50,18 +50,14 @@ end
   end
 end
 
-# The Beamline type is essentially an "expanded" lattice, as
-# in there are no PreExpansionDirectives here anymore.
 @kwdef mutable struct Beamline <: Branch
   const line::ReadOnlyVector{LineElement, Vector{LineElement}}
-  const species_ref::Species
+  const species_ref::Species  
   lattice::_Lattice{Beamline} # This should be HARD to change, not allowed easily
   lattice_index::Int          # This should be HARD to change, not allowed easily
   ref_meaning::RefMeaning.T   # This should be HARD to change, not allowed easily
   ref # Will be nothing if not specified
 
-  # Beamlines can be very long, so realistically only 
-  # Base.Vector should be allowed.
   function Beamline(
     line;
     species_ref::Species=Species(),  
@@ -103,20 +99,15 @@ end
       getfield(bl.line[i], :pdict)[BeamlineParams] = BeamlineParams(bl, i)
     end
 
-    # Now at end set the stuff (in case construction needed to be reversed due to error)
-    if !isnothing(ibp)
-      setproperty!(bl, refmeaning_to_sym(ibp.ref_meaning), getfield(ibp, :ref))
-      # delete!(getfield(bl.line[1], :pdict), InitialBeamlineParams) # always delete it
-    end
-
-    # Beamline ctor kwargs override any InitialBeamlineParams
     if c == 1
       idx = findfirst(t->!isnothing(t), kwargs)
       sym = (:p_over_q_ref, :E_ref, :pc_ref, :dp_over_q_ref, :dE_ref, :dpc_ref)[idx]
       val = (p_over_q_ref, E_ref, pc_ref, dp_over_q_ref, dE_ref, dpc_ref)[idx]
       setproperty!(bl, sym, val)
+    elseif !isnothing(ibp)
+      setproperty!(bl, refmeaning_to_sym(ibp.ref_meaning), getfield(ibp, :ref))
     end
-
+    
     return bl
   end
 end
