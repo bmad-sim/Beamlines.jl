@@ -101,7 +101,12 @@ end
       if haskey(getfield(bl.line[i], :pdict), BeamlineParams)
         if bl.line[i].beamline != bl # Different Beamline - need to error
           reverse_bl_construction!(bl, i)
-          error("Cannot construct Beamline: element $i with name $(bl.line[i].name) is already in a Beamline")
+          error("Cannot construct Beamline: element $i with name $(bl.line[i].name) is already in a Beamline.
+          
+                 To use this element in a new Beamline, you can either
+                 1) Use the `deepcopy` function to make an independent copy of the LineElement, which can then be 
+                    used in another Beamline
+                 2) Free all elements from the previously-defined Beamline using `empty!(::Beamline)`")
         else # Duplicate element
           # .parent overrides ReadOnlyArray
           bl.line.parent[i] = LineElement(ParamDict(InheritParams=>InheritParams(bl.line[i])))
@@ -129,6 +134,23 @@ end
     return bl
   end
 end
+
+"""
+    empty!(::Beamline)
+
+Removes `BeamlineParams` from all elements in the `Beamline` and empties 
+the array of `LineElement`s.
+
+WARNING: this is irreversible.
+"""
+function Base.empty!(bl::Beamline)
+  for ele in bl.line
+    delete!(getfield(ele, :pdict), BeamlineParams)
+  end
+  empty!(bl.line.parent)
+  return bl
+end
+
 #show(io::IO, ::MIME"text/plain", bl::Beamline) = show(io, bl)
 function Base.show(io::IO, bl::Beamline)
   println(io, "Beamline:")

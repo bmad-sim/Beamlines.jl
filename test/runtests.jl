@@ -1421,4 +1421,14 @@ using ForwardDiff, GTPSA, ReverseDiff
     @test ele2.L == ele.L
     @test ele2.voltage == ele.voltage
     @test !(ele2.beamline === ele.beamline)
+
+    # Empty the beamline
+    ele = LineElement()
+    bl = Beamline([ele, ele, ele])
+    @test_throws ErrorException Beamline([ele])
+    empty!(bl)
+    @test isempty(bl.line)
+    @test isnothing(ele.BeamlineParams)
+    bl2 = Beamline([ele, ele])
+    @test !isnothing(ele.BeamlineParams)
 end
