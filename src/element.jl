@@ -296,7 +296,11 @@ function Base.setproperty!(ele::LineElement, key::Symbol, value)
       setproperty!(get_parent(pdict), key, value)
     else
       if isnothing(value) # setting parameter struct to nothing removes it
-        delete!(pdict, PARAMS_MAP[key])
+        if key != :BeamlineParams
+          delete!(pdict, PARAMS_MAP[key])
+        else
+          error("Cannot trivially remove BeamlineParams from a LineElement: consider using `empty!(::Beamline)` instead")
+        end
       else
         setindex!(pdict, value, PARAMS_MAP[key])
       end
@@ -336,6 +340,10 @@ function _setproperty!(pdict::ParamDict, p::AbstractParams, key::Symbol, value)
     end
   end
   return pdict[PROPERTIES_MAP[key]] = replace(p, key, value)
+end
+
+function Base.deepcopy_internal(ele::LineElement, stackdict::IdDict)
+  return get!(()->deepcopy_no_beamline(ele), stackdict, ele)::LineElement
 end
 
 function deepcopy_no_beamline(ele::LineElement)

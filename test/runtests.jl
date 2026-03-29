@@ -1431,4 +1431,25 @@ using ForwardDiff, GTPSA, ReverseDiff
     lat2 = Lattice([m2, q2])
     @test q2.species_ref == m2.species_ref
     @test lat2.beamlines[1].species_ref == lat2.beamlines[2].species_ref
+
+
+    # Deepcopy ignores BeamlineParams
+    ele = LineElement(Kn1=0.36, L=0.5, voltage=10)
+    bl = Beamline([ele])
+    ele2 = deepcopy(ele)
+    bl2 = Beamline([ele2])
+    @test ele2.Kn1 == ele.Kn1
+    @test ele2.L == ele.L
+    @test ele2.voltage == ele.voltage
+    @test !(ele2.beamline === ele.beamline)
+
+    # Empty the beamline
+    ele = LineElement()
+    bl = Beamline([ele, ele, ele])
+    @test_throws ErrorException Beamline([ele])
+    empty!(bl)
+    @test isempty(bl.line)
+    @test isnothing(ele.BeamlineParams)
+    bl2 = Beamline([ele, ele])
+    @test !isnothing(ele.BeamlineParams)
 end
