@@ -7,7 +7,7 @@ function Base.isapprox(a::MapParams, b::MapParams)
   if xor(isnothing(a.transport_map_params), isnothing(b.transport_map_params))
     return false
   elseif isnothing(a.transport_map_params) && isnothing(b.transport_map_params)
-    return true
+    return a.transport_map == b.transport_map
   else
     return a.transport_map == b.transport_map && 
           all(a.transport_map_params .≈ b.transport_map_params)
@@ -25,11 +25,35 @@ end
 end
 # === END CLAUDE ===
 
-@kwdef struct FourPotentialParams{F<:Function} <: AbstractParams
-  four_potential::F = (x, y, s, t) -> (0, 0, 0, 0) # Returns phi, Ax, Ay, Az
+@kwdef mutable struct FourPotentialParams{F<:Function, P} <: AbstractParams
+  four_potential::F = (x, y, s, t, p=nothing) -> ((0, 0, 0, 0), (0, 0, 0, 0,
+                                                                 0, 0, 0, 0,
+                                                                 0, 0, 0, 0,
+                                                                 0, 0, 0, 0)) 
+  # Returns ((ϕ, Ax, Ay, As), (∂ϕ/∂x,  ∂ϕ/∂y,  ∂ϕ/∂s,  ∂ϕ/∂t,
+  #                            ∂Ax/∂x, ∂Ax/∂y, ∂Ax/∂s, ∂Ax/∂t,
+  #                            ∂Ay/∂x, ∂Ay/∂y, ∂Ay/∂s, ∂Ay/∂t,
+  #                            ∂As/∂x, ∂As/∂y, ∂As/∂s, ∂As/∂t).
+  # If four_potential[2] is nothing, the derivatives are computed by 
+  # automatic differentiation during tracking, which is probably slower.
+  four_potential_params::P = nothing
+  four_potential_normalized::Bool = false 
+  # true means the potential/derivatives are p_over_q_ref * four_potential;
+  # false means the potential/derivatives are four_potential.
 end
 
-Base.isapprox(a::FourPotentialParams, b::FourPotentialParams) = a.four_potential == b.four_potential
+function Base.isapprox(a::FourPotentialParams, b::FourPotentialParams)
+  if xor(isnothing(a.four_potential_params), isnothing(b.four_potential_params))
+    return false
+  elseif isnothing(a.four_potential_params) && isnothing(b.four_potential_params)
+    return (a.four_potential == b.four_potential && 
+           a.four_potential_normalized == b.four_potential_normalized)
+  else
+    return (a.four_potential == b.four_potential && 
+            a.four_potential_normalized == b.four_potential_normalized &&
+            all(a.four_potential_params .≈ b.four_potential_params))
+  end
+end
 
 @kwdef mutable struct MetaParams <: AbstractParams
   alias::String = ""
