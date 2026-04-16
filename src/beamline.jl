@@ -111,6 +111,23 @@ end
     return bl
   end
 end
+
+"""
+    empty!(::Beamline)
+
+Removes `BeamlineParams` from all elements in the `Beamline` and empties 
+the array of `LineElement`s.
+
+WARNING: this is irreversible.
+"""
+function Base.empty!(bl::Beamline)
+  for ele in bl.line
+    delete!(getfield(ele, :pdict), BeamlineParams)
+  end
+  empty!(bl.line.parent)
+  return bl
+end
+
 #show(io::IO, ::MIME"text/plain", bl::Beamline) = show(io, bl)
 function Base.show(io::IO, bl::Beamline)
   println(io, "Beamline:")

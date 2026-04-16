@@ -54,7 +54,8 @@ Base.:^(da::DefExpr, db::DefExpr) = DefExpr(()-> da() ^ db())
 
 for t = (:sqrt, :exp, :log, :sin, :cos, :tan, :cot, :sinh, :cosh, :tanh, :inv,
   :coth, :asin, :acos, :atan, :acot, :asinh, :acosh, :atanh, :acoth, :sinc, :csc, 
-  :csch, :acsc, :acsch, :sec, :sech, :asec, :asech, :conj, :log10, :isnan)
+  :csch, :acsc, :acsch, :sec, :sech, :asec, :asech, :conj, :log10, :isnan, :sign,
+  :zero, :one)
 @eval begin
 Base.$t(d::DefExpr) = DefExpr(()-> ($t)(d()))
 end
