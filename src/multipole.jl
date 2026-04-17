@@ -163,7 +163,6 @@ function addord(b1::BMultipoleParams{T,N0}, ord, nrm=true, intg=true) where {T,N
   return BMultipoleParams(n, s, tilt, order, normalized, integrated)
 end
 
-
 function Base.isapprox(a::BMultipoleParams, b::BMultipoleParams)
   return all(a.n          .≈ b.n) &&
          all(a.s          .≈ b.s) &&

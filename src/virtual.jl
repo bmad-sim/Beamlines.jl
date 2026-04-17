@@ -100,114 +100,96 @@ function _get_BM_strength(ele, b::BMultipoleParams, key)
   end
 end
 
+function _promote_bm(b1::BMultipoleParams{S}, ::Type{T}) where {S,T}
+  SNEW = promote_type(S, T)
+  if S == SNEW
+    return b1
+  else
+    return BMultipoleParams{SNEW}(b1)
+  end
+end
+
 function set_BM_strength!(ele::LineElement, key::Symbol, value)
-  b = ele.BMultipoleParams
-  if isnothing(b)
-    b = BMultipoleParams() 
+  b1 = ele.BMultipoleParams
+  if isnothing(b1)
+    b1 = BMultipoleParams()
+  end
+  b = @noinline _set_BM_strength!(ele, b1, key, value)
+  if !(b === b1)
     ele.BMultipoleParams = b
   end
-
-  # Setting is painful, because we do not know what the type of
-  # of the input must be (including L and p_over_q_ref potentially)
-  # And, if it requires promotion of the BMultipoleParams struct,
-  # ouchies
-  strength = calc_BM_internal_strength(ele, b, key, value)
-  @noinline _set_BM_strength!(ele, b, key, strength)
   return value
 end
 
-function calc_BM_internal_strength(ele, b::BMultipoleParams, key, value)
-  ___, order, normalized, integrated = BMULTIPOLE_STRENGTH_MAP[key]
-  
-  if !(order in b.order) # First set
-    return value
-  else
-    i = o2i(b,order)
-    stored_normalized = b.normalized[i]
-    stored_integrated = b.integrated[i]
-    if stored_normalized == normalized
-      if stored_integrated == integrated
-        return value
-      else
-        L = ele.L
-        if stored_integrated == false 
-          # user setting integrated strength of non-integrated BMultipole
-          if L == 0
-            error("Unable to set $key of LineElement: Nonintegrated multipole is stored, but the element length L = 0")
-          end
-          return value/L
-        else
-          # user setting non-integrated strength of integrated BMultipole
-          return value*L
-        end
-      end
-    else
-      p_over_q_ref = ele.p_over_q_ref
-      if stored_integrated == integrated
-        if stored_normalized == false
-          # user setting normalized strength of unnormalized BMultipole
-          return value*p_over_q_ref
-        else
-          # user setting unnormalized strength of normalized BMultipole
-          return value/p_over_q_ref
-        end
-      else
-        L = ele.L
-        if stored_normalized == false
-          if stored_integrated == false
-            # user setting normalized, integrated strength of 
-            # unnormalized, nonintegrated BMultipole
-            if L == 0
-              error("Unable to set $key of LineElement: Nonintegrated multipole is stored, but the element length L = 0")
-            end
-            return value*p_over_q_ref/L
-          else
-            # user setting normalized, nonintegrated strength of 
-            # unnormalized, integrated BMultipole
-            return value*p_over_q_ref*L
-          end
-        else
-          if stored_integrated == false
-            # user setting unnormalized, integrated strength of 
-            # normalized, nonintegrated BMultipole
-            if L == 0
-              error("Unable to set $key of LineElement: Nonintegrated multipole is stored, but the element length L = 0")
-            end
-            return value/p_over_q_ref/L
-          else
-            # user setting unnormalized, nonintegrated strength of 
-            # normalized, integrated BMultipole
-            return value/p_over_q_ref*L
-          end
-        end
-      end
-    end
-  end
-end
-
-function _set_BM_strength!(ele, b1::BMultipoleParams{S}, key, strength) where {S}
+function _set_BM_strength!(ele, b::BMultipoleParams, key, value)
   normal, order, normalized, integrated = BMULTIPOLE_STRENGTH_MAP[key]
 
-  T = promote_type(S,typeof(strength))
-  if T != S
-    b = BMultipoleParams{T}(b1)
-    ele.BMultipoleParams = b
-  else
-    b = b1
-  end
-
-  # If first set, this now defines normalized + integrated.
   if !(order in b.order)
     b = addord(b, order, normalized, integrated)
-    ele.BMultipoleParams = b
   end
 
-  if normal
-    b.n[o2i(b,order)] = strength
-  else
-    b.s[o2i(b,order)] = strength
+  i = o2i(b, order)
+  if b.normalized[i] == normalized && b.integrated[i] == integrated
+      # EASY!
+      b = _promote_bm(b, typeof(value))
+      bm = normal ? b.n : b.s
+      bm[i] = value
   end
-  return 
+
+  # Switching normalized status:
+  if b.normalized[i] != normalized
+    #=
+    This is the hard case.
+    Here we will keep the angle between both multipoles the same.
+    This is done by ensuring that Bs*Kn = Ks*Bn
+    =#
+    old_val = normal ? b.n[i] : b.s[i]
+    old_other_val = normal ? b.s[i] : b.n[i]
+    if old_val == 0
+      if old_other_val == 0
+        new_other_val = 0
+      else
+        old_sym = BMULTIPOLE_STRENGTH_INVERSE_MAP[(normal, order, b.normalized[i], b.integrated[i])]
+        old_other_sym = BMULTIPOLE_STRENGTH_INVERSE_MAP[(!normal, order, b.normalized[i], b.integrated[i])]
+        new_other_sym = BMULTIPOLE_STRENGTH_INVERSE_MAP[(!normal, order, !(b.normalized[i]), integrated)]
+        error("
+        Unable to set multipole $(key): currently stored is $(old_other_sym), and setting $(key) would 
+        change the order $order multipole to have normalized=$normalized as the independent variable.
+        The only consistent way to then update $(old_other_sym) is to set the value so the 
+        angle between $(new_other_sym) and $(key) remains the same as the angle between $(old_other_sym)
+        and $(old_sym). However, this angle is undefined if $(old_sym) = 0, because $(new_other_sym) 
+        would have to be infinite.
+        ")
+      end
+    else
+      new_other_val = old_other_val*value/old_val
+    end
+    b = _promote_bm(b, promote_type(typeof(value),typeof(new_other_val)))
+    if normal
+      b.n[i] = value
+      b.s[i] = new_other_val
+    else
+      b.s[i] = value
+      b.n[i] = new_other_val
+    end
+  end
+
+  # Switching integrated status
+  if b.integrated[i] != integrated
+    L = ele.L
+    old_other_val = normal ? b.s[i] : b.n[i]
+    new_other_val = old_other_val*(integrated ? L : 1/L)
+    b = _promote_bm(b, promote_type(typeof(value),typeof(new_other_val)))
+    @reset b.integrated[i] = integrated
+    if normal
+      b.n[i] = value
+      b.s[i] = new_other_val
+    else
+      b.s[i] = value
+      b.n[i] = new_other_val
+    end
+  end
+  return b
 end
 
 function set_bend_angle!(ele::LineElement, ::Symbol, value)
@@ -263,8 +245,7 @@ function _set_bend_g!(ele::LineElement, bp::BendParams{S}, bm::BMultipoleParams,
     bp = set(bp, opcompose(PropertyLens(:g_ref)), T(value))
     ele.BendParams = bp
   end
-  strength = calc_BM_internal_strength(ele, bm, :Kn0, T(value))
-  @noinline _set_BM_strength!(ele, bm, :Kn0, strength)
+  @noinline set_BM_strength!(ele, :Kn0, T(value))
   return value
 end
 
@@ -416,52 +397,29 @@ function get_cavity_rate(ele::LineElement, key::Symbol)
 end
 
 function set_cavity_rate!(ele::LineElement, key::Symbol, value)
-  rfp = ele.RFParams
-  # First set: construct RF params
-  if isnothing(rfp)
-    rfp = RFParams()
-    ele.RFParams = rfp
+  rf1 = ele.RFParams
+  if isnothing(rf1)
+    rf1 = RFParams()
   end
-  # If rate_meaning hasn't been set yet, we can set it now
-  if rfp.rate_meaning == RateMeaning.Indeterminate
-    rate_meaning = key == :harmon ? RateMeaning.Harmon : RateMeaning.RFFrequency
-    rfp = set(rfp, opcompose(PropertyLens(:rate_meaning)), rate_meaning)
-    ele.RFParams = rfp
+  rf = @noinline _set_cavity_rate!(rf1, key, value)
+  if !(rf === rf1)
+    ele.RFParams = rf
   end
-  rate = calc_rf_internal_rate(ele, rfp, key, value)
-  @noinline _set_cavity_rate!(ele, rfp, rate)
   return value
 end
 
-function calc_rf_internal_rate(ele, rfp, key, value)
-  rate_meaning = getfield(rfp, :rate_meaning)
-  if ((key == :harmon) && rate_meaning == RateMeaning.Harmon) || ((key == :rf_frequency) && rate_meaning == RateMeaning.RFFrequency)
-    return value
-  else # Need to convert
-    bp = ele.BeamlineParams
-    if isnothing(bp)
-      error("Unable to set $key from LineElement: element is NOT in a Beamline and has harmon_master = $(rfp.harmon_master)")
-    end
-    bl = bp.beamline
-    species = bl.species_ref
-    circumference = bl.line[end].s_downstream
-    v = R_to_v(species, bl.p_over_q_ref)
-    if key == :harmon # rf_frequency is stored, user wants to set harmon
-      return value*v/circumference 
-    else # harmon is stored, user wants to set rf_frequency
-      return value*circumference/v
-    end
-  end
-end
-
-function _set_cavity_rate!(ele, rfp::RFParams{S}, value) where {S}
+function _set_cavity_rate!(rf::RFParams{S}, key, value) where {S}
   T = promote_type(S,typeof(value))
   if T != S
-    ele.RFParams = set(rfp, opcompose(PropertyLens(:rate)), T(value))
+    rf = set(rf, opcompose(PropertyLens(:rate)), T(value))
   else
-    setfield!(rfp, :rate, T(value))
+    setfield!(rf, :rate, T(value))
   end
-  return
+  rate_meaning = key == :harmon ? RateMeaning.Harmon : RateMeaning.RFFrequency
+  if rf.rate_meaning != rate_meaning
+    rf = set(rf, opcompose(PropertyLens(:rate_meaning)), rate_meaning)
+  end
+  return rf
 end
 
 function set_harmon_master!(ele::LineElement, ::Symbol, value::Bool)
