@@ -142,7 +142,7 @@ using ForwardDiff, GTPSA, ReverseDiff
     @test i == 3
 
     @test eltype(ele.BMultipoleParams) == Float64
-    ele.Bn2 = 1.2
+    ele.Bn2L = 1.2*ele.L
     @test eltype(ele.BMultipoleParams) == ComplexF64 # promotion because length is complex
     @test ele.Bn2 == 1.2
     @test ele.Bn2L == 1.2*ele.L
@@ -243,7 +243,7 @@ using ForwardDiff, GTPSA, ReverseDiff
     @test a.p_over_q_ref == 6.0
     a.p_over_q_ref = 5.0
     @test eltype(a.BMultipoleParams) == Float32
-    a.Kn1 = 123 # should cause promotion
+    a.Kn1 = 123
     @test eltype(a.BMultipoleParams) == Float64
     @test a.Kn1 == 123
     @test a.Bn1 == 123*5.0

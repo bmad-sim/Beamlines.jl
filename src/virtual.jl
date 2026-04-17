@@ -165,6 +165,7 @@ function _set_BM_strength!(ele, b::BMultipoleParams, key, value)
       new_other_val = old_other_val*value/old_val
     end
     b = _promote_bm(b, promote_type(typeof(value),typeof(new_other_val)))
+    @reset b.normalized[i] = normalized
     if normal
       b.n[i] = value
       b.s[i] = new_other_val

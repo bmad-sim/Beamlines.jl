@@ -36,7 +36,7 @@ function Base.show(io::IO, a::AbstractParams)
   width = maximum(length, String.(fields))
   println(io, nameof(typeof(a)))
   for field in fields
-    println(io, " ", rpad(String(field), width), " = ", getproperty(a, field))
+    println(io, " ", rpad(String(field), width), " = ", repr(getproperty(a, field)))
   end
   return
 end

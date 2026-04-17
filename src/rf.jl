@@ -115,15 +115,15 @@ function Base.show(io::IO, a::RFParams)
   width = length("traveling_wave")
   println(io, nameof(typeof(a)))
   if a.rate_meaning == RateMeaning.RFFrequency
-    println(io, " ", rpad("rf_frequency", width), " = ", a.rate)
+    println(io, " ", rpad("rf_frequency", width), " = ", repr(a.rate))
   elseif a.rate_meaning == RateMeaning.Harmon
-    println(io, " ", rpad("harmon", width), " = ", a.rate)
+    println(io, " ", rpad("harmon", width), " = ", repr(a.rate))
   end
   for field in fields
     if field == :rate || field == :rate_meaning
       continue
     end
-    println(io, " ", rpad(String(field), width), " = ", getproperty(a, field))
+    println(io, " ", rpad(String(field), width), " = ", repr(getproperty(a, field)))
   end
   return
 end
