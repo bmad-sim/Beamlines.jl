@@ -203,6 +203,28 @@ end
   tracking_method = SciBmadStandard()
 end
 
+# For UniversalParams, print each tracking_method field:
+function Base.show(io::IO, a::UniversalParams)
+  fields = fieldnames(typeof(a))
+  width = maximum(length, String.(fields))
+  println(io, nameof(typeof(a)))
+  for field in fields
+    if field == :tracking_method
+      tm = getproperty(a, field)
+      println(io, " ", rpad(String(field), width), " = ", repr(typeof(tm)), "(")
+      subfields = fieldnames(typeof(tm))
+      subwidth = maximum(length, String.(subfields))
+      for subfield in subfields
+        println(io, "   ",  rpad(String(subfield), subwidth), " = ", repr("text/plain", getproperty(tm, subfield)), ",")
+      end
+      println(io, " )")
+    else
+      println(io, " ", rpad(String(field), width), " = ", repr(getproperty(a, field)))
+    end
+  end
+  return
+end
+
 function Base.isapprox(a::UniversalParams, b::UniversalParams)
   return a.tracking_method == b.tracking_method &&
          a.L               ≈  b.L

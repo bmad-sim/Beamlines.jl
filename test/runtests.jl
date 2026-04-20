@@ -244,12 +244,12 @@ using ForwardDiff, GTPSA, ReverseDiff
     a.p_over_q_ref = 5.0
     @test eltype(a.BMultipoleParams) == Float32
     a.Kn1 = 123
-    @test eltype(a.BMultipoleParams) == Float64
+    @test eltype(a.BMultipoleParams) == Float32
     @test a.Kn1 == 123
     @test a.Bn1 == 123*5.0
     @test a.Bn1L == 0.5*123*5.0
     @test !a.BMultipoleParams.integrated[1]
-    @test !a.BMultipoleParams.normalized[1]
+    @test a.BMultipoleParams.normalized[1]
     # Sets:
     a.Kn1 = 0.5
     @test a.Kn1 ≈ 0.5
@@ -280,10 +280,10 @@ using ForwardDiff, GTPSA, ReverseDiff
     @test a.Kn4L ≈ 7.8
     a.Kn4 = 7.8
     @test a.Kn4 ≈ 7.8
-    a.Bs4L = 7.8
-    @test a.Bs4L ≈ 7.8
-    a.Bs4 = 7.8
-    @test a.Bs4 ≈ 7.8
+    @test_throws ErrorException a.Bs4L = 7.8
+    @test a.Kn4 ≈ 7.8
+    a.Ks4 = 7.8
+    @test a.Ks4 ≈ 7.8
 
     ele.BMultipoleParams = nothing
     ele.Bsol = 1.0
@@ -660,7 +660,8 @@ using ForwardDiff, GTPSA, ReverseDiff
     @test qf2.s_downstream == 4
     @test fodo.line[end].s_downstream == 6.5
     @test qf2.Kn2L == qf2.Kn2*qf2.L
-    @test qf2.Kn2 == qf.Kn2
+    @test qf.Kn2L == qf2.Kn2L # Note Kn2L was made independent variable above thru child
+    @test qf2.Kn2 != qf.Kn2
     
     qf.Kn3L = 1
     @test qf2.Kn3L == 1
@@ -793,7 +794,7 @@ using ForwardDiff, GTPSA, ReverseDiff
       @test fodo.p_over_q_ref == p_over_q_ref
       @test_throws ErrorException qf.p_over_q_ref
       qf = fodo.line[1]
-      qd = fodo.line[2]
+      qd = fodo.line[3]
       @test qf.p_over_q_ref == p_over_q_ref
 
       p_over_q_ref = 40.
@@ -945,7 +946,9 @@ using ForwardDiff, GTPSA, ReverseDiff
     cav2.harmon = 1160
     @test cav2.harmon == 1160 && cav2.harmon_master == true
     @test_throws ErrorException cav2.harmon_master = false # Can't switch unless in Beamline
-    @test_throws ErrorException cav2.rf_frequency = 1e6 # Can't set rf frequency if not in Beamline w harmon_master=true
+    cav2.rf_frequency = 1e6 # switches independent variable to rf_frequency
+    @test cav2.harmon_master == false
+    @test cav2.rf_frequency == 1e6
     
     # RFParams in Beamline
     rf0 = RFCavity(L=10, harmon=20)
@@ -964,7 +967,7 @@ using ForwardDiff, GTPSA, ReverseDiff
     @test rf0.harmon ≈ 20
 
     rf0.harmon = 20
-    @test rf0.harmon_master == false
+    @test rf0.harmon_master == true
     @test rf0.rf_frequency ≈ 0.2118107321845737E+08
     @test rf0.harmon ≈ 20
 
@@ -979,7 +982,7 @@ using ForwardDiff, GTPSA, ReverseDiff
     @test rf0.harmon ≈ 20
 
     rf0.rf_frequency = 0.2118107321845737E+08
-    @test rf0.harmon_master == true
+    @test rf0.harmon_master == false
     @test rf0.rf_frequency ≈ 0.2118107321845737E+08
     @test rf0.harmon ≈ 20
 

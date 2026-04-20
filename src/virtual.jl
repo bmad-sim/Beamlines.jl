@@ -410,15 +410,15 @@ function set_cavity_rate!(ele::LineElement, key::Symbol, value)
 end
 
 function _set_cavity_rate!(rf::RFParams{S}, key, value) where {S}
+  rate_meaning = key == :harmon ? RateMeaning.Harmon : RateMeaning.RFFrequency
+  if rf.rate_meaning != rate_meaning
+    rf = set(rf, opcompose(PropertyLens(:rate_meaning)), rate_meaning)
+  end
   T = promote_type(S,typeof(value))
   if T != S
     rf = set(rf, opcompose(PropertyLens(:rate)), T(value))
   else
     setfield!(rf, :rate, T(value))
-  end
-  rate_meaning = key == :harmon ? RateMeaning.Harmon : RateMeaning.RFFrequency
-  if rf.rate_meaning != rate_meaning
-    rf = set(rf, opcompose(PropertyLens(:rate_meaning)), rate_meaning)
   end
   return rf
 end
