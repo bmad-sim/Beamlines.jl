@@ -9,6 +9,5 @@ R_to_v(species::Species, R) = abs(chargeof(species))*C_LIGHT / sqrt(1+(massof(sp
 
 
 # Custom show
-param_
 param_repr(thing) = repr("text/plain", thing)
 param_repr(thing::Enum) = "$(nameof(parentmodule(typeof(thing)))).$(repr(thing; context=:compact=>true))"
