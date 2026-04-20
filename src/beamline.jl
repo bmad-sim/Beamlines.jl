@@ -146,7 +146,7 @@ function Base.show(io::IO, bl::Beamline)
   catch
   end
   ref_meaning = refmeaning_to_sym(bl.ref_meaning)
-  println(io, " "*String(ref_meaning), " = ", repr(ref))
+  println(io, " "*String(ref_meaning), " = ", param_repr(ref))
   lines_used += 1
 
   lattice_index = getfield(bl, :lattice_index)
@@ -164,7 +164,7 @@ function Base.show(io::IO, bl::Beamline)
   lines_used
   for i in 1:N_ele
     ele = bl.line[i]
-    ele_table[i+1,:] = [ele.beamline_index, ele.name, ele.kind, repr(ele.s)]
+    ele_table[i+1,:] = [ele.beamline_index, ele.name, ele.kind, param_repr(ele.s)]
     lines_used += 1
     if get(io, :limit, false) && lines_used > displaysize(io)[1]-offset
       break
@@ -392,11 +392,11 @@ function Base.show(io::IO, bp::BeamlineParams)
   end
   ref_meaning = refmeaning_to_sym(bp.beamline.ref_meaning)
   if !(ref_meaning in (:dp_over_q_ref, :dE_ref, :dpc_ref)) || bp.beamline_index == 1
-    println(io, rpad((" "*String(ref_meaning)), width), " = ", repr(ref))
+    println(io, rpad((" "*String(ref_meaning)), width), " = ", param_repr(ref))
   end
 
-  println(io, rpad(" s",width), " = ", repr(bp.s))
-  println(io, rpad(" s_downstream",width), " = ", repr(bp.s_downstream))
+  println(io, rpad(" s",width), " = ", param_repr(bp.s))
+  println(io, rpad(" s_downstream",width), " = ", param_repr(bp.s_downstream))
 
   lattice_index = getfield(bp.beamline, :lattice_index)
   if lattice_index != -1
@@ -496,7 +496,7 @@ function Base.show(io::IO, ibp::InitialBeamlineParams)
   catch
   end
   ref_meaning = refmeaning_to_sym(ibp.ref_meaning)
-  println(io, rpad((" "*String(ref_meaning)), width), " = ", repr(ref))
+  println(io, rpad((" "*String(ref_meaning)), width), " = ", param_repr(ref))
   return
 end
 

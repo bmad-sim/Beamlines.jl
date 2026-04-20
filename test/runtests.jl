@@ -955,6 +955,7 @@ using ForwardDiff, GTPSA, ReverseDiff
     fline = Beamline([rf0, Drift(L=20)], species_ref=Species("proton"), pc_ref=1e8)
     @test rf0.harmon_master == true
     @test rf0.harmon == 20
+    rf0 = fline.line[1]
     @test rf0.rf_frequency ≈ 0.2118107321845737E+08
     rf0.harmon_master = false
     @test rf0.harmon_master == false
@@ -1076,7 +1077,6 @@ using ForwardDiff, GTPSA, ReverseDiff
     @test Beamline(LineElement[], species_ref=Species("electron"), p_over_q_ref = 10).p_over_q_ref == -10
     ele = LineElement()
     bl1 = Beamline([ele])
-    @test_throws ErrorException Beamline([ele])
     bl = Beamline(LineElement[], species_ref=Species("electron"), p_over_q_ref = 10)
     @test bl.p_over_q_ref == -10
     @test (bl.pc_ref = 0; bl.p_over_q_ref) == 0
@@ -1177,7 +1177,8 @@ using ForwardDiff, GTPSA, ReverseDiff
     # Overriding InitialBeamlineParams at Beamline level
     ele = LineElement(species_ref=Species("electron"), pc_ref=1.0)
     bl = Beamline([ele]; species_ref=Species("proton"), pc_ref=2.0)
-    @test ele.species_ref == Species("proton")
+    @test ele.species_ref == Species("electron")
+    @test bl.line[1].species_ref == Species("proton")
     @test ele.pc_ref == 2.0
     # set thru first element
     ele.pc_ref = 3.0

@@ -381,7 +381,7 @@ function get_cavity_rate(ele::LineElement, key::Symbol)
   else # Need to convert
     bp = ele.BeamlineParams
     if isnothing(bp)
-      error("Unable to get $key from LineElement: element is NOT in a Beamline and has harmon_master = $(rfp.harmon_master)")
+      error("Unable to get $key from LineElement: element is not in a Beamline and has harmon_master = $(rfp.harmon_master)")
     end
     bl = bp.beamline
     species = bl.species_ref

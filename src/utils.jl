@@ -8,3 +8,7 @@ pc_to_E(species_ref::Species, pc) = sign(pc)*sqrt((pc)^2 + massof(species_ref)^2
 R_to_v(species::Species, R) = abs(chargeof(species))*C_LIGHT / sqrt(1+(massof(species)/(R*C_LIGHT))^2)
 
 
+# Custom show
+param_
+param_repr(thing) = repr("text/plain", thing)
+param_repr(thing::Enum) = "$(nameof(parentmodule(typeof(thing)))).$(repr(thing; context=:compact=>true))"

@@ -36,7 +36,7 @@ function Base.show(io::IO, a::AbstractParams)
   width = maximum(length, String.(fields))
   println(io, nameof(typeof(a)))
   for field in fields
-    println(io, " ", rpad(String(field), width), " = ", repr(getproperty(a, field)))
+    println(io, " ", rpad(String(field), width), " = ", param_repr(getproperty(a, field)))
   end
   return
 end
@@ -211,15 +211,15 @@ function Base.show(io::IO, a::UniversalParams)
   for field in fields
     if field == :tracking_method
       tm = getproperty(a, field)
-      println(io, " ", rpad(String(field), width), " = ", repr(typeof(tm)), "(")
+      println(io, " ", rpad(String(field), width), " = ", param_repr(typeof(tm)), "(")
       subfields = fieldnames(typeof(tm))
       subwidth = maximum(length, String.(subfields))
       for subfield in subfields
-        println(io, "   ",  rpad(String(subfield), subwidth), " = ", repr("text/plain", getproperty(tm, subfield)), ",")
+        println(io, "   ",  rpad(String(subfield), subwidth), " = ", param_repr(getproperty(tm, subfield)), ",")
       end
       println(io, " )")
     else
-      println(io, " ", rpad(String(field), width), " = ", repr(getproperty(a, field)))
+      println(io, " ", rpad(String(field), width), " = ", param_repr(getproperty(a, field)))
     end
   end
   return
