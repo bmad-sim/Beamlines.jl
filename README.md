@@ -197,10 +197,10 @@ qf2.Kn1 == 0.1 # true
 # A Beamline has a single E_ref, p_over_q_ref, or pc_ref, and 
 # a single Species. One could also specify a single 
 # dE_ref, dp_over_q_ref, dpc_ref wrt the previous Beamline, granted 
-# the Beamlines are in a Lattice
+# the Beamlines are in a Branch
 bl1 = Beamline(LineElement[]; E_ref=10e9, species_ref=Species("proton"))
 bl2 = Beamline(LineElement[]; dE_ref=-3e9, species_ref=Species("electron"))
-lat = Lattice([bl1, bl2])
+branch = Branch([bl1, bl2])
 
 # In this case, bl1.E_ref=10e9, bl2.E_ref=7e9
 # Whichever of E_ref, p_over_q_ref, pc_ref, dE_ref, dp_over_q_ref, or dpc_ref is 
@@ -213,16 +213,16 @@ bl1 = Beamline([ele1, ele2])
 bl1.E_ref == 10e9 # true
 bl1.species_ref == Species("proton") # true
 
-# To ease construction of Lattices, one can alternatively use the 
-# Lattice(::Vector{LineElement}) constructor, which will automatically
+# To ease construction of Branchs, one can alternatively use the 
+# Branch(::Vector{LineElement}) constructor, which will automatically
 ele1 = LineElement(E_ref=10e9, species_ref=Species("electron"))
 ele1a = LineElement()
 ele2 = LineElement(dE_ref=-3e9, species_ref=Species("proton"))
 ele2a = LineElement()
 ele2b = LineElement()
-lat = Lattice([ele1, ele1a, ele2, ele2a, ele2b])
-all(lat.beamlines[1].line .=== [ele1, ele1a]) # true
-all(lat.beamlines[2].line .=== [ele2, ele2a, ele2b]) # true
+branch = Branch([ele1, ele1a, ele2, ele2a, ele2b])
+all(branch.beamlines[1].line .=== [ele1, ele1a]) # true
+all(branch.beamlines[2].line .=== [ele2, ele2a, ele2b]) # true
 ele1.E_ref == 10e9 # true
 ele2.E_ref == 7e9 # true
 ```
@@ -232,4 +232,4 @@ All properties stored in `Beamline`s and `LineElement`s must be independent vari
 
 # Acknowledgements
 
-`Beamlines.jl` aims to provide the powerful lattice definitions enabled by [classic Bmad](github.com/bmad-sim/bmad-ecosystem), [`AcceleratorLattice.jl`](https://github.com/bmad-sim/AcceleratorLattice.jl), and the [Particle Accelerator Lattice Standard (PALS) project](https://github.com/campa-consortium/pals). The use of lazily-evaluated deferred expressions is inspired completely by [MAD-NG](https://github.com/MethodicalAcceleratorDesign/MAD-NG). This package would be a fragment of what it is today without all of these efforts.
+`Beamlines.jl` aims to provide the powerful branch definitions enabled by [classic Bmad](github.com/bmad-sim/bmad-ecosystem), [`AcceleratorBranch.jl`](https://github.com/bmad-sim/AcceleratorBranch.jl), and the [Particle Accelerator Branch Standard (PALS) project](https://github.com/campa-consortium/pals). The use of lazily-evaluated deferred expressions is inspired completely by [MAD-NG](https://github.com/MethodicalAcceleratorDesign/MAD-NG). This package would be a fragment of what it is today without all of these efforts.

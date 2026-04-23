@@ -39,8 +39,8 @@ const PROPERTIES_MAP = Dict{Symbol,Type{<:AbstractParams}}(
   :dpc_ref => BeamlineParams, 
   :species_ref => BeamlineParams,
   =#
-  :lattice => BeamlineParams,
-  :lattice_index => BeamlineParams,
+  :branch => BeamlineParams,
+  :branch_index => BeamlineParams,
   :s => BeamlineParams,
   :s_downstream => BeamlineParams,
 

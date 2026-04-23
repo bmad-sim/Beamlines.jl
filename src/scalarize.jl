@@ -33,13 +33,13 @@ function scalarize!(bl::Beamline)
 end
 
 """
-    scalarize!(lat::Lattice)
+    scalarize!(branch::Branch)
 
-Modifies the Lattice so all LineElement and Beamline parameters are scalars.
+Modifies the Branch so all LineElement and Beamline parameters are scalars.
 """
-function scalarize!(lat::Lattice)
-    for bl in lat.beamlines
+function scalarize!(branch::Branch)
+    for bl in branch.beamlines
         scalarize!(bl)
     end
-    return lat
+    return branch
 end

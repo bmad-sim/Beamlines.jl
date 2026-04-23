@@ -1,7 +1,7 @@
 """
     struct BMultipoleParams{T,N} <: AbstractParams
 
-Structure holding the magnetic multipole components of a lattice element. 
+Structure holding the magnetic multipole components of a branch element. 
 
 ## Fields
 
