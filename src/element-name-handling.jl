@@ -1,3 +1,31 @@
+"""
+    @elements ...;
+    @elements begin
+      ...
+    end
+
+Can be applied before the definition of any `LineElement`(s) in order to make 
+set the element `name` equal to the variable symbol automatically.
+
+## Examples
+```jldoctest
+julia> @elements qf = Quadrupole();
+
+julia> qf.name
+"qf"
+
+julia> @elements begin
+         my_drift = Drift(L=0.5);
+         my_sextupole = Sextupole(Kn2L=3.2);
+       end;
+
+julia> my_drift.name
+"my_drift"
+
+julia> my_sextupole.name
+"my_sextupole"
+```
+"""
 macro elements(expr_or_block)
   return _macro_elements(expr_or_block)
 end

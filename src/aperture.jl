@@ -1,6 +1,13 @@
 @enumx ApertureShape::UInt8 Elliptical Rectangular
 @enumx ApertureAt::UInt8 Entrance Exit BothEnds
 
+"""
+    ApertureParams
+
+Describes a mechanical aperture.
+## Properties
+$(FIELDS)
+"""
 @kwdef mutable struct ApertureParams{T} <: AbstractParams
   x1_limit::T                     = -Inf32
   x2_limit::T                     =  Inf32

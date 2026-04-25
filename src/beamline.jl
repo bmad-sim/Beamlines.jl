@@ -50,17 +50,97 @@ end
   end
 end
 
-@kwdef mutable struct Beamline <: Branch
+"""
+    Beamline
+
+Structure containing a vector of `LineElement`s in an ordered sequence. The reference 
+species (specified as `species_ref` and reference energy (specified as one of `E_ref`, 
+`pc_ref`, `p_over_q_ref`, `dE_ref`, `dpc_ref`, or `dp_over_q_ref`) is uniform over the
+entire beamline. The most-recently specified of these reference energy quantites will 
+be stored as the independent variable.
+
+## Properties
+- `line`: Vector of `LineElement`s in the beamline
+- `species_ref`: Reference species of the beamline
+- `E_ref`: Total reference energy [eV]
+- `pc_ref`: Reference momentum [eV/c]
+- `p_over_q_ref`: A *signed* reference magnetic rigidity [T * m]
+- `dE_ref`: Change in total reference energy w.r.t. the directly-upstream beamline in 
+    units [eV]
+- `dpc_ref`: Change in reference momentum w.r.t. the directly-upstream beamline in 
+    units [eV/c]
+- `dp_over_q_ref`: Change in *signed* reference magnetic rigidty w.r.t. the directly 
+    upstream beamline [T * m]
+- `lattice`: `Lattice` that the beamline is placed in, if any
+- `lattice_index`: Index of the beamline in the `Lattice`, if in a `Lattice`
+"""
+mutable struct Beamline <: Branch
   const line::ReadOnlyVector{LineElement, Vector{LineElement}}
-  const species_ref::Species  
+  species_ref::Union{Species,DefExpr{Species}}  
   lattice::_Lattice{Beamline} # This should be HARD to change, not allowed easily
   lattice_index::Int          # This should be HARD to change, not allowed easily
   ref_meaning::RefMeaning.T   # This should be HARD to change, not allowed easily
   ref # Will be nothing if not specified
 
+  @doc"""
+      Beamline(line; kwargs...)
+
+  Constructs a `Beamline` out of the `LineElement`s in the vector `line`. The `LineElement`s 
+  in the `Beamline` will be automatically constructed as children of those `LineElement`s in 
+  `line`, inheriting all of their properties.
+
+  ## Examples
+  ```jldoctest
+  qf = Quadrupole(Kn1=0.36, L=0.5)
+  d = Drift(L=1)
+  qd = Quadrupole(Kn1=-0.36, L=0.5)
+
+  fodo = Beamline([qf, d, qd, d], species_ref=Species("electron"), E_ref=18e9)
+  ```
+
+  The reference energy of the beamline may be optionally specified using one of the keyword 
+  arguments: `E_ref`, `pc_ref`, `p_over_q_ref`, `dE_ref`, `dpc_ref`, or `dp_over_q_ref`.
+  Whichever of these is specified will be the independent variable. The species of 
+  the beamline may be optionally specified using the `species_ref` keyword argument. 
+
+  ## Keyword arguments
+  - `species_ref`: Reference species of the beamline. Defaults to the null species 
+      `Species()`, in which case if this beamline is in a `Lattice` it will inherit the 
+      species from the beamline directly upstream.
+  - `E_ref`: Total reference energy [eV]
+  - `pc_ref`: Reference momentum [eV/c]
+  - `p_over_q_ref`: A *signed* reference magnetic rigidity [T * m]
+  - `dE_ref`: Change in total reference energy w.r.t. the directly-upstream beamline in 
+      units [eV]
+  - `dpc_ref`: Change in reference momentum w.r.t. the directly-upstream beamline in 
+      units [eV/c]
+  - `dp_over_q_ref`: Change in *signed* reference magnetic rigidty w.r.t. the directly 
+      upstream beamline [T * m]
+
+  !!! warning
+      Keyword arguments specified to the `Beamline` constructor will override any corresponding 
+      properties specified in the first `LineElement` in the beamline. E.g., 
+      ```jldoctest
+      julia> ele = LineElement(species_ref=Species("electron"), E_ref=18e9);
+
+      julia> bl = Beamline([ele], species_ref=Species("proton"), E_ref=140e9);
+
+      julia> bl.species_ref == bl.line[1].species_ref == Species("proton")
+      true
+
+      julia> bl.E_ref == bl.line[1].E_ref == 140e9
+      true
+
+      julia> ele.E_ref == 18e9
+      true
+
+      julia> ele.species_ref == Species("electron")
+      true
+      ```
+  """
   function Beamline(
     line;
-    species_ref::Species=Species(),  
+    species_ref::Union{Species,DefExpr{Species}}=Species(),  
     p_over_q_ref=nothing, 
     E_ref=nothing, 
     pc_ref=nothing,
@@ -78,7 +158,7 @@ end
     ibp = length(line) > 0 && haskey(getfield(first(line), :pdict), InitialBeamlineParams) ? getfield(first(line), :pdict)[InitialBeamlineParams] : nothing
     if !isnothing(ibp)
       if isnullspecies(species_ref)
-        species_ref = getfield(ibp, :species_ref)
+        species_ref = DefExpr{Species}(()->first(line).species_ref)
       end
     end
 
@@ -111,6 +191,9 @@ end
     return bl
   end
 end
+#=
+Base.getindex(bl::Beamline, i::Integer) = bl.line[i]
+=#
 
 """
     empty!(::Beamline)
@@ -190,11 +273,51 @@ function Base.show(io::IO, bl::Beamline)
   return
 end
 
+"""
+    Lattice
+
+Structure containing a vector of `Beamline`s, where currently each follows in-order, 
+one after the other. 
+
+## Properties
+- `beamlines`: Vector of the beamlines in the `Lattice`
+"""
 const Lattice = _Lattice{Beamline}
 const NULL_LATTICE = Lattice(Beamline[])
 
+"""
+    Lattice(beamlines)
+
+Constructs a `Lattice` given the vector of beamlines `beamlines`.
+
+## Example
+```jldoctest
+ele = LineElement()
+bl1 = Beamline([ele], E_ref=2e9, species_ref=Species("electron"))
+bl2 = Beamline([ele], dE_ref=1e9)
+
+lat = Lattice([bl1, bl2])
+```
+
+---
+
+    Lattice(elements; kwargs...)
+
+Constructs a `Lattice` given the vector of `LineElement`s `elements`. This will 
+automatically partition the given vector into separate `Beamline`s, which each 
+have a uniform reference species and reference energy.
+
+## Example
+```jldoctest
+beginning = Marker(E_ref=10e9, species_ref=Species("electron"))
+rf0 = RFCavity(dE_ref=1e9)
+next = LineElement()
+
+lat = Lattice([beginning, rf0, next]) # Partitioned into 2 `Beamline`s
+```
+"""
 function Lattice(
-  line::AbstractArray{<:LineElement};
+  elements::AbstractArray{<:LineElement};
   species_ref0::Species=Species(),
   E_ref0=nothing,
   p_over_q_ref0=nothing,
@@ -211,10 +334,10 @@ function Lattice(
   kwarg_sym = isnothing(kwarg_idx) ? :p_over_q_ref : kwarg_syms[kwarg_idx] 
   
   # Determine all indices with InitialBeamlineParams
-  idxs = findall(t->haskey(getfield(t, :pdict), InitialBeamlineParams), line)
+  idxs = findall(t->haskey(getfield(t, :pdict), InitialBeamlineParams), elements)
   # If none, then only single Beamline
   if length(idxs) == 0
-    return Lattice([Beamline(line; species_ref=species_ref0, kwarg_sym=>kwarg_val)])
+    return Lattice([Beamline(elements; species_ref=species_ref0, kwarg_sym=>kwarg_val)])
   end
 
   n_beamlines = length(idxs)
@@ -222,15 +345,15 @@ function Lattice(
   for i in 1:n_beamlines
     idx0 = idxs[i]
     if i == n_beamlines
-      idxf = length(line)
+      idxf = length(elements)
     else
       idxf = idxs[i+1]-1
     end
 
     if i == 1
-      beamlines[i] = Beamline(line[idx0:idxf]; species_ref=species_ref0, kwarg_sym=>kwarg_val)
+      beamlines[i] = Beamline(elements[idx0:idxf]; species_ref=species_ref0, kwarg_sym=>kwarg_val)
     else
-      beamlines[i] = Beamline(line[idx0:idxf])
+      beamlines[i] = Beamline(elements[idx0:idxf])
     end
   end
   return Lattice(beamlines)
@@ -426,21 +549,6 @@ function Base.setproperty!(bp::BeamlineParams, key::Symbol, value)
     return setproperty!(bp.beamline, key, value)
   end
 end
-
-# Because BeamlineParams contains an abstract type, "replacing" it 
-# is just modifying the field and returning itself
-# Unreachable? need to check coverage
-# looks unreachable, commenting out for now
-#=
-function replace(bp::BeamlineParams, key::Symbol, value)
-  #if key in (:p_over_q_ref, :E_ref, :pc_ref, :dp_over_q_ref, :dE_ref, :dpc_ref, :species_ref)
-  setproperty!(bp, key, value)
-  return bp
-  #else
-  #  error("BeamlineParams property $key cannot be modified")
-  #end
-end
-=#
 
 function Base.getproperty(bp::BeamlineParams, key::Symbol)
   if key in (:p_over_q_ref, :E_ref, :pc_ref, :species_ref, :lattice, :lattice_index, :ref)

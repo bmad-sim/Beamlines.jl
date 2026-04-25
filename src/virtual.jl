@@ -444,9 +444,12 @@ function set_harmon_master!(ele::LineElement, ::Symbol, value::Bool)
   return value
 end
 
+# Element-level sets will bleed thru to parent
 function set_bl_params!(ele::LineElement, sym::Symbol, value)
   pdict = getfield(ele, :pdict)
-  if haskey(pdict, BeamlineParams)
+  if haskey(pdict, InheritParams)
+    setproperty!(get_parent(pdict), sym, value)
+  elseif haskey(pdict, BeamlineParams)
     setproperty!(pdict[BeamlineParams], sym, value)
   else
     if !haskey(pdict, InitialBeamlineParams)
@@ -469,6 +472,15 @@ function get_bl_params(ele::LineElement, sym::Symbol)
   end
 end
 
+function get_parent_ele(ele::LineElement, ::Symbol)
+  pdict = getfield(ele, :pdict)
+  if haskey(pdict, InheritParams)
+    return get_parent(pdict)
+  else
+    return ele
+  end
+end
+
 const VIRTUAL_GETTER_MAP = Dict{Symbol,Function}(
   [key => get_BM_strength for (key, value) in BMULTIPOLE_STRENGTH_MAP]...,
 
@@ -488,6 +500,8 @@ const VIRTUAL_GETTER_MAP = Dict{Symbol,Function}(
   :dp_over_q_ref => get_bl_params,
   :dE_ref => get_bl_params,
   :dpc_ref => get_bl_params,
+
+  :parent => get_parent_ele,
 )
 
 const VIRTUAL_SETTER_MAP = Dict{Symbol,Function}(

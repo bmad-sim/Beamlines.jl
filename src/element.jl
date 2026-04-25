@@ -285,6 +285,13 @@ function Base.getproperty(ele::LineElement, key::Symbol)
       # Default value will be done by constructing the parameter group 
       # and then just extracting the particular property.
       # This ensures that if a default is changed elsewhere, it is handled properly
+      if PROPERTIES_MAP[key] == BeamlineParams
+        error("""
+          Unable to get key $key from LineElement: element is not in a Beamline. 
+          If you placed this element in a Beamline, use `findchildren` to find 
+          the child instances of this element in a given Beamline.
+        """)
+      end
       return getproperty(PROPERTIES_MAP[key](), key)
     end
   end
@@ -295,20 +302,7 @@ function Base.getproperty(ele::LineElement, key::Symbol)
     error("Type LineElement has no property $key")
   end
 end
-#=
-qf = Quadrupole(K1=0.36, L=0.5)
-bl = Beamline([qf, qf])
 
-qf.K1 = 0.3 # sets both
-qf.K2 = 0.4 # both should get a K2 honestly
-qf.BMultipoleParams = ... # Both should get it too
-qf.BMultipoleParams = nothing # remove both
-
-qf2 = bl.line[2]
-qf2.K1 = 0.2 # set both?
-qf2.UniversalParams = .... # set both
-
-=#
 function Base.setproperty!(ele::LineElement, key::Symbol, value)
   pdict = getfield(ele, :pdict)
   if haskey(PARAMS_MAP, key) # Setting whole parameter struct
@@ -382,7 +376,9 @@ end
 #Base.fieldnames(::Type{LineElement}) = tuple(:pdict, keys(PROPERTIES_MAP)..., keys(PARAMS_MAP)...)
 #Base.fieldnames(::LineElement) = tuple(:pdict, keys(PROPERTIES_MAP)..., keys(PARAMS_MAP)...)
 #Base.propertynames(::Type{LineElement}) = tuple(:pdict, keys(PROPERTIES_MAP)..., keys(PARAMS_MAP)...)
-function Base.propertynames(::LineElement)
+Base.propertynames(::LineElement) = _lineelement_properties()
+
+function _lineelement_properties()
   virt = union(keys(VIRTUAL_GETTER_MAP),keys(VIRTUAL_SETTER_MAP))
   prop = keys(PROPERTIES_MAP)
   param = keys(PARAMS_MAP)

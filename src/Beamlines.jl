@@ -52,10 +52,13 @@ export AbstractParams,
        elements,
 
        scalarize,
-       scalarize!
+       scalarize!,
+
+       findchildren
 
 using Accessors, 
       AtomicAndPhysicalConstants,
+      DocStringExtensions,
       StaticArrays, 
       OrderedCollections,
       MacroTools,
@@ -97,6 +100,7 @@ include("aperture.jl")
 include("misc.jl")
 include("keymaps.jl")
 include("element-name-handling.jl")
+include("search.jl")
 
 # BitsBeamline is no longer supported
 # Support may continue in the future with 
