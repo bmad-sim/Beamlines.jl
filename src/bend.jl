@@ -1,13 +1,3 @@
-"""
-    BendParams
-
-Defines a curvature in the reference coordinate system throught the element, 
-as well as the edge angles of the element at the entrance and exit of the 
-element. Does not specify any magnetic field.
-
-## Properties
-$(FIELDS)
-"""
 @kwdef mutable struct BendParams{T} <: AbstractParams
   "Coordinate system curvature [1 / m]"
   g_ref::T        = Float32(0.0) 
@@ -25,6 +15,28 @@ $(FIELDS)
     return new{promote_type(typeof(g_ref),typeof(tilt_ref),typeof(e1),typeof(e2),typeof(edge1_int),typeof(edge2_int))}(g_ref, tilt_ref, e1, e2, edge1_int, edge2_int)
   end
 end
+
+
+PROPS(::Type{BendParams}) = Dict{String,String}(
+  "g_ref"    => "Coordinate system curvature [1 / m]",
+  "tilt_ref" => "Tilt angle applied before the curvature, and undone after [rad]",
+  "e1" => "Edge angle of the entrance of the element w.r.t. the entering coordinate system [rad]",
+  "e2" => "Edge angle of the exit of the element w.r.t. the exit coordinate system [rad]",
+  "edge1_int" => "Pole face field integral at the entrance [T * m]",
+  "edge2_int" => "Pole face field integral at the exit [T * m]",
+)
+
+"""
+    BendParams
+
+Defines a curvature in the reference coordinate system throught the element, 
+as well as the edge angles of the element at the entrance and exit of the 
+element. Does not specify any magnetic field.
+
+## Properties
+$(PROPSDOC(BendParams))
+"""
+BendParams
 
 Base.eltype(::BendParams{T}) where {T} = T
 Base.eltype(::Type{BendParams{T}}) where {T} = T

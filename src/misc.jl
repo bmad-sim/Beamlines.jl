@@ -3,6 +3,57 @@
   transport_map_params::P = nothing
 end
 
+PROPS(::Type{MapParams}) = Dict{String,String}(
+  "transport_map" => 
+  """
+  Arbitrary function that transports particles' coordinates `v`, and optionally spin
+    quaternions `q`.  Must have the signature `<your map name>(v, q, p=nothing)` and 
+    returns the output as a tuple `(v, q)`""",
+  "transport_map_params" =>
+  "Parameters of the transport map that will be inputted as the `p` variable in `transport_map`",
+)
+
+"""
+    MapParams
+
+Defines any arbitrary function to transport particle coordinates' and optionally spin 
+quaternions. This could be a matrix, a neural network, a phase trombone, etc.
+
+The input for the `transport_map` must be `(v, q, p=nothing)`, where `v` is a tuple of the
+input phase space coordinates `(x, px, y, py, z, pz)` and `q` is `nothing` is there is no 
+spin tracking, else `q` is a tuple of the input quaternion `(q0, q1, q2, q3)`. `p` may be a
+tuple of parameters that can be used inside of the `transport_map`. This might be neural 
+network weights, for example, or perhaps phase evolutions for a phase trombone.
+
+For GPU compatibility, it is necessary that your function `transport_map` is GPU compatible:
+there should be no type instabilities. You should also try to make your `transport_map` be
+branchless, so both the CPU and GPU can vectorize it. 
+
+`transport_map_params` should contain the tuple that is passed into `p` at the time of tracking.
+## Properties:
+$(PROPSDOC(MapParams))
+
+## Example
+```jldoctest
+using StaticArrays
+random_matrix = @SMatrix rand(6,6) 
+
+function matrix(v, q::Nothing, p) # `q::Nothing` -> no spin tracking
+  # Vectorizable matrix multiplication by `p`:
+  vx  = sum(p[1,:] .* v)
+  vpx = sum(p[2,:] .* v)
+  vy  = sum(p[3,:] .* v)
+  vpy = sum(p[4,:] .* v)
+  vz  = sum(p[5,:] .* v)
+  vpz = sum(p[6,:] .* v)
+  return ((vx, vpx, vy, vpy, vz, vpz), q)
+end
+
+m = LineElement(transport_map=matrix, transport_map_params=random_matrix)
+```
+"""
+MapParams
+
 function Base.isapprox(a::MapParams, b::MapParams)
   if xor(isnothing(a.transport_map_params), isnothing(b.transport_map_params))
     return false
@@ -41,6 +92,24 @@ end
   # true means the potential/derivatives are p_over_q_ref * four_potential;
   # false means the potential/derivatives are four_potential.
 end
+
+PROPS(::Type{FourPotentialParams}) = Dict{String,String}(
+  "four_potential"            => "TODO",
+  "four_potential_params"     => "TODO",
+  "four_potential_normalized" => "TODO",
+)
+
+"""
+    FourPotentialParams
+
+TODO
+
+## Properties
+$(PROPSDOC(FourPotentialParams))
+
+## Examples
+"""
+FourPotentialParams
 
 function Base.isapprox(a::FourPotentialParams, b::FourPotentialParams)
   if xor(isnothing(a.four_potential_params), isnothing(b.four_potential_params))

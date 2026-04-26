@@ -8,8 +8,30 @@ Sets what zero `phi0` RF phase means
 """
 @enumx PhaseReference::UInt8 Accelerating BelowTransition AboveTransition
 
+"""
+    @enumx RateMeaning::Int8 RFFrequency=false Harmon=true Indeterminate=-1 
+
+Specifies which independent variable is stored in the `RFParams`.
+"""
 @enumx RateMeaning::Int8 RFFrequency=false Harmon=true Indeterminate=-1 
 
+"""
+    RFParams
+
+Defines parameters generally associated with radiofrequency (RF) cavities. The frequency 
+of the oscillating electromagnetic field may be optionally specified using the property 
+`rf_frequency` or `harmon`; whichever of these is *set* last will be the independent 
+variable.
+
+## Properties
+- `rf_frequency`: The frequency of the oscillating electromagnetic field [Hz]
+- `harmon`: The harmonic number of the oscillating electromagnetic field w.r.t. the length
+    of the entire containing `Beamline` [1]
+- `phi0`: Phase offset of the oscillating field w.r.t. `zero_phase` [rad]
+- `zero_phase::PhaseReference.T`: Specifies what `phi0` should mean, see `PhaseReference`
+- `traveling_wave::Bool`: `true` if traveling wave, `false` if standing wave
+- ``
+"""
 mutable struct RFParams{T} <: AbstractParams
   rate::T                           # RF frequency in Hz or Harmonic number
   voltage::T                        # Voltage in V 

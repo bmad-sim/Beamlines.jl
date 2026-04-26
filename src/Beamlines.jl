@@ -58,7 +58,6 @@ export AbstractParams,
 
 using Accessors, 
       AtomicAndPhysicalConstants,
-      DocStringExtensions,
       StaticArrays, 
       OrderedCollections,
       MacroTools,

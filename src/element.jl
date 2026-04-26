@@ -172,23 +172,45 @@ function Base.isapprox(a::LineElement, b::LineElement)
 end
 
 # Common kind choices
-Solenoid(; kwargs...)   = LineElement(; kind="Solenoid", kwargs...)
-SBend(; kwargs...)      = LineElement(; kind="SBend", kwargs...)
-Quadrupole(; kwargs...) = LineElement(; kind="Quadrupole", kwargs...)
-Sextupole(; kwargs...)  = LineElement(; kind="Sextupole", kwargs...)
-Drift(; kwargs...)      = LineElement(; kind="Drift", kwargs...)
-Octupole(; kwargs...)   = LineElement(; kind="Octupole", kwargs...)
-Multipole(; kwargs...)  = LineElement(; kind="Multipole", kwargs...)
-Marker(; kwargs...)     = LineElement(; kind="Marker", kwargs...)
-Kicker(; kwargs...)     = LineElement(; kind="Kicker", kwargs...)
-HKicker(; kwargs...)    = LineElement(; kind="HKicker", kwargs...)
-VKicker(; kwargs...)    = LineElement(; kind="VKicker", kwargs...)
-RFCavity(; kwargs...)   = LineElement(; kind="RFCavity", kwargs...)
+# Copy docstring to all aliases
+for kind in (:Solenoid, :SBend, :Quadrupole, :Sextupole, :Drift, :Octupole, :Multipole, 
+              :Marker, :Kicker, :HKicker, :VKicker, :RFCavity, :Patch
+  )
+  @eval begin
+    """
+    $($kind)(; kwargs...) = LineElement(; kind="$($kind)", kwargs...)
+    $(@doc(LineElement))
+    """
+    $kind(; kwargs...) = LineElement(; kind="$($kind)", kwargs...)
+  end
+end
+
+# Right now CrabCavity is treated differently
+"""
+$CrabCavity(; kwargs...) = LineElement(; kind="CrabCavity", is_crabcavity = true, kwargs...)
+$(@doc(LineElement))
+"""
 CrabCavity(; kwargs...) = LineElement(; kind="CrabCavity", is_crabcavity = true, kwargs...)
-Patch(; kwargs...)      = LineElement(; kind="Patch", kwargs...)
 
 
 # Default tracking method:
+"""
+    SciBmadStandard
+
+Default tracking method that uses exact transport maps when solvable, else uses the 
+symplectic integrator `Yoshida(order=4, num_steps=1)` which chooses an appropriate split 
+for each element.
+
+## Properties
+- `radiation_damping_on`: `true` if the deterministic effect of synchrotron radiation 
+    is included, `false` otherwise. Defaults to `false`
+- `radiation_fluctuations_on`: `true` if the stochastic radiation kicks are included, 
+    `false` otherwise. Defaults to `false`
+- `ibs_damping_on`: true if the deterministic effect of intrabeam scattering (IBS) is 
+    included, `false` otherwise. Defaults to `false`.
+- `ibs_fluctuations_on`: true if the stochastic kicks of intrabeam scattering (IBS) is 
+    included, `false` otherwise. Defaults to `false`.
+"""
 @kwdef struct SciBmadStandard
   radiation_damping_on::Bool = false
   radiation_fluctuations_on::Bool = false
@@ -202,6 +224,23 @@ end
   L               = Float32(0.0)
   tracking_method = SciBmadStandard()
 end
+
+PROPS(::Type{UniversalParams}) = Dict{String,String}(
+  "kind" => "String specifing the \"kind\", of an element, e.g. \"Quadrupole\"",
+  "name" => "The name of an element as a string",
+  "L"    => "Length of the element [m]",
+  "tracking_method" => "Tracking method for the element, defaults to `SciBmadStandard()`"
+)
+
+"""
+    UniversalParams
+
+Describes the kind, name, length, and tracking method for a `LineElement`.
+
+## Properties
+$(PROPSDOC(UniversalParams))
+"""
+UniversalParams
 
 # For UniversalParams, print each tracking_method field:
 function Base.show(io::IO, a::UniversalParams)
@@ -237,10 +276,28 @@ struct InheritParams <: AbstractParams
   parent::LineElement
 end
 
+PROPS(::Type{InheritParams}) = Dict{String,String}(
+  "parent" => "Parent `LineElement` to inherit parameter groups from for both reading and writing.",
+)
+
+"""
+    InheritParams
+
+Stores a parent `LineElement` through which any parameter groups NOT present in the "child" 
+element containing the `InheritParams` would inherit. E.g., if the child element has its own
+`BeamlineParams`, then any property from the `BeamlineParams` parameter group would be read/
+write to the child's `BeamlineParams`.
+
+## Properties:
+$(PROPSDOC(InheritParams))
+"""
+InheritParams
+
 @inline get_parent(pdict::ParamDict) = (pdict[InheritParams]::InheritParams).parent::LineElement
 
 # For parameter groups, both read and write are not allowed
 # For properties, write is not allowed
+# Internal as of 0.9.0, however it does work.
 struct ProtectParams <: AbstractParams
   protected_properties::Vector{Symbol}
 end

@@ -1,13 +1,7 @@
+# TODO: Docs for ApertureShape, ApertureAt, ApertureParams, and PROPS(::Type{ApertureParams})
 @enumx ApertureShape::UInt8 Elliptical Rectangular
 @enumx ApertureAt::UInt8 Entrance Exit BothEnds
 
-"""
-    ApertureParams
-
-Describes a mechanical aperture.
-## Properties
-$(FIELDS)
-"""
 @kwdef mutable struct ApertureParams{T} <: AbstractParams
   x1_limit::T                     = -Inf32
   x2_limit::T                     =  Inf32
@@ -22,6 +16,20 @@ $(FIELDS)
     return new{promote_type(typeof(x1_limit),typeof(x2_limit),typeof(y1_limit),typeof(y2_limit))}(x1_limit, x2_limit, y1_limit, y2_limit, aperture_shape, aperture_at, aperture_shifts_with_body, aperture_active)
   end
 end
+
+PROPS(::Type{ApertureParams}) = Dict{String,String}(
+  "TODO" => ""
+)
+
+"""
+    ApertureParams
+
+Describe a mechanical aperture.
+
+## Properties
+$(PROPSDOC(ApertureParams))
+"""
+ApertureParams
 
 Base.eltype(::ApertureParams{T}) where {T} = T
 Base.eltype(::Type{ApertureParams{T}}) where {T} = T

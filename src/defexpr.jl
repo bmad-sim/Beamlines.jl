@@ -2,8 +2,11 @@
 """
     DefExpr{T}
   
+
 A lazily-evaluated deferred expression returning type `T`. Deferred expressions 
-are lambda functions that "close" over a variable in the current scope.
+are lambda functions that "close" over a variable in the current scope. They can 
+be used to specify inter-dependent parameters in an accelerator and guarantee that 
+no parameter ever becomes "stale".
 
 ## Examples
 ```jldoctest

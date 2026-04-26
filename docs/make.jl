@@ -8,7 +8,7 @@ makedocs(;
     authors="mattsignorelli <mgs255@cornell.edu> and contributors",
     sitename="Beamlines.jl",
     format=Documenter.HTML(;
-        canonical="https://mattsignorelli.github.io/Beamlines.jl",
+        canonical="https://bmad-sim.github.io/Beamlines.jl",
         edit_link="main",
         assets=String[],
     ),
@@ -18,6 +18,6 @@ makedocs(;
 )
 
 deploydocs(;
-    repo="github.com/mattsignorelli/Beamlines.jl",
+    repo="github.com/bmad-sim/Beamlines.jl",
     devbranch="main",
 )

@@ -68,6 +68,14 @@ end
 
 setname(not_ele, name::String) = not_ele
 
+"""
+    elements(eles_dict)
+
+For more Pythonic-workflows, `elements` receives a dictionary with key as the element name 
+and value as the element, and sets the `name` attribute for each element equal to its key.
+
+Julia users should generally use the `@elements` macro instead.
+"""
 function elements(eles_dict::AbstractDict)
   for (name, ele) in eles_dict
     if ele.name == "" # Unset
@@ -76,21 +84,3 @@ function elements(eles_dict::AbstractDict)
   end
   return eles_dict
 end
-
-#=
-  @nospecialize
-  for (name, ele) in eles
-    if ele.name == "" # Unset
-      ele.name = name
-    end
-  end
-  return eles
-  #println(String.(keys(eles)))
-  #return Dict(String.(collect(keys(eles))), values(eles))
-end
-=#
-#=
-Base.@nospecializeinfer function _elements(@nospecialize(eles))
-
-  return eles
-end=#

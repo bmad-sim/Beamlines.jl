@@ -1,28 +1,34 @@
+@kwdef mutable struct AlignmentParams{T} <: AbstractParams
+  
+  x_offset::T = Float32(0.0)
+  y_offset::T = Float32(0.0)
+  z_offset::T = Float32(0.0)
+  x_rot::T    = Float32(0.0)
+  y_rot::T    = Float32(0.0)
+  tilt::T     = Float32(0.0)
+  function AlignmentParams(args...)
+    return new{promote_type(typeof.(args)...)}(args...)
+  end
+end
+
+PROPS(::Type{AlignmentParams}) = Dict{String,String}(
+  "x_offset" => "Offset along x-axis [m]",
+  "y_offset" => "Offset along y-axis [m]",
+  "z_offset" => "Offset along z-axis [m]",
+  "x_rot"    => "Rotation around the x-axis [rad]",
+  "y_rot"    => "Rotation around the y-axis [rad]",
+  "tilt"    => "Rotation around the z-axis [rad]",
+)
+
 """
     AlignmentParams
 
 Describe the alignment of the element with respect to the nominal position. 
 
 ## Properties
-$(FIELDS)
+$(PROPSDOC(AlignmentParams))
 """
-@kwdef mutable struct AlignmentParams{T} <: AbstractParams
-  "Offset along x-axis [m]"
-  x_offset::T = Float32(0.0)
-  "Offset along y-axis [m]"
-  y_offset::T = Float32(0.0)
-  "Offset along z-axis [m]"
-  z_offset::T = Float32(0.0)
-  "Rotation around x-axis [rad]"
-  x_rot::T    = Float32(0.0)
-  "Rotation around y-axis [rad]"
-  y_rot::T    = Float32(0.0)
-  "Rotation around z-axis [rad]"
-  tilt::T     = Float32(0.0)
-  function AlignmentParams(args...)
-    return new{promote_type(typeof.(args)...)}(args...)
-  end
-end
+AlignmentParams
 
 Base.eltype(::AlignmentParams{T}) where {T} = T
 Base.eltype(::Type{AlignmentParams{T}}) where {T} = T
