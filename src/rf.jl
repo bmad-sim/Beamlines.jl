@@ -1,12 +1,12 @@
 """
-    @enumx PhaseReference::UInt8 Accelerating BelowTransition AboveTransition
+    @enumx PhaseRef::UInt8 Accelerating BelowTransition AboveTransition
 
 Sets what zero `phi0` RF phase means
 - `Accelerating`      Zero phase is the maximum accelerating phase.
 - `BelowTransition`   Zero phase is at the stable zero crossing for particles below transition.
 - `AboveTransition`   Zero phase is at the stable zero crossing for particles above transition.
 """
-@enumx PhaseReference::UInt8 Accelerating BelowTransition AboveTransition
+@enumx PhaseRef::UInt8 Accelerating BelowTransition AboveTransition
 
 """
     @enumx RateMeaning::Int8 RFFrequency=false Harmon=true Indeterminate=-1 
@@ -28,7 +28,7 @@ variable.
 - `harmon`: The harmonic number of the oscillating electromagnetic field w.r.t. the length
     of the entire containing `Beamline` [1]
 - `phi0`: Phase offset of the oscillating field w.r.t. `zero_phase` [rad]
-- `zero_phase::PhaseReference.T`: Specifies what `phi0` should mean, see `PhaseReference`
+- `zero_phase::PhaseRef.T`: Specifies what `phi0` should mean, see `PhaseRef`
 - `traveling_wave::Bool`: `true` if traveling wave, `false` if standing wave
 - ``
 """
@@ -37,7 +37,7 @@ mutable struct RFParams{T} <: AbstractParams
   voltage::T                        # Voltage in V 
   phi0::T                           # Phase at reference energy
   const rate_meaning::RateMeaning.T # false = frequency in Hz, true = harmonic number, -1 = Not set
-  zero_phase::PhaseReference.T      # Determines the RF phase at phi0 = 0
+  zero_phase::PhaseRef.T      # Determines the RF phase at phi0 = 0
   traveling_wave::Bool              # Traveling wave or standing wave cavity?
   is_crabcavity::Bool               # Is this a crab cavity?
   function RFParams(args...)
@@ -57,7 +57,7 @@ function RFParams(;
   voltage = Float32(0.0), 
   phi0 = Float32(0.0), 
   rate_meaning = RateMeaning.Indeterminate, 
-  zero_phase = PhaseReference.Accelerating, 
+  zero_phase = PhaseRef.Accelerating, 
   traveling_wave = false, 
   is_crabcavity = false,
   harmon_master::Union{Nothing,Bool} = nothing,
@@ -76,7 +76,7 @@ function RFParams{T}(;
   voltage = Float32(0.0), 
   phi0 = Float32(0.0), 
   rate_meaning = RateMeaning.Indeterminate, 
-  zero_phase = PhaseReference.Accelerating, 
+  zero_phase = PhaseRef.Accelerating, 
   traveling_wave = false, 
   is_crabcavity = false,
   harmon_master::Union{Nothing,Bool} = nothing,

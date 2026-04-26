@@ -902,7 +902,7 @@ using ForwardDiff, GTPSA, ReverseDiff
     @test_throws ErrorException RFParams().rate = 10
 
     # Basic RF frequency mode
-    cav = RFCavity(rf_frequency=352e6, voltage=1e6, zero_phase=PhaseReference.AboveTransition)
+    cav = RFCavity(rf_frequency=352e6, voltage=1e6, zero_phase=PhaseRef.AboveTransition)
     @test isactive(cav.RFParams)
     cav.voltage = 0
     @test !isactive(cav.RFParams)
@@ -912,7 +912,7 @@ using ForwardDiff, GTPSA, ReverseDiff
     @test cav.harmon_master == false && cav.rf_frequency == 352e6
     @test_throws ErrorException cav.harmon
     cav.rf_frequency = 500e6 + 1e3im
-    @test cav.zero_phase == PhaseReference.AboveTransition
+    @test cav.zero_phase == PhaseRef.AboveTransition
     @test cav.traveling_wave == false
     @test cav.is_crabcavity == false
     @test eltype(cav.RFParams) == ComplexF64
@@ -930,7 +930,7 @@ using ForwardDiff, GTPSA, ReverseDiff
     @test cav.harmon_master == false && cav.rf_frequency == 352e6
     @test_throws ErrorException cav.harmon
     cav.rf_frequency = 500e6 + 1e3im
-    @test cav.zero_phase == PhaseReference.Accelerating
+    @test cav.zero_phase == PhaseRef.Accelerating
     @test cav.traveling_wave == false
     @test cav.is_crabcavity == true
     @test eltype(cav.RFParams) == ComplexF64
@@ -991,9 +991,9 @@ using ForwardDiff, GTPSA, ReverseDiff
     @test_throws ErrorException RFParams(harmon_master=false, rate_meaning=RateMeaning.Harmon)
 
     # RFParams bug check
-    rf0 = RFCavity(L =  2.29999999999999982E+000, zero_phase = PhaseReference.AboveTransition,
+    rf0 = RFCavity(L =  2.29999999999999982E+000, zero_phase = PhaseRef.AboveTransition,
         rf_frequency =  5.91158776766067386E+008)
-    @test rf0.zero_phase == PhaseReference.AboveTransition
+    @test rf0.zero_phase == PhaseRef.AboveTransition
 
     bo = 1.23
     dbo = DefExpr(()->bo)
@@ -1042,7 +1042,7 @@ using ForwardDiff, GTPSA, ReverseDiff
     integrated = Beamlines.SA[false, true, true]
     @test Beamlines.deval(ele.BMultipoleParams) ≈ BMultipoleParams(n, s, tilt, order, normalized, integrated)
     @test Beamlines.deval(ele.PatchParams) ≈ PatchParams(bo + 20, bo + 21, bo + 22, bo + 23, bo + 24, bo + 25, bo + 26)
-    @test Beamlines.deval(ele.RFParams) ≈ RFParams(bo + 27, bo + 28, bo + 29, RateMeaning.RFFrequency, PhaseReference.Accelerating, false, false)
+    @test Beamlines.deval(ele.RFParams) ≈ RFParams(bo + 27, bo + 28, bo + 29, RateMeaning.RFFrequency, PhaseRef.Accelerating, false, false)
 
     # Species addition
     bl = Beamline([LineElement(), LineElement()]; p_over_q_ref=-59.52872449027632, species_ref=Species("electron"))
