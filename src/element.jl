@@ -130,7 +130,6 @@ function Base.show(io::IO, ele::LineElement)
   return
 end
 
-
 function flattened_pdict(ele::LineElement, p=ParamDict())
   curpdict = getfield(ele, :pdict)
   if !haskey(curpdict, InheritParams)
@@ -178,8 +177,9 @@ for kind in (:Solenoid, :SBend, :Quadrupole, :Sextupole, :Drift, :Octupole, :Mul
   )
   @eval begin
     """
-    $($kind)(; kwargs...) = LineElement(; kind="$($kind)", kwargs...)
-    $(@doc(LineElement))
+        $($kind)(; kwargs...) = LineElement(; kind="$($kind)", kwargs...)
+    
+    See the documentation for `LineElement`
     """
     $kind(; kwargs...) = LineElement(; kind="$($kind)", kwargs...)
   end
@@ -187,8 +187,9 @@ end
 
 # Right now CrabCavity is treated differently
 """
-$CrabCavity(; kwargs...) = LineElement(; kind="CrabCavity", is_crabcavity = true, kwargs...)
-$(@doc(LineElement))
+    $CrabCavity(; kwargs...) = LineElement(; kind="CrabCavity", is_crabcavity = true, kwargs...)
+
+See the documentation for `LineElement`
 """
 CrabCavity(; kwargs...) = LineElement(; kind="CrabCavity", is_crabcavity = true, kwargs...)
 
@@ -225,7 +226,7 @@ end
   tracking_method = SciBmadStandard()
 end
 
-PROPS(::Type{UniversalParams}) = Dict{String,String}(
+PROPS(::Type{UniversalParams}) = OrderedDict{String,String}(
   "kind" => "String specifing the \"kind\", of an element, e.g. \"Quadrupole\"",
   "name" => "The name of an element as a string",
   "L"    => "Length of the element [m]",
@@ -276,7 +277,7 @@ struct InheritParams <: AbstractParams
   parent::LineElement
 end
 
-PROPS(::Type{InheritParams}) = Dict{String,String}(
+PROPS(::Type{InheritParams}) = OrderedDict{String,String}(
   "parent" => "Parent `LineElement` to inherit parameter groups from for both reading and writing.",
 )
 
@@ -310,7 +311,7 @@ end
 
 # Use Accessors here for default bc super convenient for replacing entire (even mutable) type
 # For more complex params (e.g. BMultipoleParams) we will need custom override
-replace(p::AbstractParams, key::Symbol, value) = set(p, opcompose(PropertyLens(key)), value)
+param_replace(p::AbstractParams, key::Symbol, value) = set(p, opcompose(PropertyLens(key)), value)
 
 function Base.getproperty(ele::LineElement, key::Symbol)
   pdict = getfield(ele, :pdict)
@@ -389,7 +390,7 @@ function Base.setproperty!(ele::LineElement, key::Symbol, value)
       end
       # If the parameter struct associated with this symbol does not exist, create it
       # This could be optimized in the future with a `place` function
-      # That is similar to `replace` but just has the type
+      # That is similar to `param_replace` but just has the type
       # Though adding fields is not done very often so is fine
       setindex!(pdict, PROPERTIES_MAP[key](), PROPERTIES_MAP[key])
     end
@@ -412,7 +413,7 @@ function _setproperty!(pdict::ParamDict, p::AbstractParams, key::Symbol, value)
       return setproperty!(p, key, value)
     end
   end
-  return pdict[PROPERTIES_MAP[key]] = replace(p, key, value)
+  return pdict[PROPERTIES_MAP[key]] = param_replace(p, key, value)
 end
 
 function Base.deepcopy_internal(ele::LineElement, stackdict::IdDict)

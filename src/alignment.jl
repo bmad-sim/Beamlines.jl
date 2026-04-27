@@ -11,7 +11,7 @@
   end
 end
 
-PROPS(::Type{AlignmentParams}) = Dict{String,String}(
+PROPS(::Type{AlignmentParams}) = OrderedDict{String,String}(
   "x_offset" => "Offset along x-axis [m]",
   "y_offset" => "Offset along y-axis [m]",
   "z_offset" => "Offset along z-axis [m]",
@@ -24,6 +24,7 @@ PROPS(::Type{AlignmentParams}) = Dict{String,String}(
     AlignmentParams
 
 Describe the alignment of the element with respect to the nominal position. 
+Rotations are applied in order: `tilt`, `x_rot`, `y_rot`.
 
 ## Properties
 $(PROPSDOC(AlignmentParams))

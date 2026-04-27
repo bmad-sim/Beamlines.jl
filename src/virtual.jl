@@ -193,6 +193,8 @@ function _set_BM_strength!(ele, b::BMultipoleParams, key, value)
   return b
 end
 
+get_bend_angle(::LineElement, ::Symbol) = error("Property `angle` is write-only, and sets both `g_ref` and `Kn0` together")
+
 function set_bend_angle!(ele::LineElement, ::Symbol, value)
   L = ele.L
   bm = ele.BMultipoleParams
@@ -218,13 +220,7 @@ function _set_bend_angle!(ele, L, bm, bp, value)
   return value
 end
 
-function get_bend_g(ele::LineElement, ::Symbol)
-  bp = ele.BendParams
-  if isnothing(bp)
-    return 0f0 # Default value
-  end
-  return bp.g_ref
-end
+get_bend_g(::LineElement, ::Symbol) = error("Property `g` is write-only, and sets both `g_ref` and `Kn0` together.")
 
 function set_bend_g!(ele::LineElement, ::Symbol, value)
   bp = ele.BendParams
@@ -484,6 +480,7 @@ end
 const VIRTUAL_GETTER_MAP = Dict{Symbol,Function}(
   [key => get_BM_strength for (key, value) in BMULTIPOLE_STRENGTH_MAP]...,
 
+  :angle => get_bend_angle,
   :g => get_bend_g,
 
   :BM_independent => get_BM_independent,

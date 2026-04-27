@@ -15,29 +15,12 @@ Specifies which independent variable is stored in the `RFParams`.
 """
 @enumx RateMeaning::Int8 RFFrequency=false Harmon=true Indeterminate=-1 
 
-"""
-    RFParams
-
-Defines parameters generally associated with radiofrequency (RF) cavities. The frequency 
-of the oscillating electromagnetic field may be optionally specified using the property 
-`rf_frequency` or `harmon`; whichever of these is *set* last will be the independent 
-variable.
-
-## Properties
-- `rf_frequency`: The frequency of the oscillating electromagnetic field [Hz]
-- `harmon`: The harmonic number of the oscillating electromagnetic field w.r.t. the length
-    of the entire containing `Beamline` [1]
-- `phi0`: Phase offset of the oscillating field w.r.t. `zero_phase` [rad]
-- `zero_phase::PhaseRef.T`: Specifies what `phi0` should mean, see `PhaseRef`
-- `traveling_wave::Bool`: `true` if traveling wave, `false` if standing wave
-- ``
-"""
 mutable struct RFParams{T} <: AbstractParams
   rate::T                           # RF frequency in Hz or Harmonic number
   voltage::T                        # Voltage in V 
   phi0::T                           # Phase at reference energy
   const rate_meaning::RateMeaning.T # false = frequency in Hz, true = harmonic number, -1 = Not set
-  zero_phase::PhaseRef.T      # Determines the RF phase at phi0 = 0
+  zero_phase::PhaseRef.T            # Determines the RF phase at phi0 = 0
   traveling_wave::Bool              # Traveling wave or standing wave cavity?
   is_crabcavity::Bool               # Is this a crab cavity?
   function RFParams(args...)
@@ -48,6 +31,29 @@ mutable struct RFParams{T} <: AbstractParams
     return new{promote_type(typeof.((args[1],args[2],args[3]))...)}(args...)
   end
 end
+
+PROPS(::Type{RFParams}) = OrderedDict{String,String}(
+  "rf_frequency"   => "Frequency of the oscillating electromagnetic field [Hz]",
+  "harmon"         => "Harmonic number of the oscillating electromagnetic field w.r.t. the length of the 
+                        entire containing `Beamline` [1]",
+  "phi0"           => "Phase offset of the oscillating field w.r.t. `zero_phase` [rad]",
+  "zero_phase"     => "A `PhaseRef` that specifies what `phi0` should mean, see `PhaseRef`",
+  "traveling_wave" => "`true` if traveling wave, `false` if standing wave",
+  "is_crabcavity"  => "`true` if this is a crab cavity, `false` otherwise"
+)
+
+"""
+    RFParams
+
+Defines parameters generally associated with radiofrequency (RF) cavities. The frequency 
+of the oscillating electromagnetic field may be optionally specified using the property 
+`rf_frequency` or `harmon`; whichever of these is *set* last will be the independent 
+variable.
+
+## Properties
+$(PROPSDOC(RFParams))
+"""
+RFParams
 
 # Default kwarg ctors
 # This instead of @kwdef to allow 

@@ -3,9 +3,39 @@
 [![Build Status](https://github.com/mattsignorelli/Beamlines.jl/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/mattsignorelli/Beamlines.jl/actions/workflows/CI.yml?query=branch%3Amain)
 [![codecov](https://codecov.io/github/bmad-sim/Beamlines.jl/graph/badge.svg?token=4776DOLQ8B)](https://codecov.io/github/bmad-sim/Beamlines.jl)
 
-This package defines the `Beamline` and `LineElement` types, which can be used to define particle (or in the future, potentially x-ray) beamlines. The `LineElement` is fully extensible and polymorphic, and has been highly optimized for fast getting/setting of the beamline element parameters. High-order automatic differentiation of parameters, e.g. magnet strengths or lengths, is easy using `Beamlines.jl`. Furthermore, all non-fundamental quantities computed from `LineElement`s are computed lazily as deferred expressions. There is no eager "bookkeeper". This both fully minimizes overhead from storing and computing quantities you don't need (especially impactful in optimization loops), and ensures that you don't need to rely on a bookkeeper to properly update all dependent variables, minimizing bugs and easing long term maintainence. Furthermore, the generic `DefExpr` type is provided as a general usage lazily-evaluated deferred expression for controlling potentially many parameters with only a single update.
+This package defines the `Beamline` and `LineElement` types, which can be used to define particle accelerator beamlines. The `LineElement` is fully extensible and polymorphic, and has been highly optimized for fast getting/setting of the beamline element parameters. High-order automatic differentiation of parameters, e.g. magnet strengths or lengths, is also easy using `Beamlines.jl`. All dependent variables computed from `LineElement`s are computed from the internally stored independent variables as lazily as deferred expressions; there is no eager "bookkeeper". This both fully minimizes overhead from storing and computing quantities you don't need (especially impactful in optimization loops), and ensures that you don't need to rely on a complicated bookkeeper to properly update all dependent variables, minimizing bugs and easing long term maintainence. Furthermore, the generic `DefExpr` type is provided as a general usage lazily-evaluated deferred expression for controlling potentially many parameters with only a single update.
 
-`Beamlines.jl` is best shown with an example:
+
+## Installation
+To use `Beamlines.jl`, simply run:
+
+```julia
+import Pkg; Pkg.add("Beamlines")
+```
+
+## Basic Example
+
+```julia
+using Beamlines
+
+@elements begin
+  qf = Quadrupole(Kn1=0.36, L=0.5)
+  d = Drift(L=1.2)
+  qd = Quadrupole(Kn1=-0.36, L=0.5)
+end
+
+fodo = Beamline([qf, d, qd, d], species_ref=Species("electron"), E_ref=18e9)
+```
+
+See the [documentation]("https://bmad-sim.github.io/Beamlines.jl") for more.
+
+
+
+
+
+
+
+
 
 ```julia
 using Beamlines, GTPSA

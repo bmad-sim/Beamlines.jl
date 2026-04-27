@@ -17,7 +17,7 @@
   end
 end
 
-PROPS(::Type{ApertureParams}) = Dict{String,String}(
+PROPS(::Type{ApertureParams}) = OrderedDict{String,String}(
   "TODO" => ""
 )
 

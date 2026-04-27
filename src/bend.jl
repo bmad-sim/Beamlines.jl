@@ -17,7 +17,7 @@
 end
 
 
-PROPS(::Type{BendParams}) = Dict{String,String}(
+PROPS(::Type{BendParams}) = OrderedDict{String,String}(
   "g_ref"    => "Coordinate system curvature [1 / m]",
   "tilt_ref" => "Tilt angle applied before the curvature, and undone after [rad]",
   "e1" => "Edge angle of the entrance of the element w.r.t. the entering coordinate system [rad]",

@@ -3,7 +3,7 @@
   transport_map_params::P = nothing
 end
 
-PROPS(::Type{MapParams}) = Dict{String,String}(
+PROPS(::Type{MapParams}) = OrderedDict{String,String}(
   "transport_map" => 
   """
   Arbitrary function that transports particles' coordinates `v`, and optionally spin
@@ -36,7 +36,7 @@ $(PROPSDOC(MapParams))
 ## Example
 ```jldoctest
 using StaticArrays
-random_matrix = @SMatrix rand(6,6) 
+random_matrix = @SMatrix rand(6,6) # use StaticArrays for GPU compatibility
 
 function matrix(v, q::Nothing, p) # `q::Nothing` -> no spin tracking
   # Vectorizable matrix multiplication by `p`:
@@ -93,7 +93,7 @@ end
   # false means the potential/derivatives are four_potential.
 end
 
-PROPS(::Type{FourPotentialParams}) = Dict{String,String}(
+PROPS(::Type{FourPotentialParams}) = OrderedDict{String,String}(
   "four_potential"            => "TODO",
   "four_potential_params"     => "TODO",
   "four_potential_normalized" => "TODO",
@@ -108,6 +108,8 @@ TODO
 $(PROPSDOC(FourPotentialParams))
 
 ## Examples
+
+TODO
 """
 FourPotentialParams
 
@@ -129,6 +131,23 @@ end
   label::String = ""
   description::String = ""
 end
+
+PROPS(::Type{MetaParams}) = OrderedDict{String,String}(
+  "alias"       => "Alternate name for the element as a string",
+  "label"       => "A label string",
+  "description" => "A descriptive string",
+)
+
+"""
+    MetaParams
+
+Defines extra `String` properties that may be useful for pattern matching 
+or storing extra information about a given element.
+
+## Properties
+$(PROPSDOC(MetaParams))
+"""
+MetaParams
 
 # isapprox ignores MetaParams
 Base.isapprox(a::MetaParams, b::MetaParams) = true

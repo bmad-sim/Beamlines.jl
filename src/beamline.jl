@@ -50,30 +50,6 @@ end
   end
 end
 
-"""
-    Beamline
-
-Structure containing a vector of `LineElement`s in an ordered sequence. The reference 
-species (specified as `species_ref` and reference energy (specified as one of `E_ref`, 
-`pc_ref`, `p_over_q_ref`, `dE_ref`, `dpc_ref`, or `dp_over_q_ref`) is uniform over the
-entire beamline. The most-recently specified of these reference energy quantites will 
-be stored as the independent variable.
-
-## Properties
-- `line`: Vector of `LineElement`s in the beamline
-- `species_ref`: Reference species of the beamline
-- `E_ref`: Total reference energy [eV]
-- `pc_ref`: Reference momentum [eV/c]
-- `p_over_q_ref`: A *signed* reference magnetic rigidity [T * m]
-- `dE_ref`: Change in total reference energy w.r.t. the directly-upstream beamline in 
-    units [eV]
-- `dpc_ref`: Change in reference momentum w.r.t. the directly-upstream beamline in 
-    units [eV/c]
-- `dp_over_q_ref`: Change in *signed* reference magnetic rigidty w.r.t. the directly 
-    upstream beamline [T * m]
-- `lattice`: `Lattice` that the beamline is placed in, if any
-- `lattice_index`: Index of the beamline in the `Lattice`, if in a `Lattice`
-"""
 mutable struct Beamline <: Branch
   const line::ReadOnlyVector{LineElement, Vector{LineElement}}
   species_ref::Union{Species,DefExpr{Species}}  
@@ -191,9 +167,33 @@ mutable struct Beamline <: Branch
     return bl
   end
 end
-#=
-Base.getindex(bl::Beamline, i::Integer) = bl.line[i]
-=#
+
+PROPS(::Type{Beamline}) = OrderedDict{String,String}(
+  "species_ref"   => "Reference species of the beamline",
+  "E_ref"         => "Total reference energy [eV]",
+  "pc_ref"        => "Reference momentum [eV/c]",
+  "p_over_q_ref"  => "A *signed* reference magnetic rigidity [T * m]",
+  "dE_ref"        => "Change in total reference energy w.r.t. the directly-upstream beamline [eV]",
+  "dpc_ref"       => "Change in reference momentum w.r.t. the directly-upstream beamline [eV/c]",
+  "dp_over_q_ref" => "Change in *signed* reference magnetic rigidty w.r.t. the directly-upstream beamline [T * m]",
+  "lattice"       => "`Lattice` that the beamline is placed in, if any",
+  "lattice_index" => "Index of the beamline in the `Lattice`, if in a `Lattice`",
+)
+
+"""
+    Beamline
+
+Structure containing a vector of `LineElement`s in an ordered sequence. The reference 
+species (specified as `species_ref` and reference energy (specified as one of `E_ref`, 
+`pc_ref`, `p_over_q_ref`, `dE_ref`, `dpc_ref`, or `dp_over_q_ref`) is uniform over the
+entire beamline. The most-recently specified of these reference energy quantites will 
+be stored as the independent variable.
+
+## Properties
+- `line`: Vector of `LineElement`s in the beamline
+$(PROPSDOC(Beamline))
+"""
+Beamline
 
 """
     empty!(::Beamline)
@@ -223,10 +223,9 @@ function Base.show(io::IO, bl::Beamline)
   end
   println(io, " species_ref", " = ", name)
   lines_used += 1
-  ref = ""
-  try
-    ref = bl.ref
-  catch
+  ref = getfield(bl, :ref)
+  if isnothing(ref)
+    ref = "Inferred"
   end
   ref_meaning = refmeaning_to_sym(bl.ref_meaning)
   println(io, " "*String(ref_meaning), " = ", param_repr(ref))
@@ -365,21 +364,21 @@ function Base.getproperty(b::Beamline, key::Symbol)
   # Fast gets first, hopefully constant prop
   if key in (:ref, :ref_meaning, :species_ref, :line, :lattice, :lattice_index)
     field = deval(getfield(b, key))
-    if key == :ref && isnothing(field)
-      #@warn "p_over_q_ref has not been set: using default value of NaN"
-      error("Unable to get $key: ref of the Beamline has not been set")
-    elseif key == :species_ref && isnullspecies(field)
+    if (key == :ref && isnothing(field)) || (key == :species_ref && isnullspecies(field))
       latidx = getfield(b, :lattice_index)
       if latidx == -1 || latidx == 1
-        error("Unable to get species_ref: species_ref of the Beamline has not been set")
+        error("Unable to get $key: $key of the Beamline is not set nor inferrable")
       else
-        return getfield(b, :lattice).beamlines[latidx-1].species_ref
+        return getproperty(getfield(b, :lattice).beamlines[latidx-1], key)
       end
     elseif key in (:lattice, :lattice_index) && (field == -1 || field === NULL_LATTICE)
       error("Unable to get $key: Beamline is not in a Lattice")
     end
     return field
   elseif key in (:E_ref, :pc_ref, :p_over_q_ref, :dE_ref, :dpc_ref, :dp_over_q_ref)
+    if isnothing(getfield(b, :ref))
+      return getproperty(b, :ref) # loops back 
+    end
     ref_meaning = refmeaning_to_sym(b.ref_meaning)
     if key == ref_meaning
       return b.ref
@@ -464,7 +463,6 @@ function Base.getproperty(b::Beamline, key::Symbol)
   else
     error("Unable to get property $key from Beamline: Beamline does not have this property")
   end
-  error("This error is unreachable. If reached, submit an issue to Beamlines")
 end
 
 function Base.setproperty!(b::Beamline, key::Symbol, value)
@@ -494,6 +492,25 @@ struct BeamlineParams <: AbstractParams
   beamline::Beamline
   beamline_index::Int
 end
+
+PROPS(::Type{BeamlineParams}) = OrderedDict{String,String}(
+  "beamline"       => "`Beamline` that this `LineElement` is in",
+  "beamline_index" => "Index of the `line` array of the `Beamline` that this element is at",
+  "s"              => "Longitudinal position from the start of the `Beamline` at the entrance of the element [m]",
+  "s_downstream"   => "Longitudinal position from the start of the `Beamline` at the exit of the element [m]",
+  PROPS(Beamline)...,
+)
+
+"""
+    BeamlineParams
+
+Defines information for `LineElement`s that are in a `Beamline`.
+
+## Properties
+$(PROPSDOC(BeamlineParams))
+"""
+BeamlineParams
+
 
 function Base.show(io::IO, bp::BeamlineParams)
   println(io, typeof(bp))

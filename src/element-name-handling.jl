@@ -30,13 +30,6 @@ macro elements(expr_or_block)
   return _macro_elements(expr_or_block)
 end
 
-# This is kept in to prevent a breaking change for now
-macro eles(expr_or_block)
-  t = _macro_elements(expr_or_block)
-  Base.depwarn("`@eles` is deprecated and will be removed in the next breaking release. Use `@elements` instead.", :eles; force=true)
-  return t
-end
-
 function _macro_elements(expr_or_block)
   if expr_or_block isa Expr && expr_or_block.head == :block
     block = expr_or_block
