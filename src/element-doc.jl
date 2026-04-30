@@ -70,5 +70,8 @@ ele.Kn1 = 2 # Normal quadrupole strength
 ele.rf_frequency = 1e6 
 ```
 
+For detailed descriptions of properties in a given parameter group, see the documentation 
+for that parameter group.
+
 """
 LineElement

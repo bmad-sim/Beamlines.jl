@@ -3,7 +3,7 @@ CurrentModule = Beamlines
 ```
 
 # Quickstart Guide
-
+## Getting Started
 Let's start by constructing a simple FODO cell `Beamline`, which consists of a quadrupole magnet that focuses the beam in the horizontal plane (defocuses in the vertical), followed by a drift (empty space), then a quadrupole that defocuses in the horizontal plane (focuses in the vertical), and finally another drift. 
 
 To do this, we will define four `LineElement`s corresponding to each of these objects. The lengths of each object are specified by `L` (in meters), and the quadrupole strengths can be set using the property `Kn1`, where `n` means the "normal" multipole (`s` would be "skew") and `1` means 1st order multipole (quadrupole). 
@@ -34,9 +34,11 @@ fodo = Beamline([qf, d, qd, d])
 
 Much better!
 
-Earlier we set `qf.Kn1 = 0.36`, and `qd.Kn1 = -0.36`. But what if we want to ensure that `qf.Kn1 == -qd.Kn1` always? We can bake-in such an interdependence, common in particle accelerator parameters, using a "deferred expression" - an expression where evaluation is postponed until its result is actually needed, rather than immediately when it is defined. 
+## Deferred Expressions
 
-To do this, let's first define a function that returns the current value of `-qf.Kn1`. We can do this without giving the function any explicit name using [lambda/anonymous functions](https://docs.julialang.org/en/v1/manual/functions/#man-anonymous-functions): 
+Earlier we set `qf.Kn1 = 0.36`, and `qd.Kn1 = -0.36`. But what if we want to ensure that `qd.Kn1 == -qf.Kn1` always? We can bake-in such an interdependence, common in particle accelerator parameters, using a "deferred expression" - an expression where evaluation is postponed until its result is actually needed, rather than immediately when it is defined. 
+
+To do this, let's first define a function that returns the current value of `-qf.Kn1`. We can do this without giving the function any explicit name using [lambda/anonymous functions](https://docs.julialang.org/en/v1/manual/functions/#man-anonymous-functions):
 
 
 ```@example defexpr1
@@ -61,14 +63,30 @@ Now if we change `qf.Kn1`, evaluation of `qd.Kn1` will always be `-qf.Kn1`:
 qf.Kn1 = 0.7
 qd.Kn1
 ```
+'
 
+Deferred expressions can also be manipulated like any other number:
 
+```@example
+a = 1
+da = DefExpr(()->a)
+b = 2
+db = DefExpr(()->b)
+dc = da + db
+println(dc())
+a = 4
+println(dc())
+dd = sin(dc)
+println(dd())
+```
 
-Here we set `qd.Kn1` equal to `DefExpr(() -> -qf.Kn1)`. The syntax `() -> ...` is a [lambda/anonymous function](https://docs.julialang.org/en/v1/manual/functions/#man-anonymous-functions) that takes in no arguments and returns a numerical result. Specifically, when you evaluate the anonymous function `() -> -qf.Kn1`, you will get the **current** value of `-qf.Kn1` at the time of evaluation. E.g.:
+One can really "go crazy" with deferred expressions if they want to. They can be infinitely nested, and you can write any function that the Julia programming language allows, for example file I/O, or even control system gets/puts with a real accelerator for a digital twin.
 
+## Parameters
 
+`Beamlines.jl` supports a very large variety of parameters to define accelerator elements. To 
 
-As you can see, closures provide a powerful tool that lazily "get" the state 
+## Polymorphism/Differentiability
 
-
+To enable full auto-differentiability of all accelerator parameters, `Beamlines.jl` is fully **polymorphic**. Full polymorphism this means that you can set any parameter to be any _type_ that you want. For auto-differentiability, a special number type that propagates the partial derivative(s) with actual value must be used in-place of the regular 64-bit floating point numbers -- polymorphism allows that. Differentiable codes in accelerator physics are *not* new: an early example of such a differentiable code is the [Polymorphic Tracking Code (PTC)](https://cds.cern.ch/record/573082/files/sl-2002-044.pdf), which you might be familiar with, written in Fortran back in the 90s.
 
