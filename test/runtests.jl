@@ -1488,14 +1488,14 @@ end
     @elements fodo_lattice = Lattice( [fodo_cell] )
 
     # Create the test file
-    Beamlines.scibmad_to_pals(fodo_lattice, "test_fodo_cell")
+    Beamlines.scibmad_to_pals(fodo_lattice, "test_files/test_fodo_cell")
     
     # Load the test file and the expected file 
-    expected_file = YAML.load_file("test_fodo_cell_expected.pals.yaml")
-    test_file = YAML.load_file("test_fodo_cell.pals.yaml")
+    expected_file = YAML.load_file("test_files/test_fodo_cell_expected.pals.yaml")
+    test_file = YAML.load_file("test_files/test_fodo_cell.pals.yaml")
     
     # Check if the created file exists
-    @test isfile("test_fodo_cell.pals.yaml")
+    @test isfile("test_files/test_fodo_cell.pals.yaml")
     # Check if the created file matches the expected
     @test test_file == expected_file
     
@@ -1511,14 +1511,14 @@ end
     fodo_lattice = Lattice( [fodo_cell] )
 
     # Create the test file
-    Beamlines.scibmad_to_pals(fodo_lattice, "test_unnamed_fodo_cell")
+    Beamlines.scibmad_to_pals(fodo_lattice, "test_files/test_unnamed_fodo_cell")
 
     # Load the test file and the expected file 
-    expected_file = YAML.load_file("test_unnamed_fodo_cell_expected.pals.yaml")
-    test_file = YAML.load_file("test_unnamed_fodo_cell.pals.yaml")
+    expected_file = YAML.load_file("test_files/test_unnamed_fodo_cell_expected.pals.yaml")
+    test_file = YAML.load_file("test_files/test_unnamed_fodo_cell.pals.yaml")
 
     # Check if the created file exists
-    @test isfile("test_unnamed_fodo_cell.pals.yaml")
+    @test isfile("test_files/test_unnamed_fodo_cell.pals.yaml")
     # Check if the created file matches the expected
     @test test_file == expected_file
 
@@ -1542,14 +1542,14 @@ end
     @elements lattice = Lattice( [beamline] )
 
     # Create the test file
-    Beamlines.scibmad_to_pals(lattice, "test_every_element")
+    Beamlines.scibmad_to_pals(lattice, "test_files/test_every_element")
     
     # Load the test file and the expected file 
-    expected_file = YAML.load_file("test_every_element_expected.pals.yaml")
-    test_file = YAML.load_file("test_every_element.pals.yaml")
+    expected_file = YAML.load_file("test_files/test_every_element_expected.pals.yaml")
+    test_file = YAML.load_file("test_files/test_every_element.pals.yaml")
     
     # Check if the created file exists
-    @test isfile("test_every_element.pals.yaml")
+    @test isfile("test_files/test_every_element.pals.yaml")
     # Check if the created file matches the expected
     @test test_file == expected_file
 
@@ -1572,14 +1572,14 @@ end
     @elements fodo_lattice = Lattice( [fodo_cell_1, fodo_cell_2] )
 
     # Create the test file
-    Beamlines.scibmad_to_pals(fodo_lattice, "test_two_beamlines")
+    Beamlines.scibmad_to_pals(fodo_lattice, "test_files/test_two_beamlines")
     
     # Load the test file and the expected file 
-    expected_file = YAML.load_file("test_two_beamlines_expected.pals.yaml")
-    test_file = YAML.load_file("test_two_beamlines.pals.yaml")
+    expected_file = YAML.load_file("test_files/test_two_beamlines_expected.pals.yaml")
+    test_file = YAML.load_file("test_files/test_two_beamlines.pals.yaml")
     
     # Check if the created file exists
-    @test isfile("test_two_beamlines.pals.yaml")
+    @test isfile("test_files/test_two_beamlines.pals.yaml")
     # Check if the created file matches the expected
     @test test_file == expected_file
 
@@ -1595,14 +1595,14 @@ end
     @elements fodo_lattice = Lattice( [fodo_cell] )
 
     # Create the test file
-    Beamlines.scibmad_to_pals(fodo_lattice, "test_custom_tracking")
+    Beamlines.scibmad_to_pals(fodo_lattice, "test_files/test_custom_tracking")
     
     # Load the test file and the expected file
-    expected_file = YAML.load_file("test_custom_tracking_expected.pals.yaml")
-    test_file = YAML.load_file("test_custom_tracking.pals.yaml")
+    expected_file = YAML.load_file("test_files/test_custom_tracking_expected.pals.yaml")
+    test_file = YAML.load_file("test_files/test_custom_tracking.pals.yaml")
     
     # Check if the created file exists
-    @test isfile("test_custom_tracking.pals.yaml")
+    @test isfile("test_files/test_custom_tracking.pals.yaml")
     # Check if the created file matches the expected
     @test test_file == expected_file
 
@@ -1617,14 +1617,14 @@ end
     @elements fodo_lattice = Lattice( [beamline] )
 
     # Create the test file
-    Beamlines.scibmad_to_pals(fodo_lattice, "test_default_values")
+    Beamlines.scibmad_to_pals(fodo_lattice, "test_files/test_default_values")
 
     # Load the test file and the expected file 
-    expected_file = YAML.load_file("test_default_values_expected.pals.yaml")
-    test_file = YAML.load_file("test_default_values.pals.yaml")
+    expected_file = YAML.load_file("test_files/test_default_values_expected.pals.yaml")
+    test_file = YAML.load_file("test_files/test_default_values.pals.yaml")
 
     # Check if the created file exists
-    @test isfile("test_default_values.pals.yaml")
+    @test isfile("test_files/test_default_values.pals.yaml")
     # Check if the created file matches the expected
     @test test_file == expected_file
 
@@ -1637,14 +1637,14 @@ end
     @elements fodo_lattice = Lattice( [beamline] )
 
     # Create the test file
-    Beamlines.scibmad_to_pals(fodo_lattice, "test_name_conversion")
+    Beamlines.scibmad_to_pals(fodo_lattice, "test_files/test_name_conversion")
     
     # Load the test file and the expected file 
-    expected_file = YAML.load_file("test_name_conversion_expected.pals.yaml")
-    test_file = YAML.load_file("test_name_conversion.pals.yaml")
+    expected_file = YAML.load_file("test_files/test_name_conversion_expected.pals.yaml")
+    test_file = YAML.load_file("test_files/test_name_conversion.pals.yaml")
     
     # Check if the created file exists
-    @test isfile("test_name_conversion.pals.yaml")
+    @test isfile("test_files/test_name_conversion.pals.yaml")
     # Check if the created file matches the expected
     @test test_file == expected_file
 
@@ -1663,14 +1663,14 @@ end
     @elements lattice = Lattice( [beamline1, beamline2, beamline3, beamline4 ])
 
     # Create the test file
-    Beamlines.scibmad_to_pals(lattice, "test_sagan_cavities")
+    Beamlines.scibmad_to_pals(lattice, "test_files/test_sagan_cavities")
     
     # Load the test file and the expected file 
-    expected_file = YAML.load_file("test_sagan_cavities_expected.pals.yaml")
-    test_file = YAML.load_file("test_sagan_cavities.pals.yaml")
+    expected_file = YAML.load_file("test_files/test_sagan_cavities_expected.pals.yaml")
+    test_file = YAML.load_file("test_files/test_sagan_cavities.pals.yaml")
     
     # Check if the created file exists
-    @test isfile("test_sagan_cavities.pals.yaml")
+    @test isfile("test_files/test_sagan_cavities.pals.yaml")
     # Check if the created file matches the expected
     @test test_file == expected_file
 
@@ -1686,14 +1686,14 @@ end
     @elements fodo_lattice = Lattice( [fodo_cell] )
 
     # Create the test file
-    Beamlines.scibmad_to_pals(fodo_lattice, "test_modified_tracking")
+    Beamlines.scibmad_to_pals(fodo_lattice, "test_files/test_modified_tracking")
     
     # Load the test file and the expected file 
-    expected_file = YAML.load_file("test_modified_tracking.pals.yaml")
-    test_file = YAML.load_file("test_modified_tracking.pals.yaml")
+    expected_file = YAML.load_file("test_files/test_modified_tracking.pals.yaml")
+    test_file = YAML.load_file("test_files/test_modified_tracking.pals.yaml")
     
     # Check if the created file exists
-    @test isfile("test_modified_tracking.pals.yaml")
+    @test isfile("test_files/test_modified_tracking.pals.yaml")
     # Check if the created file matches the expected
     @test test_file == expected_file
 
@@ -1706,14 +1706,14 @@ end
     @elements lattice = Lattice( [beamline] )
 
     # Create the test file
-    Beamlines.scibmad_to_pals(lattice, "test_aperture")
+    Beamlines.scibmad_to_pals(lattice, "test_files/test_aperture")
     
     # Load the test file and the expected file 
-    expected_file = YAML.load_file("test_aperture.pals.yaml")
-    test_file = YAML.load_file("test_aperture.pals.yaml")
+    expected_file = YAML.load_file("test_files/test_aperture.pals.yaml")
+    test_file = YAML.load_file("test_files/test_aperture.pals.yaml")
     
     # Check if the created file exists
-    @test isfile("test_aperture.pals.yaml")
+    @test isfile("test_files/test_aperture.pals.yaml")
     # Check if the created file matches the expected
     @test test_file == expected_file
 
@@ -1735,14 +1735,14 @@ end
     ring = Beamline([D2ER_6, EDGE3_002__1, RF0__1], species_ref = Species("proton"), E_ref = 70)
 
     # Create the test file
-    Beamlines.scibmad_to_pals(Lattice( [ring] ), "test_begele")
+    Beamlines.scibmad_to_pals(Lattice( [ring] ), "test_files/test_begele")
 
     # Load the test file and the expected file
-    expected_file = YAML.load_file("test_begele_expected.pals.yaml")
-    test_file = YAML.load_file("test_begele.pals.yaml")
+    expected_file = YAML.load_file("test_files/test_begele_expected.pals.yaml")
+    test_file = YAML.load_file("test_files/test_begele.pals.yaml")
     
     # Check if the created file exists
-    @test isfile("test_begele.pals.yaml")
+    @test isfile("test_files/test_begele.pals.yaml")
     # Check if the created file matches the expected
     @test test_file == expected_file
 
@@ -1765,14 +1765,14 @@ end
     @elements fodo_lattice = Lattice( [fodo_cell_A, fodo_cell_B] )
 
     # Create the test file
-    Beamlines.scibmad_to_pals(fodo_lattice, "test_beamline_change")
+    Beamlines.scibmad_to_pals(fodo_lattice, "test_files/test_beamline_change")
     
     # Load the test file and the expected file 
-    expected_file = YAML.load_file("test_beamline_change.pals.yaml")
-    test_file = YAML.load_file("test_beamline_change.pals.yaml")
+    expected_file = YAML.load_file("test_files/test_beamline_change.pals.yaml")
+    test_file = YAML.load_file("test_files/test_beamline_change.pals.yaml")
     
     # Check if the created file exists
-    @test isfile("test_beamline_change.pals.yaml")
+    @test isfile("test_files/test_beamline_change.pals.yaml")
     # Check if the created file matches the expected
     @test test_file == expected_file
 
