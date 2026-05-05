@@ -514,25 +514,23 @@ function pals_format(line_element::LineElement)
     return OrderedDict(line_element.name => format_dict)
 end
 
-"""
-    Internal: create_begele(beamline::Beamline, num::Integer)
 
-Returns an `OrderedDict` with a single key, "BEGELE`num`" that maps
-to a dictionary containing the parameters of the `BeginningEle` element
-that starts a branch.
-
-This function is used as a helper for `scibmad_to_pals()` for creating
-the element storing the reference parameters for a branch.
 """
-function create_begele(beamline::Beamline, num::Integer)
-    # Create accumulator
-    outer_acc = OrderedDict()
-    outer_acc[:kind] = :BeginningEle # Do this outside constructor to avoid concrete typing
-    inner_acc = OrderedDict()
+    Internal: make_reference_dict(beamline::Beamline)
+
+Returns an `OrderedDict` containing the beamline information,
+`species_ref` and the energy or momentum description of the 
+beamline. 
+
+This function is used a helper for `create_begele` and directly
+for `scibmad_to_pals()` to accessing beamline information.
+"""
+function make_reference_dict(beamline::Beamline)
+    acc = OrderedDict()
 
     # Access species
     try 
-        inner_acc[:species_ref] = Symbol(beamline.species_ref.name)
+        acc[:species_ref] = Symbol(beamline.species_ref.name)
     catch
         nothing
     end
@@ -547,10 +545,27 @@ function create_begele(beamline::Beamline, num::Integer)
             refsym = :E_tot_ref
         end
 
-        inner_acc[refsym] = beamline.ref
+        acc[refsym] = beamline.ref
     catch
         nothing
     end
+end
+
+"""
+    Internal: create_begele(beamline::Beamline, num::Integer)
+
+Returns an `OrderedDict` with a single key, "BEGELE`num`" that maps
+to a dictionary containing the parameters of the `BeginningEle` element
+that starts a branch.
+
+This function is used as a helper for `scibmad_to_pals()` for creating
+the element storing the reference parameters for a branch.
+"""
+function create_begele(beamline::Beamline, num::Integer)
+    # Create accumulator
+    outer_acc = OrderedDict()
+    outer_acc[:kind] = :BeginningEle # Do this outside constructor to avoid concrete typing
+    inner_acc = make_reference_dict(beamline)
 
     # Put in proper parameter group
     if (beamline.ref_meaning == RefMeaning.dp_over_q_ref || beamline.ref_meaning == RefMeaning.dE_ref || beamline.ref_meaning == RefMeaning.dpc_ref)
@@ -601,6 +616,17 @@ function scibmad_to_pals(lattice::Lattice, new_file_name::String)
 
     line_counter = 1 # Counter used for naming BeamLines
 
+    # Add a beginning element to the line
+    begele = create_begele(lattice.beamlines[1], line_counter)
+    if (!isnothing(begele))
+        # Add the begele to the facility
+        push!(facility, begele)
+        # Add the begele's name to the line
+        push!(line, collect(keys(begele))[1])
+    end
+
+    first_beamline = true
+
     for beamline in lattice.beamlines
         # For every (branch :: `BeamLine`) in the lattice...
 
@@ -609,14 +635,7 @@ function scibmad_to_pals(lattice::Lattice, new_file_name::String)
 
         line = [] # Accumulator for what's in a beamline
 
-        # Add a beginning element to the line if meaningful
-        begele = create_begele(beamline, line_counter)
-        if (!isnothing(begele))
-            # Add the begele to the facility
-            push!(facility, create_begele(beamline, line_counter))
-            # Add the begele's name to the line
-            push!(line, collect(keys(begele))[1])
-        end
+        first_element = true
 
         # Add the elements to the facility
         for line_element in beamline.line
@@ -662,13 +681,33 @@ function scibmad_to_pals(lattice::Lattice, new_file_name::String)
                 if (!(name in created_elements))
                     # If this line element has not already been created...
 
+                    # Create the element
+                    element = pals_format(line_element)
+
+                    if (!first_beamline && first_element)
+                        # If this is not the first beamline and this is the first element of the beamline...
+
+                        # Get the reference parameters of this beamline
+                        reference_dict = make_reference_dict(beamline)
+
+                        # The species cannot change, so the `species_ref` field can be removed
+                        if (haskey(reference_dict, :species_ref))
+                            delete!(reference_dict, :species_ref)
+                        end
+
+                        # Add a `ReferenceChangeP` dictionary to this element
+                        element[name][:ReferenceChangeP] = reference_dict
+                    end
+
                     # Push the line element onto `facility`
-                    push!(facility, pals_format(line_element))
+                    push!(facility, element)
 
                     # Push the line element's name onto the set of unique elements
                     push!(created_elements, name)
                 end
             end
+
+            first_element = false
         end
 
         # Name beamlines using default-namer (for now), increment the counter
@@ -685,6 +724,8 @@ function scibmad_to_pals(lattice::Lattice, new_file_name::String)
             )
         )
         push!(created_elements, beamline_name)
+
+        first_beamline = false;
     end
 
     # Add the master beamline
