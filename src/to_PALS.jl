@@ -788,5 +788,3 @@ end
 
 #= TODO Handle Named Beamlines =#
 #= TODO Deferred Expression =#
-#= TODO Create Master Beamline =#
-#= TODO ReferenceChangeP should show up in cavity =#
