@@ -1746,5 +1746,35 @@ end
     # Check if the created file matches the expected
     @test test_file == expected_file
 
+
+    #= ------------------------------------ =#
+    # Test ReferenceChangeP
+    
+    @elements drift_A = Drift( L = 0.25 )
+    @elements quad_A = Quadrupole( L = 1.0, Bn1 = 1.0)
+    @elements drift_B = Drift( L = 0.5)
+    @elements quad_B = Quadrupole( L = 1.0, Bn1 = -1.0)
+    @elements fodo_cell_A = Beamline([drift_A, quad_A, drift_B, quad_B, drift_A], species_ref = Species("proton"), E_ref = 70)
+
+    @elements drift_C = Drift( L = 0.25 )
+    @elements quad_C = Quadrupole( L = 1.0, Bn1 = 1.0)
+    @elements drift_D = Drift( L = 0.5)
+    @elements quad_D = Quadrupole( L = 1.0, Bn1 = -1.0)
+    @elements fodo_cell_B = Beamline( [drift_C, quad_C, drift_D, quad_D, drift_C], dE_ref = 35)
+
+    @elements fodo_lattice = Lattice( [fodo_cell_A, fodo_cell_B] )
+
+    # Create the test file
+    Beamlines.scibmad_to_pals(fodo_lattice, "test_beamline_change")
+    
+    # Load the test file and the expected file 
+    expected_file = YAML.load_file("test_beamline_change.pals.yaml")
+    test_file = YAML.load_file("test_beamline_change.pals.yaml")
+    
+    # Check if the created file exists
+    @test isfile("test_beamline_change.pals.yaml")
+    # Check if the created file matches the expected
+    @test test_file == expected_file
+
     return nothing
 end

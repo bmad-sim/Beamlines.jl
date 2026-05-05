@@ -67,7 +67,11 @@ cut out elements that store the standard "default" value of their type.
 function isdefault(value)
     value_type = typeof(value)
         
-    if (value_type <: OrderedDict)
+    if (isnothing(value))
+        # Anything with a value of nothing is default
+        return true
+
+    elseif (value_type <: OrderedDict)
         # A default `Dict` is empty
         return isempty(value)
 
@@ -549,6 +553,8 @@ function make_reference_dict(beamline::Beamline)
     catch
         nothing
     end
+
+    return acc
 end
 
 """
@@ -621,8 +627,6 @@ function scibmad_to_pals(lattice::Lattice, new_file_name::String)
     if (!isnothing(begele))
         # Add the begele to the facility
         push!(facility, begele)
-        # Add the begele's name to the line
-        push!(line, collect(keys(begele))[1])
     end
 
     first_beamline = true
@@ -640,6 +644,11 @@ function scibmad_to_pals(lattice::Lattice, new_file_name::String)
         # Add the elements to the facility
         for line_element in beamline.line
             # For every element in `beamline`'s line...
+
+            if (first_beamline && first_element && !isdefault(begele))
+                # Add the begele's name to the line
+                push!(line, collect(keys(begele))[1])
+            end
 
             if (typeof(line_element) == Beamline)
                 # If this is a `Beamline`
@@ -695,8 +704,10 @@ function scibmad_to_pals(lattice::Lattice, new_file_name::String)
                             delete!(reference_dict, :species_ref)
                         end
 
-                        # Add a `ReferenceChangeP` dictionary to this element
-                        element[name][:ReferenceChangeP] = reference_dict
+                        # Add a `ReferenceChangeP` dictionary to this element if it's meaningful
+                        if (!isdefault(reference_dict))
+                            element[String(name)][:ReferenceChangeP] = reference_dict
+                        end
                     end
 
                     # Push the line element onto `facility`
