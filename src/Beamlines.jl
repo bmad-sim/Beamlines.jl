@@ -52,7 +52,8 @@ export AbstractParams,
        elements,
 
        scalarize,
-       scalarize!
+       scalarize!,
+       scibmad_to_pals
 
 using Accessors, 
       AtomicAndPhysicalConstants,
@@ -61,7 +62,8 @@ using Accessors,
       MacroTools,
       EnumX,
       ReadOnlyArrays,
-      PrettyTables
+      PrettyTables, 
+      YAML
 
 export Species
 
@@ -97,6 +99,7 @@ include("aperture.jl")
 include("misc.jl")
 include("keymaps.jl")
 include("element-name-handling.jl")
+include("to_PALS.jl")
 
 # BitsBeamline is no longer supported
 # Support may continue in the future with 
