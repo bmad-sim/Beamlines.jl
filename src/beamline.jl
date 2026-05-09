@@ -52,18 +52,22 @@ end
 
 mutable struct Beamline <: Branch
   const line::ReadOnlyVector{LineElement, Vector{LineElement}}
-  species_ref::Union{Species,DefExpr{Species}}  
   lattice::_Lattice{Beamline} # This should be HARD to change, not allowed easily
   lattice_index::Int          # This should be HARD to change, not allowed easily
-  ref_meaning::RefMeaning.T   # This should be HARD to change, not allowed easily
-  ref # Will be nothing if not specified
 
   @doc"""
       Beamline(line; kwargs...)
 
   Constructs a `Beamline` out of the `LineElement`s in the vector `line`. The `LineElement`s 
   in the `Beamline` will be automatically constructed as children of those `LineElement`s in 
-  `line`, inheriting all of their properties.
+  `line`, inheriting all of their properties. 
+  
+  The reference energy of the beamline may be optionally specified using one of the keyword 
+  arguments: `E_ref`, `pc_ref`, `p_over_q_ref`, `dE_ref`, `dpc_ref`, or `dp_over_q_ref`.
+  Whichever of these is specified will be the independent variable. The species of 
+  the beamline may be optionally specified using the `species_ref` keyword argument.
+  Specifying either of these keyword arguments will permanently override both the reference 
+  species and energy defined in the first `LineElement` -- see the warning below.
 
   ## Examples
   ```jldoctest
@@ -73,16 +77,19 @@ mutable struct Beamline <: Branch
 
   fodo = Beamline([qf, d, qd, d], species_ref=Species("electron"), E_ref=18e9)
   ```
+  
+  Alternatively, one can specify the reference species/energy in the first element:
 
-  The reference energy of the beamline may be optionally specified using one of the keyword 
-  arguments: `E_ref`, `pc_ref`, `p_over_q_ref`, `dE_ref`, `dpc_ref`, or `dp_over_q_ref`.
-  Whichever of these is specified will be the independent variable. The species of 
-  the beamline may be optionally specified using the `species_ref` keyword argument. 
+  ```jldoctest
+  qf = Quadrupole(Kn1=0.36, L=0.5, species_ref=Species("electron"), E_ref=18e9)
+  d = Drift(L=1)
+  qd = Quadrupole(Kn1=-0.36, L=0.5)
+
+  fodo = Beamline([qf, d, qd, d])
+  ```
 
   ## Keyword arguments
-  - `species_ref`: Reference species of the beamline. Defaults to the null species 
-      `Species()`, in which case if this beamline is in a `Lattice` it will inherit the 
-      species from the beamline directly upstream.
+  - `species_ref`: Reference species of the beamline. 
   - `E_ref`: Total reference energy [eV]
   - `pc_ref`: Reference momentum [eV/c]
   - `p_over_q_ref`: A *signed* reference magnetic rigidity [T * m]
@@ -94,24 +101,25 @@ mutable struct Beamline <: Branch
       upstream beamline [T * m]
 
   !!! warning
-      Keyword arguments specified to the `Beamline` constructor will override any corresponding 
-      properties specified in the first `LineElement` in the beamline. E.g., 
+      Keyword arguments specified to the `Beamline` constructor will permanently override any 
+      corresponding properties specified in the first `LineElement` of the beamline. E.g., 
       ```jldoctest
-      julia> ele = LineElement(species_ref=Species("electron"), E_ref=18e9);
+      beg = Marker(species_ref=Species("electron"), E_ref=18e9)
 
-      julia> bl = Beamline([ele], species_ref=Species("proton"), E_ref=140e9);
+      a = Beamline([beg])
+      b = Beamline([beg], species_ref=Species("proton"), E_ref=1e9)
 
-      julia> bl.species_ref == bl.line[1].species_ref == Species("proton")
-      true
+      a.E_ref == beg.E_ref == 18e9 # true
+      b.E_ref == 1e9               # true
+      b.E_ref != beg.E_ref         # true
 
-      julia> bl.E_ref == bl.line[1].E_ref == 140e9
-      true
+      # If `beg` is reset:
+      beg.species_ref = Species("positron")
 
-      julia> ele.E_ref == 18e9
-      true
-
-      julia> ele.species_ref == Species("electron")
-      true
+      # `a` will still inherit it, but `b` will not:
+      a.species_ref == beg.species_ref   # true
+      b.species_ref == Species("proton") # true
+      b.species_ref != beg.species_ref   # true
       ```
   """
   function Beamline(
@@ -131,37 +139,56 @@ mutable struct Beamline <: Branch
       error("Only one of $(kwarg_syms) can be specified")
     end
     
-    ibp = length(line) > 0 && haskey(getfield(first(line), :pdict), InitialBeamlineParams) ? getfield(first(line), :pdict)[InitialBeamlineParams] : nothing
-    if !isnothing(ibp)
-      if isnullspecies(species_ref)
-        species_ref = DefExpr{Species}(()->first(line).species_ref)
+    if (c == 1 || !isnullspecies(species_ref)) # set occurring at Beamline ctor
+      if length(line) < 1
+        error("At least one LineElement must be included in the Beamline to specify a reference species/energy.")
       end
     end
 
     # For Python sanity and linear-indexing guarantee
     line = convert(Vector{LineElement}, vec(line))
 
-    bl = new(ReadOnlyVector(Vector{LineElement}(undef, length(line))), species_ref, NULL_LATTICE, -1, RefMeaning.p_over_q_ref, nothing)
+    bl = new(ReadOnlyVector(Vector{LineElement}(undef, length(line))), NULL_LATTICE, -1)
 
     for i in eachindex(bl.line)
       if i != 1 && haskey(getfield(line[i], :pdict), InitialBeamlineParams)
-        error("Cannot construct Beamline: element $i contains an InitialBeamlineParams 
-               which can only be placed in the first element of a Beamline. To include 
-               reference energy/species changes in the middle of an accelerator, use the 
-               Lattice constructor instead which will automatically construct separate 
-               Beamlines for each InitialBeamlineParams.")
+        error("
+          Cannot construct Beamline: element $i contains an InitialBeamlineParams 
+          which can only be placed in the first element of a Beamline. To include 
+          reference energy/species changes in the middle of an accelerator, use the 
+          Lattice constructor instead which will automatically construct separate 
+          Beamlines for each InitialBeamlineParams.
+        ")
       end
       bl.line.parent[i] = LineElement(ParamDict(InheritParams=>InheritParams(line[i])))
       getfield(bl.line[i], :pdict)[BeamlineParams] = BeamlineParams(bl, i)
     end
 
-    if c == 1
+    if (c == 1 || !isnullspecies(species_ref)) # set occurring at Beamline ctor
+      pdict1 = getfield(first(bl.line), :pdict)
+      ibp = InitialBeamlineParams()
+      pdict1[InitialBeamlineParams] = ibp # then override the parent
+      # Initialize with values from parent if parent has it
+      if haskey(pdict1, InheritParams)
+        ppdict = getfield((pdict1[InheritParams]::InheritParams).parent, :pdict)
+        if haskey(ppdict, InitialBeamlineParams)
+          pibp = ppdict[InitialBeamlineParams]::InitialBeamlineParams
+          setfield!(ibp, :ref_meaning, getfield(pibp, :ref_meaning))
+          setfield!(ibp, :ref,         getfield(pibp, :ref))
+          setfield!(ibp, :species_ref, getfield(pibp, :species_ref))
+        end
+      end
+    end
+
+    if c == 1 
       idx = findfirst(t->!isnothing(t), kwargs)
       sym = (:p_over_q_ref, :E_ref, :pc_ref, :dp_over_q_ref, :dE_ref, :dpc_ref)[idx]
-      val = (p_over_q_ref, E_ref, pc_ref, dp_over_q_ref, dE_ref, dpc_ref)[idx]
-      setproperty!(bl, sym, val)
-    elseif !isnothing(ibp)
-      setproperty!(bl, refmeaning_to_sym(ibp.ref_meaning), getfield(ibp, :ref))
+      ref = (p_over_q_ref, E_ref, pc_ref, dp_over_q_ref, dE_ref, dpc_ref)[idx]
+      setproperty!(first(bl.line), sym, ref)
+    end
+
+    if !isnullspecies(species_ref)
+      setproperty!(first(bl.line), :species_ref, species_ref)
     end
     
     return bl
@@ -169,13 +196,7 @@ mutable struct Beamline <: Branch
 end
 
 PROPS(::Type{Beamline}) = OrderedDict{String,String}(
-  "species_ref"   => "Reference species of the beamline",
-  "E_ref"         => "Total reference energy [eV]",
-  "pc_ref"        => "Reference momentum [eV/c]",
-  "p_over_q_ref"  => "A *signed* reference magnetic rigidity [T * m]",
-  "dE_ref"        => "Change in total reference energy w.r.t. the directly-upstream beamline [eV]",
-  "dpc_ref"       => "Change in reference momentum w.r.t. the directly-upstream beamline [eV/c]",
-  "dp_over_q_ref" => "Change in *signed* reference magnetic rigidty w.r.t. the directly-upstream beamline [T * m]",
+  "line"          => "A read-only array of `LineElements` in the beamline, in order",
   "lattice"       => "`Lattice` that the beamline is placed in, if any",
   "lattice_index" => "Index of the beamline in the `Lattice`, if in a `Lattice`",
 )
@@ -187,10 +208,9 @@ Structure containing a vector of `LineElement`s in an ordered sequence. The refe
 species (specified as `species_ref` and reference energy (specified as one of `E_ref`, 
 `pc_ref`, `p_over_q_ref`, `dE_ref`, `dpc_ref`, or `dp_over_q_ref`) is uniform over the
 entire beamline. The most-recently specified of these reference energy quantites will 
-be stored as the independent variable.
+be stored as the independent variable, in the first `LineElement` of the `Beamline`.
 
 ## Properties
-- `line`: Vector of `LineElement`s in the beamline
 $(PROPSDOC(Beamline))
 """
 Beamline
@@ -215,7 +235,7 @@ end
 function Base.show(io::IO, bl::Beamline)
   println(io, "Beamline:")
   lines_used = 1
-  name = "Inferred"
+  name = :Inferred
   try 
     species_ref = bl.species_ref
     name = species_ref.name
@@ -223,11 +243,14 @@ function Base.show(io::IO, bl::Beamline)
   end
   println(io, " species_ref", " = ", name)
   lines_used += 1
-  ref = getfield(bl, :ref)
-  if isnothing(ref)
-    ref = "Inferred"
+  ref = :Inferred 
+  ref_meaning = refmeaning_to_sym(getfield(InitialBeamlineParams(), :ref_meaning)) # Default
+  try
+    ibp = first(bl.line).InitialBeamlineParams
+    ref_meaning = refmeaning_to_sym(ibp.ref_meaning)
+    ref = ibp.ref 
+  catch
   end
-  ref_meaning = refmeaning_to_sym(bl.ref_meaning)
   println(io, " "*String(ref_meaning), " = ", param_repr(ref))
   lines_used += 1
 
@@ -358,107 +381,26 @@ function Lattice(
   return Lattice(beamlines)
 end
 
-Base.propertynames(::Beamline) = (:line, :ref_meaning, :ref, :lattice, :lattice_index, :p_over_q_ref, :E_ref, :pc_ref, :dp_over_q_ref, :dE_ref, :dpc_ref, :species_ref)
+Base.propertynames(::Beamline) = (:line, :lattice, :lattice_index, :p_over_q_ref, :E_ref, :pc_ref, :dp_over_q_ref, :dE_ref, :dpc_ref, :species_ref)
 
 function Base.getproperty(b::Beamline, key::Symbol)
   # Fast gets first, hopefully constant prop
-  if key in (:ref, :ref_meaning, :species_ref, :line, :lattice, :lattice_index)
-    field = deval(getfield(b, key))
-    if (key == :ref && isnothing(field)) || (key == :species_ref && isnullspecies(field))
-      latidx = getfield(b, :lattice_index)
-      if latidx == -1 || latidx == 1
-        error("Unable to get $key: $key of the Beamline is not set nor inferrable")
-      else
-        return getproperty(getfield(b, :lattice).beamlines[latidx-1], key)
-      end
-    elseif key in (:lattice, :lattice_index) && (field == -1 || field === NULL_LATTICE)
+  if key in (:line, :lattice, :lattice_index)
+    field = getfield(b, key)
+    if key in (:lattice, :lattice_index) && (field == -1 || field === NULL_LATTICE)
       error("Unable to get $key: Beamline is not in a Lattice")
     end
     return field
-  elseif key in (:E_ref, :pc_ref, :p_over_q_ref, :dE_ref, :dpc_ref, :dp_over_q_ref)
-    if isnothing(getfield(b, :ref))
-      return getproperty(b, :ref) # loops back 
-    end
-    ref_meaning = refmeaning_to_sym(b.ref_meaning)
-    if key == ref_meaning
-      return b.ref
-    elseif key in (:E_ref, :pc_ref, :p_over_q_ref)
-      # Key absolute
-      if ref_meaning in (:E_ref, :pc_ref, :p_over_q_ref)
-        # Both absolute is easy
-        if key == :E_ref
-          if ref_meaning == :pc_ref
-            return pc_to_E(b.species_ref, b.ref)
-          else
-            return R_to_E(b.species_ref, b.ref)
-          end
-        elseif key == :pc_ref
-          if ref_meaning == :E_ref
-            return E_to_pc(b.species_ref, b.ref)
-          else
-            return R_to_pc(b.species_ref, b.ref)
-          end
-        else
-          if ref_meaning == :pc_ref
-            return pc_to_R(b.species_ref, b.ref)
-          else
-            return E_to_R(b.species_ref, b.ref)
-          end
-        end
+  elseif key in (:E_ref, :pc_ref, :p_over_q_ref, :dE_ref, :dpc_ref, :dp_over_q_ref, :species_ref)
+    if length(b.line) < 1
+      lattice_index = getfield(b, :lattice_index)
+      if lattice_index == -1 || lattice_index == 1
+        error("Unable to get $key: $key of the Beamline is not set nor inferrable")
       else
-        # Key absolute, ref_meaning relative
-        if (key == :E_ref && ref_meaning == :dE_ref) || 
-            (key == :pc_ref && ref_meaning == :dpc_ref) || 
-            (key == :p_over_q_ref && ref_meaning == :dp_over_q_ref)
-          # Can just add going backwards
-          lat_idx = getfield(b, :lattice_index)
-          if lat_idx == -1
-            error("Unable to get property $key: because this Beamline has set $(ref_meaning),
-                    the property $key must be dependent on an upstream Beamline in a Lattice, but 
-                    the Beamline is not in a Lattice.")
-          elseif lat_idx == 1
-            return b.ref # Basically just assume zero for all "before" if first Beamline (out of thin air)
-          else
-            return b.ref + getproperty(b.lattice.beamlines[b.lattice_index-1], key)
-          end
-        elseif key == :E_ref
-          if ref_meaning == :dpc_ref
-            return pc_to_E(b.species_ref, b.pc_ref)
-          else
-            return R_to_E(b.species_ref, b.p_over_q_ref)
-          end
-        elseif key == :pc_ref
-          if ref_meaning == :dE_ref
-            return E_to_pc(b.species_ref, b.E_ref)
-          else
-            return R_to_pc(b.species_ref, b.p_over_q_ref)
-          end
-        else
-          if ref_meaning == :dpc_ref
-            return pc_to_R(b.species_ref, b.pc_ref)
-          else
-            return E_to_R(b.species_ref, b.E_ref)
-          end
-        end
+        return getproperty(getfield(b, :lattice).beamlines[lattice_index-1], key)
       end
     else
-      # Key relative
-      lat_idx = getfield(b, :lattice_index)
-      if lat_idx == -1
-        error("Unable to get property $key: because this Beamline has set $(ref_meaning),
-                the property $key must be dependent on an upstream Beamline in a Lattice, but 
-                the Beamline is not in a Lattice.")
-      elseif lat_idx == 1
-        return b.ref # Basically just assume zero for all "before" if first Beamline (out of thin air)
-      else
-        if key == :dE_ref
-          return b.E_ref - b.lattice.beamlines[b.lattice_index-1].E_ref
-        elseif key == :dpc_ref
-          return b.pc_ref - b.lattice.beamlines[b.lattice_index-1].pc_ref
-        else
-          return b.p_over_q_ref - b.lattice.beamlines[b.lattice_index-1].p_over_q_ref
-        end
-      end
+      return getproperty(first(b.line), key)
     end
   else
     error("Unable to get property $key from Beamline: Beamline does not have this property")
@@ -516,25 +458,6 @@ function Base.show(io::IO, bp::BeamlineParams)
   println(io, typeof(bp))
   width = length(" beamline_index") # longest String
   println(io, rpad(" beamline_index", width), " = ", bp.beamline_index)
-
-  name = "Inferred"
-  try 
-    species_ref = bp.beamline.species_ref
-    name = species_ref.name
-  catch
-  end
-  println(io, rpad(" species_ref", width), " = ", name)
-
-  ref = ""
-  try
-    ref = bp.beamline.ref
-  catch
-  end
-  ref_meaning = refmeaning_to_sym(bp.beamline.ref_meaning)
-  if !(ref_meaning in (:dp_over_q_ref, :dE_ref, :dpc_ref)) || bp.beamline_index == 1
-    println(io, rpad((" "*String(ref_meaning)), width), " = ", param_repr(ref))
-  end
-
   println(io, rpad(" s",width), " = ", param_repr(bp.s))
   println(io, rpad(" s_downstream",width), " = ", param_repr(bp.s_downstream))
 
@@ -593,21 +516,41 @@ function Base.getproperty(bp::BeamlineParams, key::Symbol)
   end
 end
 
-
-# InitialBeamlineParams which stores things before making a Beamline
-# This allows the behavior of e.g. setting the first element's E_ref, etc
-# This will then get destroyed when constructing a Beamline
 @kwdef mutable struct InitialBeamlineParams <: AbstractParams
   species_ref::Species       = Species()
   ref_meaning::RefMeaning.T  = RefMeaning.p_over_q_ref
   ref                        = nothing
 end
 
+
+PROPS(::Type{InitialBeamlineParams}) = OrderedDict{String,String}(
+  "species_ref"   => "Reference species of the beamline",
+  "E_ref"         => "Total reference energy [eV]",
+  "pc_ref"        => "Reference momentum [eV/c]",
+  "p_over_q_ref"  => "A *signed* reference magnetic rigidity [T * m]",
+  "dE_ref"        => "Change in total reference energy w.r.t. the directly-upstream beamline [eV]",
+  "dpc_ref"       => "Change in reference momentum w.r.t. the directly-upstream beamline [eV/c]",
+  "dp_over_q_ref" => "Change in *signed* reference magnetic rigidty w.r.t. the directly-upstream beamline [T * m]",
+)
+
+"""
+    InitialBeamlineParams
+
+Defines the reference species and energy of the beamline. These parameters may be "set" in the 
+first element of the beamline or at the `Beamline` level, and retrieved at any element in the 
+beamline. If the reference species or energy is not set, then it will inherit that quantity from 
+an upstream beamline if in a `Lattice`.
+
+## Properties
+$(PROPSDOC(InitialBeamlineParams))
+"""
+InitialBeamlineParams
+
 function Base.show(io::IO, ibp::InitialBeamlineParams)
   println(io, typeof(ibp))
-  width = length(" species_refr") # longest String
+  width = length(" species_ref") # longest String
 
-  name = "Inferred"
+  name = :Inferred
   try 
     species_ref = ibp.species_ref
     name = species_ref.name
@@ -615,7 +558,7 @@ function Base.show(io::IO, ibp::InitialBeamlineParams)
   end
   println(io, rpad(" species_ref", width), " = ", name)
 
-  ref = ""
+  ref = :Inferred
   try
     ref = ibp.ref
   catch
@@ -669,8 +612,10 @@ function Base.getproperty(ibp::InitialBeamlineParams, key::Symbol)
         end
       end
     else
-      error("Unable to get property $key: InitialBeamlineParams has stored $(ibp.ref_meaning), and
-            so property $key depends on an upstream Lattice which has not been constructed yet.")
+      error("
+        Unable to get property $key: InitialBeamlineParams has stored $(ibp.ref_meaning), and
+        so property $key depends on an upstream Lattice which has not been constructed yet.
+      ")
     end
   end
   error("This error is unreachable. If reached, submit an issue to Beamlines")

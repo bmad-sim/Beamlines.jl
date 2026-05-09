@@ -440,31 +440,156 @@ function set_harmon_master!(ele::LineElement, ::Symbol, value::Bool)
   return value
 end
 
-# Element-level sets will bleed thru to parent
+# Override is only needed bc error is thrown if either reference
+# species or reference energy are not set and generic setter 
+# first does a get to check if type promotion needed
 function set_bl_params!(ele::LineElement, sym::Symbol, value)
-  pdict = getfield(ele, :pdict)
-  if haskey(pdict, InheritParams)
-    setproperty!(get_parent(pdict), sym, value)
-  elseif haskey(pdict, BeamlineParams)
-    setproperty!(pdict[BeamlineParams], sym, value)
-  else
-    if !haskey(pdict, InitialBeamlineParams)
-      pdict[InitialBeamlineParams] = InitialBeamlineParams()
-    end
-    ibp = pdict[InitialBeamlineParams]
-    setproperty!(ibp, sym, value)
+  ibp = ele.InitialBeamlineParams
+  if isnothing(ibp)
+    ibp = InitialBeamlineParams()
+    ele.InitialBeamlineParams = ibp
   end
-  return value
+  return setproperty!(ibp, sym, value)
 end
 
-function get_bl_params(ele::LineElement, sym::Symbol)
+function get_bl_params(ele::LineElement, key::Symbol)
   pdict = getfield(ele, :pdict)
-  if haskey(pdict, BeamlineParams)
-    return getproperty(pdict[BeamlineParams], sym)
-  elseif !haskey(pdict, InitialBeamlineParams)
-    return error("Unable to get $sym: $sym has not been set")
-  else
-    return getproperty(pdict[InitialBeamlineParams], sym)
+  
+  if haskey(pdict, BeamlineParams) # If element in a Beamline
+    beamline = (pdict[BeamlineParams]::BeamlineParams).beamline
+    ibp = first(beamline.line).InitialBeamlineParams
+    if isnothing(ibp) # If first element does not have InitialBeamlineParams, then it is inferred from previous
+      lattice_index = getfield(beamline, :lattice_index)
+      if lattice_index == -1 || lattice_index == 1
+        error("Unable to get $key: $key is not set nor inferrable")
+      else
+        return getproperty(getfield(beamline, :lattice).beamlines[lattice_index-1], key)
+      end
+    elseif key == :species_ref # Species
+      field = getfield(ibp, :species_ref) 
+      if isnullspecies(field)
+        lattice_index = getfield(beamline, :lattice_index)
+        if lattice_index == -1 || lattice_index == 1
+          error("Unable to get $key: $key is not set nor inferrable")
+        else
+          return getproperty(getfield(beamline, :lattice).beamlines[lattice_index-1], key)
+        end
+      else
+        return field
+      end
+    else # key in (:E_ref, :pc_ref, :p_over_q_ref, :dE_ref, :dpc_ref, :dp_over_q_ref)
+      ref = getfield(ibp, :ref)
+      if isnothing(ref)
+        lattice_index = getfield(beamline, :lattice_index)
+        if lattice_index == -1 || lattice_index == 1
+          error("Unable to get $key: $key is not set nor inferrable")
+        else
+          return getproperty(getfield(beamline, :lattice).beamlines[lattice_index-1], key)
+        end
+      end
+      ref_meaning = refmeaning_to_sym(getfield(ibp, :ref_meaning))
+      if key == ref_meaning
+        return ref
+      elseif key in (:E_ref, :pc_ref, :p_over_q_ref) # Key absolute
+        species_ref = getfield(ibp, :species_ref)
+        if isnullspecies(species_ref)
+          error("
+            Unable to get $key: stored is $ref_meaning and computing $key requires a species_ref,
+            which has not been set.
+          ")
+        end
+        if ref_meaning in (:E_ref, :pc_ref, :p_over_q_ref) # key absolute, ref_meaning absolute
+          if key == :E_ref
+            if ref_meaning == :pc_ref
+              return pc_to_E(species_ref, ref)
+            else
+              return R_to_E(species_ref, ref)
+            end
+          elseif key == :pc_ref
+            if ref_meaning == :E_ref
+              return E_to_pc(species_ref, ref)
+            else
+              return R_to_pc(species_ref, ref)
+            end
+          else
+            if ref_meaning == :pc_ref
+              return pc_to_R(species_ref, ref)
+            else
+              return E_to_R(species_ref, ref)
+            end
+          end
+        else # Key absolute, ref_meaning relative
+          if (key == :E_ref && ref_meaning == :dE_ref) || 
+              (key == :pc_ref && ref_meaning == :dpc_ref) || 
+              (key == :p_over_q_ref && ref_meaning == :dp_over_q_ref)
+            # Can just add going backwards
+            lattice_index = getfield(beamline, :lattice_index)
+            if lattice_index == -1
+              error("
+                Unable to get property $key: because this Beamline has set $(ref_meaning),
+                the property $key must be dependent on an upstream Beamline in a Lattice, but 
+                the Beamline is not in a Lattice.
+              ")
+            elseif latice_index == 1
+              return ref # Basically just assume zero for all "before" if first Beamline (out of thin air)
+            else
+              return ref + getproperty(getfield(beamline, :lattice).beamlines[lattice_index-1], key)
+            end
+          elseif key == :E_ref
+            species_ref = getfield(ibp, :species_ref)
+            if isnullspecies(species_ref)
+              error("
+                Unable to get $key: stored is $ref_meaning and computing $key requires a species_ref,
+                which has not been set.
+              ")
+            end
+            if ref_meaning == :dpc_ref
+              return pc_to_E(species_ref, ibp.pc_ref)
+            else
+              return R_to_E(species_ref, ibp.p_over_q_ref)
+            end
+          elseif key == :pc_ref
+            if ref_meaning == :dE_ref
+              return E_to_pc(species_ref, ibp.E_ref)
+            else
+              return R_to_pc(species_ref, ibp.p_over_q_ref)
+            end
+          else # key == :p_over_q_ref
+            if ref_meaning == :dpc_ref
+              return pc_to_R(species_ref, ibp.pc_ref)
+            else
+              return E_to_R(species_ref, ibp.E_ref)
+            end
+          end
+        end
+      else # Key relative
+        lattice_index = getfield(b, :lattice_index)
+        if lattice_index == -1
+          error("
+            Unable to get property $key: because this Beamline has set $(ref_meaning),
+            the property $key must be dependent on an upstream Beamline in a Lattice, but 
+            the Beamline is not in a Lattice.
+          ")
+        elseif lattice_index == 1
+          return ref # Basically just assume zero for all "before" if first Beamline (out of thin air)
+        else
+          if key == :dE_ref
+            return ibp.E_ref - getfield(beamline, :lattice).beamlines[lattice_index-1].E_ref
+          elseif key == :dpc_ref
+            return ibp.pc_ref - getfield(beamline, :lattice).beamlines[lattice_index-1].pc_ref
+          else
+            return ibp.p_over_q_ref - getfield(beamline, :lattice).beamlines[lattice_index-1].p_over_q_ref
+          end
+        end
+      end
+    end
+  else # not in a Beamline, just return ibp
+    ibp = ele.InitialBeamlineParams
+    if isnothing(ibp)
+      error("Unable to get $key: $key is not set nor inferrable")
+    else
+      return getproperty(ibp, key)
+    end
   end
 end
 

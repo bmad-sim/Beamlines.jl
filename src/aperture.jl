@@ -18,7 +18,14 @@
 end
 
 PROPS(::Type{ApertureParams}) = OrderedDict{String,String}(
-  "TODO" => ""
+  "x1_limit" => "",
+  "x2_limit" => "",
+  "y1_limit" => "",
+  "y2_limit" => "",
+  "aperture_shape" => "",
+  "aperture_at" => "",
+  "aperture_shifts_with_body" => "",
+  "aperture_active" => "",
 )
 
 """

@@ -2,12 +2,9 @@
 CurrentModule = Beamlines
 ```
 
-# Beamlines
+# Full API
 
 Documentation for [Beamlines](https://github.com/bmad-sim/Beamlines.jl).
-
-```@index
-```
 
 ```@autodocs
 Modules = [Beamlines]

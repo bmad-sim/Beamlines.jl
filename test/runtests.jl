@@ -44,7 +44,7 @@ using ForwardDiff, GTPSA, ReverseDiff
     @test_throws ErrorException getfield(ele, :pdict)[UniversalParams] = 10.0
 
     @test !isactive(ele.BendParams)
-    @test ele.g == 0 # Default value
+    @test ele.g_ref == 0 # Default value
     ele.g_ref = g_ref
     @test isactive(ele.BendParams)
     @test ele.g_ref == g_ref
@@ -171,36 +171,32 @@ using ForwardDiff, GTPSA, ReverseDiff
     b1 = SBend(L=1.0f0, g=0.2f0)
     @test b1.Kn0 == 0.2f0
     @test b1.g_ref == b1.Kn0
-    @test b1.g == b1.Kn0
+    @test_throws ErrorException b1.g
+    @test_throws ErrorException b1.angle
 
     b1.Kn0 = im
     @test eltype(b1.BMultipoleParams) == ComplexF32
     @test eltype(b1.BendParams) == Float32
-    @test b1.g == 0.2f0
     @test b1.g_ref == 0.2f0
 
     b1.g_ref = 0.3
     @test eltype(b1.BendParams) == Float64
     @test eltype(b1.BMultipoleParams) == ComplexF32
     @test b1.g_ref ==  0.3
-    @test b1.g == 0.3
     @test b1.Kn0 == 1.0f0*im
 
     # Test storing Kn0L internally before setting g
     b2 = SBend(L=3.0, Kn0L=2, g=0.5)
     @test eltype(b2.BMultipoleParams) == Float64
     @test eltype(b2.BendParams) == Float64
-    @test b2.g == 0.5
     @test b2.Kn0L == 0.5*3.0 # note NOT 2! changed by g, order matters
     @test b2.Kn0 == 0.5
-    @test b2.g_ref == b2.g
 
     b2.g = 0.5*im
     @test eltype(b2.BendParams) == ComplexF64
     @test eltype(b2.BMultipoleParams) == ComplexF64
-    @test b2.g == 0.5*im
+    @test b2.g_ref == 0.5*im
     @test b2.Kn0 == 0.5*im
-    @test b2.g_ref == b2.g
     @test b2.Kn0L == 0.5*im*3.0
 
     b3 = SBend(L=2.0, g_ref=3.0, Kn0=3.0*im)

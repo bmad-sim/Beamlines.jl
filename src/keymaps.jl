@@ -30,15 +30,6 @@ const PROPERTIES_MAP = Dict{Symbol,Type{<:AbstractParams}}(
 
   :beamline => BeamlineParams,
   :beamline_index => BeamlineParams,
-  #= These guys now virtual for InitialBeamlineParams
-  :p_over_q_ref => BeamlineParams, 
-  :E_ref => BeamlineParams, 
-  :pc_ref => BeamlineParams, 
-  :dp_over_q_ref => BeamlineParams, 
-  :dE_ref => BeamlineParams, 
-  :dpc_ref => BeamlineParams, 
-  :species_ref => BeamlineParams,
-  =#
   :lattice => BeamlineParams,
   :lattice_index => BeamlineParams,
   :s => BeamlineParams,
@@ -107,4 +98,5 @@ const PARAMS_MAP = Dict{Symbol,Type{<:AbstractParams}}(
   :MapParams => MapParams,
   :FourPotentialParams => FourPotentialParams,
   :MetaParams => MetaParams,
+  :InitialBeamlineParams => InitialBeamlineParams,
 )

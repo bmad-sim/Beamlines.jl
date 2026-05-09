@@ -19,21 +19,8 @@ makedocs(;
   pages=[
     "Home" => "index.md",
     "Quickstart Guide" => "quickstart.md",
-    "Advanced Usage" => "advanced.md",
-    "Manual" => [
-        "man/a_toc.md",
-    "man/b_descriptor.md", 
-    "man/c_tps.md",
-    "man/d_varsparams.md",
-    "man/e_monoindex.md",
-    "man/f_mono.md",
-    "man/g_gjh.md",
-    "man/h_slice.md",
-    "man/i_methods.md",
-    "man/j_fastgtpsa.md",
-    "man/k_io.md",
-    "man/l_global.md",
-    "man/m_all.md"],
+    "Parameter Groups" => "parameters.md",
+    "Full API" => "api.md",
   ],
 )
 
