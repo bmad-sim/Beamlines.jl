@@ -7,5 +7,5 @@ CurrentModule = Beamlines
 Documentation for [Beamlines](https://github.com/bmad-sim/Beamlines.jl).
 
 ```@autodocs
-Modules = [Beamlines, Beamlines.ApertureAt, Beamlines.ApertureShape, Beamlines.PhaseRef, Beamlines.RefMeaning]
+Modules = [Beamlines, Beamlines.ApertureAt, Beamlines.ApertureShape, Beamlines.PhaseRef, Beamlines.RateMeaning, Beamlines.RefMeaning]
 ```
