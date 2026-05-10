@@ -1,13 +1,8 @@
-using Beamlines
-using Documenter
-
+using Documenter, Beamlines
 
 cp(joinpath(@__DIR__, "..", "README.md"), joinpath(@__DIR__, "src", "index.md"); force=true)
 
-DocMeta.setdocmeta!(Beamlines, :DocTestSetup, :(using Beamlines); recursive=true)
-
 makedocs(;
-  modules=[Beamlines],
   authors="mattsignorelli <mgs255@cornell.edu> and contributors",
   sitename="Beamlines.jl",
   format=Documenter.HTML(;
