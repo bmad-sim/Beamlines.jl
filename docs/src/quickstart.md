@@ -45,7 +45,7 @@ Much better!
 
 Python users may use the dict-based naming function `elements` instead.
 
-```@docs
+```@docs; canonical=false
 @elements
 elements
 ```
@@ -106,7 +106,7 @@ One can really "go crazy" with deferred expressions if they want to. They can be
 
 `Beamlines.jl` supports a continually-growing list of parameters to define accelerator elements. To see a full list of the parameters you can set, look at the docstring for the `LineElement` type. This can be retrieved in a Julia session using `Doc.docs(LineElement)`.
 
-```@docs
+```@docs; canonical=false
 LineElement
 ```
 
@@ -258,6 +258,6 @@ scalarize!(fodo)
 println(fodo.line[end].s_downstream)
 ```
 
-```@docs
+```@docs; canonical=false
 scalarize!
 ```
