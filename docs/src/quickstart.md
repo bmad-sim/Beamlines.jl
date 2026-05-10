@@ -26,7 +26,7 @@ using Beamlines # hide
 fodo = Beamline([qd, d, qd, d], species_ref=Species("electron"), E_ref=18e9)
 ```
 
-`Beamlines.jl` uses the [`AtomicAndPhysicalConstants.jl](https://github.com/bmad-sim/AtomicAndPhysicalConstants.jl) package for specifying particle species, and so any species defined by that package may be provided.
+`Beamlines.jl` uses the [`AtomicAndPhysicalConstants.jl`](https://github.com/bmad-sim/AtomicAndPhysicalConstants.jl) package for specifying particle species, and so any species defined by that package may be provided.
 
 The rest of the output looks ok, except for the fact that the `name` column is empty! This is because we didn't specify a `name` property for each element. It would often be convenient if we can make the variable symbols (e.g. `qf`, `d`, etc.) automatically fill in the `name` field for each element. We can do exactly this by wrapping the element definitions in a `@elements` block:
 
@@ -82,7 +82,6 @@ using Beamlines # hide
 qf.Kn1 = 0.7
 qd.Kn1
 ```
-'
 
 Deferred expressions can also be manipulated like any other number:
 
