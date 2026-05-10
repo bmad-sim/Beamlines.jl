@@ -36,7 +36,7 @@ function Base.show(io::IO, a::AbstractParams)
   width = maximum(length, String.(fields))
   println(io, nameof(typeof(a)))
   for field in fields
-    println(io, " ", rpad(String(field), width), " = ", getproperty(a, field))
+    println(io, " ", rpad(String(field), width), " = ", param_repr(getproperty(a, field)))
   end
   return
 end
@@ -130,7 +130,6 @@ function Base.show(io::IO, ele::LineElement)
   return
 end
 
-
 function flattened_pdict(ele::LineElement, p=ParamDict())
   curpdict = getfield(ele, :pdict)
   if !haskey(curpdict, InheritParams)
@@ -172,23 +171,47 @@ function Base.isapprox(a::LineElement, b::LineElement)
 end
 
 # Common kind choices
-Solenoid(; kwargs...)   = LineElement(; kind="Solenoid", kwargs...)
-SBend(; kwargs...)      = LineElement(; kind="SBend", kwargs...)
-Quadrupole(; kwargs...) = LineElement(; kind="Quadrupole", kwargs...)
-Sextupole(; kwargs...)  = LineElement(; kind="Sextupole", kwargs...)
-Drift(; kwargs...)      = LineElement(; kind="Drift", kwargs...)
-Octupole(; kwargs...)   = LineElement(; kind="Octupole", kwargs...)
-Multipole(; kwargs...)  = LineElement(; kind="Multipole", kwargs...)
-Marker(; kwargs...)     = LineElement(; kind="Marker", kwargs...)
-Kicker(; kwargs...)     = LineElement(; kind="Kicker", kwargs...)
-HKicker(; kwargs...)    = LineElement(; kind="HKicker", kwargs...)
-VKicker(; kwargs...)    = LineElement(; kind="VKicker", kwargs...)
-RFCavity(; kwargs...)   = LineElement(; kind="RFCavity", kwargs...)
+# Copy docstring to all aliases
+for kind in (:Solenoid, :SBend, :Quadrupole, :Sextupole, :Drift, :Octupole, :Multipole, 
+              :Marker, :Kicker, :HKicker, :VKicker, :RFCavity, :Patch
+  )
+  @eval begin
+    """
+        $($kind)(; kwargs...) = LineElement(; kind="$($kind)", kwargs...)
+    
+    See the documentation for `LineElement`
+    """
+    $kind(; kwargs...) = LineElement(; kind="$($kind)", kwargs...)
+  end
+end
+
+# Right now CrabCavity is treated differently
+"""
+    $CrabCavity(; kwargs...) = LineElement(; kind="CrabCavity", is_crabcavity = true, kwargs...)
+
+See the documentation for `LineElement`
+"""
 CrabCavity(; kwargs...) = LineElement(; kind="CrabCavity", is_crabcavity = true, kwargs...)
-Patch(; kwargs...)      = LineElement(; kind="Patch", kwargs...)
 
 
 # Default tracking method:
+"""
+    SciBmadStandard
+
+Default tracking method that uses exact transport maps when solvable, else uses the 
+symplectic integrator `Yoshida(order=4, num_steps=1)` which chooses an appropriate split 
+for each element.
+
+## Properties
+- `radiation_damping_on`: `true` if the deterministic effect of synchrotron radiation 
+    is included, `false` otherwise. Defaults to `false`
+- `radiation_fluctuations_on`: `true` if the stochastic radiation kicks are included, 
+    `false` otherwise. Defaults to `false`
+- `ibs_damping_on`: true if the deterministic effect of intrabeam scattering (IBS) is 
+    included, `false` otherwise. Defaults to `false`.
+- `ibs_fluctuations_on`: true if the stochastic kicks of intrabeam scattering (IBS) is 
+    included, `false` otherwise. Defaults to `false`.
+"""
 @kwdef struct SciBmadStandard
   radiation_damping_on::Bool = false
   radiation_fluctuations_on::Bool = false
@@ -203,6 +226,45 @@ end
   tracking_method = SciBmadStandard()
 end
 
+PROPS(::Type{UniversalParams}) = OrderedDict{String,String}(
+  "kind" => "String specifing the \"kind\", of an element, e.g. \"Quadrupole\"",
+  "name" => "The name of an element as a string",
+  "L"    => "Length of the element [m]",
+  "tracking_method" => "Tracking method for the element, defaults to `SciBmadStandard()`"
+)
+
+"""
+    UniversalParams
+
+Describes the kind, name, length, and tracking method for a `LineElement`.
+
+## Properties
+$(PROPSDOC(UniversalParams))
+"""
+UniversalParams
+
+# For UniversalParams, print each tracking_method field:
+function Base.show(io::IO, a::UniversalParams)
+  fields = fieldnames(typeof(a))
+  width = maximum(length, String.(fields))
+  println(io, nameof(typeof(a)))
+  for field in fields
+    if field == :tracking_method
+      tm = getproperty(a, field)
+      println(io, " ", rpad(String(field), width), " = ", param_repr(typeof(tm)), "(")
+      subfields = fieldnames(typeof(tm))
+      subwidth = maximum(length, String.(subfields))
+      for subfield in subfields
+        println(io, "   ",  rpad(String(subfield), subwidth), " = ", param_repr(getproperty(tm, subfield)), ",")
+      end
+      println(io, " )")
+    else
+      println(io, " ", rpad(String(field), width), " = ", param_repr(getproperty(a, field)))
+    end
+  end
+  return
+end
+
 function Base.isapprox(a::UniversalParams, b::UniversalParams)
   return a.tracking_method == b.tracking_method &&
          a.L               ≈  b.L
@@ -215,10 +277,28 @@ struct InheritParams <: AbstractParams
   parent::LineElement
 end
 
+PROPS(::Type{InheritParams}) = OrderedDict{String,String}(
+  "parent" => "Parent `LineElement` to inherit parameter groups from for both reading and writing.",
+)
+
+"""
+    InheritParams
+
+Stores a parent `LineElement` through which any parameter groups NOT present in the "child" 
+element containing the `InheritParams` would inherit. E.g., if the child element has its own
+`BeamlineParams`, then any property from the `BeamlineParams` parameter group would be read/
+write to the child's `BeamlineParams`.
+
+## Properties:
+$(PROPSDOC(InheritParams))
+"""
+InheritParams
+
 @inline get_parent(pdict::ParamDict) = (pdict[InheritParams]::InheritParams).parent::LineElement
 
 # For parameter groups, both read and write are not allowed
 # For properties, write is not allowed
+# Internal as of 0.9.0, however it does work.
 struct ProtectParams <: AbstractParams
   protected_properties::Vector{Symbol}
 end
@@ -231,7 +311,7 @@ end
 
 # Use Accessors here for default bc super convenient for replacing entire (even mutable) type
 # For more complex params (e.g. BMultipoleParams) we will need custom override
-replace(p::AbstractParams, key::Symbol, value) = set(p, opcompose(PropertyLens(key)), value)
+param_replace(p::AbstractParams, key::Symbol, value) = set(p, opcompose(PropertyLens(key)), value)
 
 function Base.getproperty(ele::LineElement, key::Symbol)
   pdict = getfield(ele, :pdict)
@@ -263,6 +343,13 @@ function Base.getproperty(ele::LineElement, key::Symbol)
       # Default value will be done by constructing the parameter group 
       # and then just extracting the particular property.
       # This ensures that if a default is changed elsewhere, it is handled properly
+      if PROPERTIES_MAP[key] == BeamlineParams
+        error("""
+          Unable to get key $key from LineElement: element is not in a Beamline. 
+          If you placed this element in a Beamline, use `findchildren` to find 
+          the child instances of this element in a given Beamline.
+        """)
+      end
       return getproperty(PROPERTIES_MAP[key](), key)
     end
   end
@@ -273,20 +360,7 @@ function Base.getproperty(ele::LineElement, key::Symbol)
     error("Type LineElement has no property $key")
   end
 end
-#=
-qf = Quadrupole(K1=0.36, L=0.5)
-bl = Beamline([qf, qf])
 
-qf.K1 = 0.3 # sets both
-qf.K2 = 0.4 # both should get a K2 honestly
-qf.BMultipoleParams = ... # Both should get it too
-qf.BMultipoleParams = nothing # remove both
-
-qf2 = bl.line[2]
-qf2.K1 = 0.2 # set both?
-qf2.UniversalParams = .... # set both
-
-=#
 function Base.setproperty!(ele::LineElement, key::Symbol, value)
   pdict = getfield(ele, :pdict)
   if haskey(PARAMS_MAP, key) # Setting whole parameter struct
@@ -316,7 +390,7 @@ function Base.setproperty!(ele::LineElement, key::Symbol, value)
       end
       # If the parameter struct associated with this symbol does not exist, create it
       # This could be optimized in the future with a `place` function
-      # That is similar to `replace` but just has the type
+      # That is similar to `param_replace` but just has the type
       # Though adding fields is not done very often so is fine
       setindex!(pdict, PROPERTIES_MAP[key](), PROPERTIES_MAP[key])
     end
@@ -339,19 +413,23 @@ function _setproperty!(pdict::ParamDict, p::AbstractParams, key::Symbol, value)
       return setproperty!(p, key, value)
     end
   end
-  return pdict[PROPERTIES_MAP[key]] = replace(p, key, value)
+  return pdict[PROPERTIES_MAP[key]] = param_replace(p, key, value)
 end
 
 function Base.deepcopy_internal(ele::LineElement, stackdict::IdDict)
   return get!(()->deepcopy_no_beamline(ele), stackdict, ele)::LineElement
 end
 
+# This should also flatten any InheritParams
 function deepcopy_no_beamline(ele::LineElement)
   newele = LineElement()
-  pdict = getfield(ele, :pdict)
-  for (key, p) in pdict
-    if key != BeamlineParams
-      setindex!(getfield(newele, :pdict), deepcopy(p), key)
+  for pg in keys(PARAMS_MAP)
+    if pg == :BeamlineParams
+      continue
+    end
+    elepg = getproperty(ele, pg)
+    if !isnothing(elepg)
+      setproperty!(newele, pg, deepcopy(elepg))
     end
   end
   return newele
@@ -360,7 +438,9 @@ end
 #Base.fieldnames(::Type{LineElement}) = tuple(:pdict, keys(PROPERTIES_MAP)..., keys(PARAMS_MAP)...)
 #Base.fieldnames(::LineElement) = tuple(:pdict, keys(PROPERTIES_MAP)..., keys(PARAMS_MAP)...)
 #Base.propertynames(::Type{LineElement}) = tuple(:pdict, keys(PROPERTIES_MAP)..., keys(PARAMS_MAP)...)
-function Base.propertynames(::LineElement)
+Base.propertynames(::LineElement) = _lineelement_properties()
+
+function _lineelement_properties()
   virt = union(keys(VIRTUAL_GETTER_MAP),keys(VIRTUAL_SETTER_MAP))
   prop = keys(PROPERTIES_MAP)
   param = keys(PARAMS_MAP)

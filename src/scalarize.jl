@@ -6,12 +6,17 @@ scalarize(t::AbstractArray) = scalarize.(t)
 """
     scalarize!(ele::LineElement)
 
-Modifies the LineElement so all element-level parameters are scalars
+Modifies the `LineElement` so all element-level parameters are regular number types. 
+This may be needed after optimizing the element's parameters using e.g. `ForwardDiff`, 
+`ReverseDiff`, or `GTPSA`, which will set the parameter equal to a special number type 
+that propagates the gradients.
 """
 function scalarize!(ele::LineElement)
   pdict = getfield(ele, :pdict)
   for (key, p) in pdict
-    if key != BeamlineParams
+    if key == InheritParams
+      scalarize!(p.parent)
+    elseif key != BeamlineParams
       setindex!(pdict, scalarize(p), key)
     end
   end
@@ -21,21 +26,25 @@ end
 """
     scalarize!(bl::Beamline)
 
-Modifies the Beamline so all LineElement parameters are scalars and all 
-Beamline-level parameters are scalars.
+Modifies the `Beamline` and its `LineElement`s so all parameters are regular number types. 
+This may be needed after optimizing the element's parameters using e.g. `ForwardDiff`, 
+`ReverseDiff`, or `GTPSA`, which will set the parameter equal to a special number type 
+that propagates the gradients.
 """
 function scalarize!(bl::Beamline)
     for ele in bl.line
         scalarize!(ele)
     end
-    bl.ref = scalarize(bl.ref)
     return bl 
 end
 
 """
     scalarize!(lat::Lattice)
 
-Modifies the Lattice so all LineElement and Beamline parameters are scalars.
+Modifies all `Beamline`s and their `LineElement`s in the `Lattice` so all parameters are 
+regular number types. This may be needed after optimizing the element's parameters using 
+e.g. `ForwardDiff`, `ReverseDiff`, or `GTPSA`, which will set the parameter equal to a 
+special number type that propagates the gradients.
 """
 function scalarize!(lat::Lattice)
     for bl in lat.beamlines

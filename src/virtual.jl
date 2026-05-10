@@ -100,115 +100,100 @@ function _get_BM_strength(ele, b::BMultipoleParams, key)
   end
 end
 
+function _promote_bm(b1::BMultipoleParams{S}, ::Type{T}) where {S,T}
+  SNEW = promote_type(S, T)
+  if S == SNEW
+    return b1
+  else
+    return BMultipoleParams{SNEW}(b1)
+  end
+end
+
 function set_BM_strength!(ele::LineElement, key::Symbol, value)
-  b = ele.BMultipoleParams
-  if isnothing(b)
-    b = BMultipoleParams() 
+  b1 = ele.BMultipoleParams
+  if isnothing(b1)
+    b1 = BMultipoleParams()
+  end
+  b = @noinline _set_BM_strength!(ele, b1, key, value)
+  if !(b === b1)
     ele.BMultipoleParams = b
   end
-
-  # Setting is painful, because we do not know what the type of
-  # of the input must be (including L and p_over_q_ref potentially)
-  # And, if it requires promotion of the BMultipoleParams struct,
-  # ouchies
-  strength = calc_BM_internal_strength(ele, b, key, value)
-  @noinline _set_BM_strength!(ele, b, key, strength)
   return value
 end
 
-function calc_BM_internal_strength(ele, b::BMultipoleParams, key, value)
-  ___, order, normalized, integrated = BMULTIPOLE_STRENGTH_MAP[key]
-  
-  if !(order in b.order) # First set
-    return value
-  else
-    i = o2i(b,order)
-    stored_normalized = b.normalized[i]
-    stored_integrated = b.integrated[i]
-    if stored_normalized == normalized
-      if stored_integrated == integrated
-        return value
-      else
-        L = ele.L
-        if stored_integrated == false 
-          # user setting integrated strength of non-integrated BMultipole
-          if L == 0
-            error("Unable to set $key of LineElement: Nonintegrated multipole is stored, but the element length L = 0")
-          end
-          return value/L
-        else
-          # user setting non-integrated strength of integrated BMultipole
-          return value*L
-        end
-      end
-    else
-      p_over_q_ref = ele.p_over_q_ref
-      if stored_integrated == integrated
-        if stored_normalized == false
-          # user setting normalized strength of unnormalized BMultipole
-          return value*p_over_q_ref
-        else
-          # user setting unnormalized strength of normalized BMultipole
-          return value/p_over_q_ref
-        end
-      else
-        L = ele.L
-        if stored_normalized == false
-          if stored_integrated == false
-            # user setting normalized, integrated strength of 
-            # unnormalized, nonintegrated BMultipole
-            if L == 0
-              error("Unable to set $key of LineElement: Nonintegrated multipole is stored, but the element length L = 0")
-            end
-            return value*p_over_q_ref/L
-          else
-            # user setting normalized, nonintegrated strength of 
-            # unnormalized, integrated BMultipole
-            return value*p_over_q_ref*L
-          end
-        else
-          if stored_integrated == false
-            # user setting unnormalized, integrated strength of 
-            # normalized, nonintegrated BMultipole
-            if L == 0
-              error("Unable to set $key of LineElement: Nonintegrated multipole is stored, but the element length L = 0")
-            end
-            return value/p_over_q_ref/L
-          else
-            # user setting unnormalized, nonintegrated strength of 
-            # normalized, integrated BMultipole
-            return value/p_over_q_ref*L
-          end
-        end
-      end
-    end
-  end
-end
-
-function _set_BM_strength!(ele, b1::BMultipoleParams{S}, key, strength) where {S}
+function _set_BM_strength!(ele, b::BMultipoleParams, key, value)
   normal, order, normalized, integrated = BMULTIPOLE_STRENGTH_MAP[key]
 
-  T = promote_type(S,typeof(strength))
-  if T != S
-    b = BMultipoleParams{T}(b1)
-    ele.BMultipoleParams = b
-  else
-    b = b1
-  end
-
-  # If first set, this now defines normalized + integrated.
   if !(order in b.order)
     b = addord(b, order, normalized, integrated)
-    ele.BMultipoleParams = b
   end
 
-  if normal
-    b.n[o2i(b,order)] = strength
-  else
-    b.s[o2i(b,order)] = strength
+  i = o2i(b, order)
+  if b.normalized[i] == normalized && b.integrated[i] == integrated
+      # EASY!
+      b = _promote_bm(b, typeof(value))
+      bm = normal ? b.n : b.s
+      bm[i] = value
   end
-  return 
+
+  # Switching normalized status:
+  if b.normalized[i] != normalized
+    #=
+    This is the hard case.
+    Here we will keep the angle between both multipoles the same.
+    This is done by ensuring that Bs*Kn = Ks*Bn
+    =#
+    old_val = normal ? b.n[i] : b.s[i]
+    old_other_val = normal ? b.s[i] : b.n[i]
+    if old_val == 0
+      if old_other_val == 0
+        new_other_val = 0
+      else
+        old_sym = BMULTIPOLE_STRENGTH_INVERSE_MAP[(normal, order, b.normalized[i], b.integrated[i])]
+        old_other_sym = BMULTIPOLE_STRENGTH_INVERSE_MAP[(!normal, order, b.normalized[i], b.integrated[i])]
+        new_other_sym = BMULTIPOLE_STRENGTH_INVERSE_MAP[(!normal, order, !(b.normalized[i]), integrated)]
+        error("
+        Unable to set multipole $(key): currently stored is $(old_other_sym), and setting $(key) would 
+        change the order $order multipole to have normalized=$normalized as the independent variable.
+        The only consistent way to then update $(old_other_sym) is to set the value so the 
+        angle between $(new_other_sym) and $(key) remains the same as the angle between $(old_other_sym)
+        and $(old_sym). However, this angle is undefined if $(old_sym) = 0, because $(new_other_sym) 
+        would have to be infinite.
+        ")
+      end
+    else
+      new_other_val = old_other_val*value/old_val
+    end
+    b = _promote_bm(b, promote_type(typeof(value),typeof(new_other_val)))
+    @reset b.normalized[i] = normalized
+    if normal
+      b.n[i] = value
+      b.s[i] = new_other_val
+    else
+      b.s[i] = value
+      b.n[i] = new_other_val
+    end
+  end
+
+  # Switching integrated status
+  if b.integrated[i] != integrated
+    L = ele.L
+    old_other_val = normal ? b.s[i] : b.n[i]
+    new_other_val = old_other_val*(integrated ? L : 1/L)
+    b = _promote_bm(b, promote_type(typeof(value),typeof(new_other_val)))
+    @reset b.integrated[i] = integrated
+    if normal
+      b.n[i] = value
+      b.s[i] = new_other_val
+    else
+      b.s[i] = value
+      b.n[i] = new_other_val
+    end
+  end
+  return b
 end
+
+get_bend_angle(::LineElement, ::Symbol) = error("Property `angle` is write-only, and sets both `g_ref` and `Kn0` together")
 
 function set_bend_angle!(ele::LineElement, ::Symbol, value)
   L = ele.L
@@ -235,13 +220,7 @@ function _set_bend_angle!(ele, L, bm, bp, value)
   return value
 end
 
-function get_bend_g(ele::LineElement, ::Symbol)
-  bp = ele.BendParams
-  if isnothing(bp)
-    return 0f0 # Default value
-  end
-  return bp.g_ref
-end
+get_bend_g(::LineElement, ::Symbol) = error("Property `g` is write-only, and sets both `g_ref` and `Kn0` together.")
 
 function set_bend_g!(ele::LineElement, ::Symbol, value)
   bp = ele.BendParams
@@ -263,8 +242,7 @@ function _set_bend_g!(ele::LineElement, bp::BendParams{S}, bm::BMultipoleParams,
     bp = set(bp, opcompose(PropertyLens(:g_ref)), T(value))
     ele.BendParams = bp
   end
-  strength = calc_BM_internal_strength(ele, bm, :Kn0, T(value))
-  @noinline _set_BM_strength!(ele, bm, :Kn0, strength)
+  @noinline set_BM_strength!(ele, :Kn0, T(value))
   return value
 end
 
@@ -399,7 +377,7 @@ function get_cavity_rate(ele::LineElement, key::Symbol)
   else # Need to convert
     bp = ele.BeamlineParams
     if isnothing(bp)
-      error("Unable to get $key from LineElement: element is NOT in a Beamline and has harmon_master = $(rfp.harmon_master)")
+      error("Unable to get $key from LineElement: element is not in a Beamline and has harmon_master = $(rfp.harmon_master)")
     end
     bl = bp.beamline
     species = bl.species_ref
@@ -416,52 +394,29 @@ function get_cavity_rate(ele::LineElement, key::Symbol)
 end
 
 function set_cavity_rate!(ele::LineElement, key::Symbol, value)
-  rfp = ele.RFParams
-  # First set: construct RF params
-  if isnothing(rfp)
-    rfp = RFParams()
-    ele.RFParams = rfp
+  rf1 = ele.RFParams
+  if isnothing(rf1)
+    rf1 = RFParams()
   end
-  # If rate_meaning hasn't been set yet, we can set it now
-  if rfp.rate_meaning == RateMeaning.Indeterminate
-    rate_meaning = key == :harmon ? RateMeaning.Harmon : RateMeaning.RFFrequency
-    rfp = set(rfp, opcompose(PropertyLens(:rate_meaning)), rate_meaning)
-    ele.RFParams = rfp
+  rf = @noinline _set_cavity_rate!(rf1, key, value)
+  if !(rf === rf1)
+    ele.RFParams = rf
   end
-  rate = calc_rf_internal_rate(ele, rfp, key, value)
-  @noinline _set_cavity_rate!(ele, rfp, rate)
   return value
 end
 
-function calc_rf_internal_rate(ele, rfp, key, value)
-  rate_meaning = getfield(rfp, :rate_meaning)
-  if ((key == :harmon) && rate_meaning == RateMeaning.Harmon) || ((key == :rf_frequency) && rate_meaning == RateMeaning.RFFrequency)
-    return value
-  else # Need to convert
-    bp = ele.BeamlineParams
-    if isnothing(bp)
-      error("Unable to set $key from LineElement: element is NOT in a Beamline and has harmon_master = $(rfp.harmon_master)")
-    end
-    bl = bp.beamline
-    species = bl.species_ref
-    circumference = bl.line[end].s_downstream
-    v = R_to_v(species, bl.p_over_q_ref)
-    if key == :harmon # rf_frequency is stored, user wants to set harmon
-      return value*v/circumference 
-    else # harmon is stored, user wants to set rf_frequency
-      return value*circumference/v
-    end
+function _set_cavity_rate!(rf::RFParams{S}, key, value) where {S}
+  rate_meaning = key == :harmon ? RateMeaning.Harmon : RateMeaning.RFFrequency
+  if rf.rate_meaning != rate_meaning
+    rf = set(rf, opcompose(PropertyLens(:rate_meaning)), rate_meaning)
   end
-end
-
-function _set_cavity_rate!(ele, rfp::RFParams{S}, value) where {S}
   T = promote_type(S,typeof(value))
   if T != S
-    ele.RFParams = set(rfp, opcompose(PropertyLens(:rate)), T(value))
+    rf = set(rf, opcompose(PropertyLens(:rate)), T(value))
   else
-    setfield!(rfp, :rate, T(value))
+    setfield!(rf, :rate, T(value))
   end
-  return
+  return rf
 end
 
 function set_harmon_master!(ele::LineElement, ::Symbol, value::Bool)
@@ -485,34 +440,214 @@ function set_harmon_master!(ele::LineElement, ::Symbol, value::Bool)
   return value
 end
 
+# Override is only needed bc error is thrown if either reference
+# species or reference energy are not set and generic setter 
+# first does a get to check if type promotion needed
 function set_bl_params!(ele::LineElement, sym::Symbol, value)
-  pdict = getfield(ele, :pdict)
-  if haskey(pdict, BeamlineParams)
-    setproperty!(pdict[BeamlineParams], sym, value)
-  else
-    if !haskey(pdict, InitialBeamlineParams)
-      pdict[InitialBeamlineParams] = InitialBeamlineParams()
-    end
-    ibp = pdict[InitialBeamlineParams]
-    setproperty!(ibp, sym, value)
+  if !isnothing(ele.BeamlineParams) && ele.beamline_index != 1
+    error("Unable to set $sym of an element that is in a beamline and not the first element of the beamline.")
   end
-  return value
+
+  ibp = ele.InitialBeamlineParams
+  if isnothing(ibp)
+    ibp = InitialBeamlineParams()
+    ele.InitialBeamlineParams = ibp
+  end
+
+  if sym == :species_ref && !isnothing(getfield(ibp, :ref)) && 
+    getfield(ibp, :ref_meaning) == RefMeaning.p_over_q_ref && 
+    sign(chargeof(value)) != sign(getfield(ibp, :ref))
+    new_p_over_q_ref = sign(chargeof(value))*getfield(ibp, :ref)
+    @info "Setting p_over_q_ref to $(new_p_over_q_ref) to match sign of new species_ref charge"
+    setfield!(ibp, :ref, new_p_over_q_ref)
+  elseif sym == :p_over_q_ref && !isnullspecies(getfield(ibp, :species_ref)) &&
+    sign(chargeof(getfield(ibp, :species_ref))) != sign(value)
+    value = sign(chargeof(getfield(ibp, :species_ref)))*value
+    @info "Setting p_over_q_ref to $(value) to match sign of stored species_ref charge"
+  end
+
+  if sym in (:pc_ref, :E_ref)
+    if value < 0
+      error("Negative value for $sym not allowed")
+    end
+  end
+
+  return setproperty!(ibp, sym, value)
 end
 
-function get_bl_params(ele::LineElement, sym::Symbol)
+function get_bl_params(ele::LineElement, key::Symbol)
   pdict = getfield(ele, :pdict)
-  if haskey(pdict, BeamlineParams)
-    return getproperty(pdict[BeamlineParams], sym)
-  elseif !haskey(pdict, InitialBeamlineParams)
-    return error("Unable to get $sym: $sym has not been set")
+  
+  if haskey(pdict, BeamlineParams) # If element in a Beamline
+    if key in (:dE_ref, :dpc_ref, :dp_over_q_ref) && (pdict[BeamlineParams]::BeamlineParams).beamline_index != 1
+      return 0
+    end
+    beamline = (pdict[BeamlineParams]::BeamlineParams).beamline
+    ibp = first(beamline.line).InitialBeamlineParams
+    if isnothing(ibp) # If first element does not have InitialBeamlineParams, then it is inferred from previous
+      lattice_index = getfield(beamline, :lattice_index)
+      if lattice_index == -1 || lattice_index == 1
+        error("Unable to get $key: $key is not set nor inferrable")
+      else
+        return getproperty(getfield(beamline, :lattice).beamlines[lattice_index-1], key)
+      end
+    elseif key == :species_ref # Species
+      field = getfield(ibp, :species_ref) 
+      if isnullspecies(field)
+        lattice_index = getfield(beamline, :lattice_index)
+        if lattice_index == -1 || lattice_index == 1
+          error("Unable to get $key: $key is not set nor inferrable")
+        else
+          return getproperty(getfield(beamline, :lattice).beamlines[lattice_index-1], key)
+        end
+      else
+        return field
+      end
+    else # key in (:E_ref, :pc_ref, :p_over_q_ref, :dE_ref, :dpc_ref, :dp_over_q_ref)
+      ref = deval(getfield(ibp, :ref))
+      if isnothing(ref)
+        lattice_index = getfield(beamline, :lattice_index)
+        if lattice_index == -1 || lattice_index == 1
+          error("Unable to get $key: $key is not set nor inferrable")
+        else
+          return getproperty(getfield(beamline, :lattice).beamlines[lattice_index-1], key)
+        end
+      end
+      ref_meaning = refmeaning_to_sym(getfield(ibp, :ref_meaning))
+      if key == ref_meaning
+        return ref
+      elseif key in (:E_ref, :pc_ref, :p_over_q_ref) # Key absolute
+        if ref_meaning in (:E_ref, :pc_ref, :p_over_q_ref) # key absolute, ref_meaning absolute
+          species_ref = getfield(ibp, :species_ref)
+          if isnullspecies(species_ref)
+            error("
+              Unable to get $key: stored is $ref_meaning and computing $key requires a species_ref,
+              which has not been set.
+            ")
+          end
+          if key == :E_ref
+            if ref_meaning == :pc_ref
+              return pc_to_E(species_ref, ref)
+            else
+              return R_to_E(species_ref, ref)
+            end
+          elseif key == :pc_ref
+            if ref_meaning == :E_ref
+              return E_to_pc(species_ref, ref)
+            else
+              return R_to_pc(species_ref, ref)
+            end
+          else
+            if ref_meaning == :pc_ref
+              return pc_to_R(species_ref, ref)
+            else
+              return E_to_R(species_ref, ref)
+            end
+          end
+        else # Key absolute, ref_meaning relative
+          if (key == :E_ref && ref_meaning == :dE_ref) || 
+              (key == :pc_ref && ref_meaning == :dpc_ref) || 
+              (key == :p_over_q_ref && ref_meaning == :dp_over_q_ref)
+            # Can just add going backwards
+            lattice_index = getfield(beamline, :lattice_index)
+            if lattice_index == -1
+              error("
+                Unable to get property $key: because this Beamline has set $(ref_meaning),
+                the property $key must be dependent on an upstream Beamline in a Lattice, but 
+                the Beamline is not in a Lattice.
+              ")
+            elseif lattice_index == 1
+              return ref # Basically just assume zero for all "before" if first Beamline (out of thin air)
+            else
+              return ref + getproperty(getfield(beamline, :lattice).beamlines[lattice_index-1], key)
+            end
+          else
+            species_ref = getfield(ibp, :species_ref)
+            if isnullspecies(species_ref)
+              error("
+                Unable to get $key: stored is $ref_meaning and computing $key requires a species_ref,
+                which has not been set.
+              ")
+            end
+            if key == :E_ref
+              species_ref = getfield(ibp, :species_ref)
+              if isnullspecies(species_ref)
+                error("
+                  Unable to get $key: stored is $ref_meaning and computing $key requires a species_ref,
+                  which has not been set.
+                ")
+              end
+              if ref_meaning == :dpc_ref
+                return pc_to_E(species_ref, get_bl_params(first(beamline.line), :pc_ref))
+              else
+                return R_to_E(species_ref, get_bl_params(first(beamline.line), :p_over_q_ref))
+              end
+            elseif key == :pc_ref
+              if ref_meaning == :dE_ref
+                return E_to_pc(species_ref, get_bl_params(first(beamline.line), :E_ref))
+              else
+                return R_to_pc(species_ref, get_bl_params(first(beamline.line), :p_over_q_ref))
+              end
+            else # key == :p_over_q_ref
+              if ref_meaning == :dpc_ref
+                return pc_to_R(species_ref, get_bl_params(first(beamline.line), :pc_ref))
+              else
+                return E_to_R(species_ref, get_bl_params(first(beamline.line), :E_ref))
+              end
+            end
+          end
+        end
+      else # Key relative
+        lattice_index = getfield(beamline, :lattice_index)
+        if lattice_index == -1
+          error("
+            Unable to get property $key: because this Beamline has set $(ref_meaning),
+            the property $key must be dependent on an upstream Beamline in a Lattice, but 
+            the Beamline is not in a Lattice.
+          ") 
+        elseif lattice_index == 1
+          return ref # Basically just assume zero for all "before" if first Beamline (out of thin air)
+        else
+          species_ref = getfield(ibp, :species_ref)
+          if isnullspecies(species_ref)
+            error("
+              Unable to get $key: stored is $ref_meaning and computing $key requires a species_ref,
+              which has not been set.
+            ")
+          end
+          if key == :dE_ref
+            return get_bl_params(first(beamline.line), :E_ref) - getfield(beamline, :lattice).beamlines[lattice_index-1].E_ref
+          elseif key == :dpc_ref
+            return get_bl_params(first(beamline.line), :pc_ref) - getfield(beamline, :lattice).beamlines[lattice_index-1].pc_ref
+          else
+            return get_bl_params(first(beamline.line), :p_over_q_ref) - getfield(beamline, :lattice).beamlines[lattice_index-1].p_over_q_ref
+          end
+        end
+      end
+    end
+  else # not in a Beamline, just return ibp
+    ibp = ele.InitialBeamlineParams
+    if isnothing(ibp)
+      error("Unable to get $key: $key is not set nor inferrable")
+    else
+      return getproperty(ibp, key)
+    end
+  end
+end
+
+function get_parent_ele(ele::LineElement, ::Symbol)
+  pdict = getfield(ele, :pdict)
+  if haskey(pdict, InheritParams)
+    return get_parent(pdict)
   else
-    return getproperty(pdict[InitialBeamlineParams], sym)
+    return ele
   end
 end
 
 const VIRTUAL_GETTER_MAP = Dict{Symbol,Function}(
   [key => get_BM_strength for (key, value) in BMULTIPOLE_STRENGTH_MAP]...,
 
+  :angle => get_bend_angle,
   :g => get_bend_g,
 
   :BM_independent => get_BM_independent,
@@ -529,6 +664,8 @@ const VIRTUAL_GETTER_MAP = Dict{Symbol,Function}(
   :dp_over_q_ref => get_bl_params,
   :dE_ref => get_bl_params,
   :dpc_ref => get_bl_params,
+
+  :parent => get_parent_ele,
 )
 
 const VIRTUAL_SETTER_MAP = Dict{Symbol,Function}(

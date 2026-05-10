@@ -11,6 +11,30 @@
   end
 end
 
+
+PROPS(::Type{PatchParams}) = OrderedDict{String,String}(
+  "dt"     => "Reference time shift [s]",
+  "dx"     => "New coordinate system offset in the x-direction [m]",
+  "dy"     => "New coordinate system offset in the y-direction [m]",
+  "dz"     => "New coordinate system offset in the z-direction [m]",
+  "dx_rot" => "Rotation of coordinate system around the initial x-axis [rad]",
+  "dy_rot" => "Rotation of coordinate system around the initial y-axis [rad]",
+  "dz_rot" => "Rotation of coordinate system around the initial z-axis [rad]",
+)
+
+
+"""
+    PatchParams
+
+Defines properties for patches, which change the reference coordinate system.
+Rotations are applied in order: `dz_rot`, `dx_rot`, `dy_rot`.
+
+## Properties
+$(PROPSDOC(PatchParams))
+"""
+PatchParams
+
+
 Base.eltype(::PatchParams{T}) where {T} = T
 Base.eltype(::Type{PatchParams{T}}) where {T} = T
 

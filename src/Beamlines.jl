@@ -6,6 +6,7 @@ export AbstractParams,
        UniversalParams, 
        BMultipoleParams, 
        BeamlineParams,
+       InitialBeamlineParams,
        AlignmentParams,
        PatchParams,
        BendParams,
@@ -16,7 +17,7 @@ export AbstractParams,
        MetaParams,
        ApertureAt,
        ApertureShape,
-       PhaseReference,
+       PhaseRef,
        RateMeaning,
        RFParams,
        BMultipole,
@@ -41,18 +42,16 @@ export AbstractParams,
        Lattice,
 
        deepcopy_no_beamline,
-       
-       # BitsBeamline, 
 
        SciBmadStandard,
-
-       @eles, # deprecated, to be removed in next breaking release
        
        @elements, 
        elements,
 
        scalarize,
-       scalarize!
+       scalarize!,
+
+       findchildren
 
 using Accessors, 
       AtomicAndPhysicalConstants,
@@ -97,6 +96,8 @@ include("aperture.jl")
 include("misc.jl")
 include("keymaps.jl")
 include("element-name-handling.jl")
+include("search.jl")
+include("element-doc.jl")
 
 # BitsBeamline is no longer supported
 # Support may continue in the future with 

@@ -1,17 +1,3 @@
-"""
-    struct BMultipoleParams{T,N} <: AbstractParams
-
-Structure holding the magnetic multipole components of a lattice element. 
-
-## Fields
-
-• `n::SizedVector{N,T,Vector{T}}`     # Vector of normal multipole components. \\
-• `s::SizedVector{N,T,Vector{T}}`     # Vector of skew multipole components. \\
-• `tilt::SizedVector{N,T,Vector{T}}`  # Vector of tilt components. \\
-• `order::SVector{N,Int}`             # Vector of the order of the components. \\
-• `normalized::SVector{N,Bool}`       # Vector of whether a multipole is normalized or not. \\
-• `integrated::SVector{N,Bool}`       # Vector of whether a multipole is integrated or not. \\
-"""
 @kwdef struct BMultipoleParams{T,N} <: AbstractParams
   n::SizedVector{N,T,Vector{T}}    = SizedVector{0,Float32,Vector{Float32}}()   # Normal component
   s::SizedVector{N,T,Vector{T}}    = SizedVector{0,Float32,Vector{Float32}}()   # Skew
@@ -33,6 +19,43 @@ Structure holding the magnetic multipole components of a lattice element.
   end
 end
 
+PROPS(::Type{BMultipoleParams}) = OrderedDict{String,String}(
+  "KnX"  => "Order X normal strength in [1/m^X] (normalized, nonintegrated)",
+  "KsX"  => "Order X skew strength   in [1/m^X] (normalized, nonintegrated)",
+  "BnX"  => "Order X normal strength in [T/m^X] (unnormalized, nonintegrated)",
+  "BsX"  => "Order X skew strength   in [T/m^X] (unnormalized, nonintegrated)",
+  "KnXL" => "Order X normal strength in [1/m^(X-1)] (normalized, integrated)",
+  "KsXL" => "Order X skew strength in [1/m^(X-1)] (normalized, integrated)",
+  "BnXL" => "Order X normal strength in [T/m^(X-1)] (unnormalized, integrated)",
+  "BsXL" => "Order X skew strength in [T/m^(X-1)] (unnormalized, integrated)",
+  "tiltX" => "Tilt to only order X multipole",
+)
+
+
+"""
+    BMultipoleParams
+
+Defines magnetic (B) multipoles for an element. 
+
+A given multipole can be set using any of the following:
+$(PROPSDOC(BMultipoleParams))
+
+The solenoidal multipole can be set using any of the above with `X` = `sol` and 
+omitting the `n`/`s`, e.g. `Ksol`, `Bsol`, `KsolL`, `BsolL`.
+
+!!! note
+    The last *set* for a given multipole defines if both the normal and skew strengths 
+    for a given multipole order are normalized and integrated. E.g.
+    ```jldoctest
+    ele = LineElement(Kn1=0.1, Ks1=0.2, L=0.4) # Order 1 is normalized, nonintegrated
+    ele.Kn1L = 0.3         # Order 1 independent variables are now normalized, integrated
+    ele.Ks1L == 0.2*0.4    # true
+    ele.Bn1 = 0.5          # Order 1 independent variables are now unnormalized, nonintegrated
+    ele.Bs1 == 0.2*0.5/0.3 # true, set so that (Bs1/Bn1)_new = (Ks1L/Kn1L)_old
+    ```
+"""
+BMultipoleParams
+
 function Base.show(io::IO, b::BMultipoleParams)
   println(io, BMultipoleParams)
   width = length(" Kn21L")
@@ -42,15 +65,15 @@ function Base.show(io::IO, b::BMultipoleParams)
     tilt = bm.tilt
     if n != 0
       sym = BMULTIPOLE_STRENGTH_INVERSE_MAP[(true, bm.order, bm.normalized, bm.integrated)]
-      println(io, rpad((" "*String(sym)),width), " = ", n)
+      println(io, rpad((" "*String(sym)), width), " = ", param_repr(n))
     end
     if s != 0
       sym = BMULTIPOLE_STRENGTH_INVERSE_MAP[(false, bm.order, bm.normalized, bm.integrated)]
-      println(io, rpad((" "*String(sym)),width), " = ", s)
+      println(io, rpad((" "*String(sym)), width), " = ", param_repr(s))
     end
     if tilt != 0
       sym = BMULTIPOLE_TILT_INVERSE_MAP[bm.order]
-      println(io, rpad((" "*String(sym)),width), " = ", tilt)
+      println(io, rpad((" "*String(sym)), width), " = ", param_repr(tilt))
     end
   end
   return
@@ -116,9 +139,9 @@ Base.eltype(::Type{BMultipoleParams{T}}) where {T} = T
 Base.length(b::BMultipoleParams{T,N}) where {T,N} = N
 
 # Replace is ONLY here for tilt, which is accessible at this level
-function replace(b1::BMultipoleParams{T0,N0}, key::Symbol, value) where {T0,N0} 
+function param_replace(b1::BMultipoleParams{T0,N0}, key::Symbol, value) where {T0,N0} 
   if !haskey(BMULTIPOLE_TILT_MAP, key)
-    error("Unreachable! `replace` with BMultipoleParams should only be called when the tilt of a bmultipole is being set such that the number type must be promoted. Please submit an issue to Beamlines.jl")
+    error("Unreachable! `param_replace` with BMultipoleParams should only be called when the tilt of a bmultipole is being set such that the number type must be promoted. Please submit an issue to Beamlines.jl")
   end
 
   # tilt is first value of this multipole being set
@@ -162,7 +185,6 @@ function addord(b1::BMultipoleParams{T,N0}, ord, nrm=true, intg=true) where {T,N
   integrated = StaticArrays.insert(b1.integrated, i, intg)
   return BMultipoleParams(n, s, tilt, order, normalized, integrated)
 end
-
 
 function Base.isapprox(a::BMultipoleParams, b::BMultipoleParams)
   return all(a.n          .≈ b.n) &&
