@@ -444,19 +444,44 @@ end
 # species or reference energy are not set and generic setter 
 # first does a get to check if type promotion needed
 function set_bl_params!(ele::LineElement, sym::Symbol, value)
+  if !isnothing(ele.BeamlineParams) && ele.beamline_index != 1
+    error("Unable to set $sym of an element that is in a beamline and not the first element of the beamline.")
+  end
+
   ibp = ele.InitialBeamlineParams
   if isnothing(ibp)
     ibp = InitialBeamlineParams()
     ele.InitialBeamlineParams = ibp
   end
+
+  if sym == :species_ref && !isnothing(getfield(ibp, :ref)) && 
+    getfield(ibp, :ref_meaning) == RefMeaning.p_over_q_ref && 
+    sign(chargeof(value)) != sign(getfield(ibp, :ref))
+    new_p_over_q_ref = sign(chargeof(value))*getfield(ibp, :ref)
+    @info "Setting p_over_q_ref to $(new_p_over_q_ref) to match sign of new species_ref charge"
+    setfield!(ibp, :ref, new_p_over_q_ref)
+  elseif sym == :p_over_q_ref && !isnullspecies(getfield(ibp, :species_ref)) &&
+    sign(chargeof(getfield(ibp, :species_ref))) != sign(value)
+    value = sign(chargeof(getfield(ibp, :species_ref)))*value
+    @info "Setting p_over_q_ref to $(value) to match sign of stored species_ref charge"
+  end
+
+  if sym in (:pc_ref, :E_ref)
+    if value < 0
+      error("Negative value for $sym not allowed")
+    end
+  end
+
   return setproperty!(ibp, sym, value)
 end
 
-# TODO: add logic to auto-set p_over_q_ref properly if species specified
 function get_bl_params(ele::LineElement, key::Symbol)
   pdict = getfield(ele, :pdict)
   
   if haskey(pdict, BeamlineParams) # If element in a Beamline
+    if key in (:dE_ref, :dpc_ref, :dp_over_q_ref) && (pdict[BeamlineParams]::BeamlineParams).beamline_index != 1
+      return 0
+    end
     beamline = (pdict[BeamlineParams]::BeamlineParams).beamline
     ibp = first(beamline.line).InitialBeamlineParams
     if isnothing(ibp) # If first element does not have InitialBeamlineParams, then it is inferred from previous
@@ -479,7 +504,7 @@ function get_bl_params(ele::LineElement, key::Symbol)
         return field
       end
     else # key in (:E_ref, :pc_ref, :p_over_q_ref, :dE_ref, :dpc_ref, :dp_over_q_ref)
-      ref = getfield(ibp, :ref)
+      ref = deval(getfield(ibp, :ref))
       if isnothing(ref)
         lattice_index = getfield(beamline, :lattice_index)
         if lattice_index == -1 || lattice_index == 1
@@ -492,14 +517,14 @@ function get_bl_params(ele::LineElement, key::Symbol)
       if key == ref_meaning
         return ref
       elseif key in (:E_ref, :pc_ref, :p_over_q_ref) # Key absolute
-        species_ref = getfield(ibp, :species_ref)
-        if isnullspecies(species_ref)
-          error("
-            Unable to get $key: stored is $ref_meaning and computing $key requires a species_ref,
-            which has not been set.
-          ")
-        end
         if ref_meaning in (:E_ref, :pc_ref, :p_over_q_ref) # key absolute, ref_meaning absolute
+          species_ref = getfield(ibp, :species_ref)
+          if isnullspecies(species_ref)
+            error("
+              Unable to get $key: stored is $ref_meaning and computing $key requires a species_ref,
+              which has not been set.
+            ")
+          end
           if key == :E_ref
             if ref_meaning == :pc_ref
               return pc_to_E(species_ref, ref)
@@ -531,12 +556,12 @@ function get_bl_params(ele::LineElement, key::Symbol)
                 the property $key must be dependent on an upstream Beamline in a Lattice, but 
                 the Beamline is not in a Lattice.
               ")
-            elseif latice_index == 1
+            elseif lattice_index == 1
               return ref # Basically just assume zero for all "before" if first Beamline (out of thin air)
             else
               return ref + getproperty(getfield(beamline, :lattice).beamlines[lattice_index-1], key)
             end
-          elseif key == :E_ref
+          else
             species_ref = getfield(ibp, :species_ref)
             if isnullspecies(species_ref)
               error("
@@ -544,42 +569,58 @@ function get_bl_params(ele::LineElement, key::Symbol)
                 which has not been set.
               ")
             end
-            if ref_meaning == :dpc_ref
-              return pc_to_E(species_ref, ibp.pc_ref)
-            else
-              return R_to_E(species_ref, ibp.p_over_q_ref)
-            end
-          elseif key == :pc_ref
-            if ref_meaning == :dE_ref
-              return E_to_pc(species_ref, ibp.E_ref)
-            else
-              return R_to_pc(species_ref, ibp.p_over_q_ref)
-            end
-          else # key == :p_over_q_ref
-            if ref_meaning == :dpc_ref
-              return pc_to_R(species_ref, ibp.pc_ref)
-            else
-              return E_to_R(species_ref, ibp.E_ref)
+            if key == :E_ref
+              species_ref = getfield(ibp, :species_ref)
+              if isnullspecies(species_ref)
+                error("
+                  Unable to get $key: stored is $ref_meaning and computing $key requires a species_ref,
+                  which has not been set.
+                ")
+              end
+              if ref_meaning == :dpc_ref
+                return pc_to_E(species_ref, get_bl_params(first(beamline.line), :pc_ref))
+              else
+                return R_to_E(species_ref, get_bl_params(first(beamline.line), :p_over_q_ref))
+              end
+            elseif key == :pc_ref
+              if ref_meaning == :dE_ref
+                return E_to_pc(species_ref, get_bl_params(first(beamline.line), :E_ref))
+              else
+                return R_to_pc(species_ref, get_bl_params(first(beamline.line), :p_over_q_ref))
+              end
+            else # key == :p_over_q_ref
+              if ref_meaning == :dpc_ref
+                return pc_to_R(species_ref, get_bl_params(first(beamline.line), :pc_ref))
+              else
+                return E_to_R(species_ref, get_bl_params(first(beamline.line), :E_ref))
+              end
             end
           end
         end
       else # Key relative
-        lattice_index = getfield(b, :lattice_index)
+        lattice_index = getfield(beamline, :lattice_index)
         if lattice_index == -1
           error("
             Unable to get property $key: because this Beamline has set $(ref_meaning),
             the property $key must be dependent on an upstream Beamline in a Lattice, but 
             the Beamline is not in a Lattice.
-          ")
+          ") 
         elseif lattice_index == 1
           return ref # Basically just assume zero for all "before" if first Beamline (out of thin air)
         else
+          species_ref = getfield(ibp, :species_ref)
+          if isnullspecies(species_ref)
+            error("
+              Unable to get $key: stored is $ref_meaning and computing $key requires a species_ref,
+              which has not been set.
+            ")
+          end
           if key == :dE_ref
-            return ibp.E_ref - getfield(beamline, :lattice).beamlines[lattice_index-1].E_ref
+            return get_bl_params(first(beamline.line), :E_ref) - getfield(beamline, :lattice).beamlines[lattice_index-1].E_ref
           elseif key == :dpc_ref
-            return ibp.pc_ref - getfield(beamline, :lattice).beamlines[lattice_index-1].pc_ref
+            return get_bl_params(first(beamline.line), :pc_ref) - getfield(beamline, :lattice).beamlines[lattice_index-1].pc_ref
           else
-            return ibp.p_over_q_ref - getfield(beamline, :lattice).beamlines[lattice_index-1].p_over_q_ref
+            return get_bl_params(first(beamline.line), :p_over_q_ref) - getfield(beamline, :lattice).beamlines[lattice_index-1].p_over_q_ref
           end
         end
       end

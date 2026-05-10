@@ -135,7 +135,7 @@ println(d === fodo.line[2])
 println(d === fodo.line[4])
 ```
 
-Under the hood, when an element is placed in a Beamline, a shallow copy of that element is created that points to the "parent" element, from which it inherits its parameters. So, in this above example when the "get" `fodo.line[2].L` is executed, the code goes to the parent element `d` and returns `d.L`. "Sets", such as `fodo.line[2].L = 10`, will also pass through from the child to the parent:
+Under the hood, when an element is placed in a Beamline, a **shallow copy** of that element is created that points to the "parent" element, from which it inherits its parameters. So, in this above example when the "get" `fodo.line[2].L` is executed, the code goes to the parent element `d` and returns `d.L`. "Sets", such as `fodo.line[2].L = 10`, will also pass through from the child to the parent:
 
 ```@example multiple
 fodo.line[2].L = 3.0

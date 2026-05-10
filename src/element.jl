@@ -420,6 +420,7 @@ function Base.deepcopy_internal(ele::LineElement, stackdict::IdDict)
   return get!(()->deepcopy_no_beamline(ele), stackdict, ele)::LineElement
 end
 
+# This should flatten any InheritParams
 function deepcopy_no_beamline(ele::LineElement)
   newele = LineElement()
   pdict = getfield(ele, :pdict)

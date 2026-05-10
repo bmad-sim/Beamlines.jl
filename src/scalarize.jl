@@ -14,7 +14,9 @@ that propagates the gradients.
 function scalarize!(ele::LineElement)
   pdict = getfield(ele, :pdict)
   for (key, p) in pdict
-    if key != BeamlineParams
+    if key == InheritParams
+      scalarize!(p.parent)
+    elseif key != BeamlineParams
       setindex!(pdict, scalarize(p), key)
     end
   end
@@ -33,7 +35,6 @@ function scalarize!(bl::Beamline)
     for ele in bl.line
         scalarize!(ele)
     end
-    bl.ref = scalarize(bl.ref)
     return bl 
 end
 

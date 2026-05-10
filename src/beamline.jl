@@ -407,10 +407,11 @@ function Base.getproperty(b::Beamline, key::Symbol)
   end
 end
 
-# TODO: need to fix this
 function Base.setproperty!(b::Beamline, key::Symbol, value)
-  if key in (:line, :lattice, :lattice_index)
-    return setfield!(b, key, value)
+  if key == :line
+    setfield!(b, key, value) # This will error
+  elseif key in (:lattice, :lattice_index)
+    error("Unable to set property $key: this field is protected")
   elseif key in (:E_ref, :pc_ref, :p_over_q_ref, :dE_ref, :dpc_ref, :dp_over_q_ref, :species_ref)
     if length(b.line) < 1
       error("Unable to set $key of Beamline with no elements")
@@ -540,6 +541,12 @@ $(PROPSDOC(InitialBeamlineParams))
 """
 InitialBeamlineParams
 
+function Base.isapprox(a::InitialBeamlineParams, b::InitialBeamlineParams)
+  return getfield(a, :ref) ≈ getfield(b, :ref) &&
+          getfield(a, :ref_meaning) == getfield(b, :ref_meaning) &&
+          getfield(a, :species_ref) == getfield(b, :species_ref) 
+end
+
 function Base.show(io::IO, ibp::InitialBeamlineParams)
   println(io, typeof(ibp))
   width = length(" species_ref") # longest String
@@ -613,4 +620,12 @@ function Base.getproperty(ibp::InitialBeamlineParams, key::Symbol)
     end
   end
   error("This error is unreachable. If reached, submit an issue to Beamlines")
+end
+
+function scalarize(a::InitialBeamlineParams)
+  return InitialBeamlineParams(
+    scalarize(getfield(a, :species_ref)),
+    scalarize(getfield(a, :ref_meaning)),
+    scalarize(getfield(a, :ref)),
+  )
 end
