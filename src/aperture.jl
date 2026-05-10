@@ -1,5 +1,16 @@
 # TODO: Docs for ApertureShape, ApertureAt, ApertureParams, and PROPS(::Type{ApertureParams})
+"""
+    @enumx ApertureShape::UInt8 Elliptical Rectangular
+
+Defines the shape of the aperture
+"""
 @enumx ApertureShape::UInt8 Elliptical Rectangular
+
+"""
+    @enumx ApertureAt::UInt8 Entrance Exit BothEnds
+  
+Defines at which ends of the element the aperture should be applied
+"""
 @enumx ApertureAt::UInt8 Entrance Exit BothEnds
 
 @kwdef mutable struct ApertureParams{T} <: AbstractParams
@@ -18,14 +29,14 @@
 end
 
 PROPS(::Type{ApertureParams}) = OrderedDict{String,String}(
-  "x1_limit" => "",
-  "x2_limit" => "",
-  "y1_limit" => "",
-  "y2_limit" => "",
-  "aperture_shape" => "",
-  "aperture_at" => "",
-  "aperture_shifts_with_body" => "",
-  "aperture_active" => "",
+  "x1_limit" => "Left x-axis aperture edge [m]",
+  "x2_limit" => "Right x-axis aperture edge [m]",
+  "y1_limit" => "Lower y-axis aperture edge [m]",
+  "y2_limit" => "Upper y-axis aperture edge [m]",
+  "aperture_shape" => "Shape of the aperture, see `ApertureShape`",
+  "aperture_at" => "Longitudinal aperture location(s), see `ApertureAt`",
+  "aperture_shifts_with_body" => "`true` if the aperture position moves with element alignment, `false` otherwise. Default is `true`",
+  "aperture_active" => "`true` if particles are collimated by aperture, `false` otherwise. Default is `true`",
 )
 
 """

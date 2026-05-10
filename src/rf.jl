@@ -2,9 +2,9 @@
     @enumx PhaseRef::UInt8 Accelerating BelowTransition AboveTransition
 
 Sets what zero `phi0` RF phase means
-- `Accelerating`      Zero phase is the maximum accelerating phase.
-- `BelowTransition`   Zero phase is at the stable zero crossing for particles below transition.
-- `AboveTransition`   Zero phase is at the stable zero crossing for particles above transition.
+- `Accelerating`:      Zero phase is the maximum accelerating phase.
+- `BelowTransition`:   Zero phase is at the stable zero crossing for particles below transition.
+- `AboveTransition`:   Zero phase is at the stable zero crossing for particles above transition.
 """
 @enumx PhaseRef::UInt8 Accelerating BelowTransition AboveTransition
 
