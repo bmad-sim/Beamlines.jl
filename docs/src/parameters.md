@@ -30,6 +30,11 @@ BendParams
 FourPotentialParams 
 ```
 
+## InitialBeamlineParams  
+```@docs
+InitialBeamlineParams
+```
+
 ## MapParams 
 ```@docs
 MapParams 

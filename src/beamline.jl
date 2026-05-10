@@ -407,26 +407,18 @@ function Base.getproperty(b::Beamline, key::Symbol)
   end
 end
 
+# TODO: need to fix this
 function Base.setproperty!(b::Beamline, key::Symbol, value)
-  if key in (:ref, :species_ref, :line)
+  if key in (:line, :lattice, :lattice_index)
     return setfield!(b, key, value)
-  elseif key in (:lattice, :lattice_index, :ref_meaning)
-    error("Unable to set property $key: this field is protected")
-  elseif key in (:E_ref, :pc_ref, :dp_over_q_ref, :dE_ref, :dpc_ref)
-    setfield!(b, :ref_meaning, sym_to_refmeaning(key))
-    return setfield!(b, :ref, value)
-  elseif key == :p_over_q_ref
-    species_ref = getfield(b, :species_ref)
-    if !isnothing(value) && !isnullspecies(species_ref) && sign(chargeof(species_ref)) != sign(value)
-      println("Setting p_over_q_ref to $(sign(chargeof(species_ref))*value) to match sign of species_ref charge")
-      setfield!(b, :ref_meaning, sym_to_refmeaning(key))
-      return setfield!(b, :ref, sign(chargeof(species_ref))*value)
+  elseif key in (:E_ref, :pc_ref, :p_over_q_ref, :dE_ref, :dpc_ref, :dp_over_q_ref, :species_ref)
+    if length(b.line) < 1
+      error("Unable to set $key of Beamline with no elements")
     else
-      setfield!(b, :ref_meaning, sym_to_refmeaning(key))
-      return setfield!(b, :ref, value)
+      return setproperty!(first(b.line), key, value)
     end
   else
-    error("Unable to set property $key in Beamline: Beamline does not have this property")
+    error("Unable to set property $key of Beamline: Beamline does not have this property")
   end
 end
 
@@ -480,10 +472,12 @@ function Base.setproperty!(bp::BeamlineParams, key::Symbol, value)
     if bp.beamline_index == 1 # && !any(t->haskey(getfield(t, :pdict), InheritParams) && getfield(t, :pdict)[InheritParams].parent === ele, bp.beamline.line)
       return setproperty!(bp.beamline, key, value)
     else
-      error("Property $key is a Beamline property, and therefore is only settable at 
-            at the first element in a Beamline Consider setting $key at the Beamline 
-            level (e.g. beamline.$key = $value), or setting this parameter in an element 
-            prior to Lattice construction to automatically generate a separate Beamline.")
+      error("
+        Property $key is a Beamline property, and therefore is only settable at 
+        at the first element in a Beamline Consider setting $key at the Beamline 
+        level (e.g. beamline.$key = $value), or setting this parameter in an element 
+        prior to Lattice construction to automatically generate a separate Beamline.
+      ")
     end
   else
     return setproperty!(bp.beamline, key, value)

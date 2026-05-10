@@ -452,6 +452,7 @@ function set_bl_params!(ele::LineElement, sym::Symbol, value)
   return setproperty!(ibp, sym, value)
 end
 
+# TODO: add logic to auto-set p_over_q_ref properly if species specified
 function get_bl_params(ele::LineElement, key::Symbol)
   pdict = getfield(ele, :pdict)
   
