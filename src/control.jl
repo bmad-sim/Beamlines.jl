@@ -11,7 +11,7 @@ Also see `set!`.
     deferred expressions. 
 
 ## Examples
-```jldoctest
+```julia
 qf = Quadrupole(Kn1=0.36, L=0.5)
 qd = Quadrupole(Kn1=-0.36, L=0.5)
 

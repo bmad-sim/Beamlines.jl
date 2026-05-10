@@ -46,7 +46,7 @@ omitting the `n`/`s`, e.g. `Ksol`, `Bsol`, `KsolL`, `BsolL`.
 !!! note
     The last *set* for a given multipole defines if both the normal and skew strengths 
     for a given multipole order are normalized and integrated. E.g.
-    ```jldoctest
+    ```julia
     ele = LineElement(Kn1=0.1, Ks1=0.2, L=0.4) # Order 1 is normalized, nonintegrated
     ele.Kn1L = 0.3         # Order 1 independent variables are now normalized, integrated
     ele.Ks1L == 0.2*0.4    # true

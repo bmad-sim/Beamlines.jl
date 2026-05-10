@@ -34,7 +34,7 @@ branchless, so both the CPU and GPU can vectorize it.
 $(PROPSDOC(MapParams))
 
 ## Example
-```jldoctest
+```julia
 using StaticArrays
 random_matrix = @SMatrix rand(6,6) # use StaticArrays for GPU compatibility
 

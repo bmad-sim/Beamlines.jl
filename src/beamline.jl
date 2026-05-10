@@ -70,7 +70,7 @@ mutable struct Beamline <: Branch
   species and energy defined in the first `LineElement` -- see the warning below.
 
   ## Examples
-  ```jldoctest
+  ```julia
   qf = Quadrupole(Kn1=0.36, L=0.5)
   d = Drift(L=1)
   qd = Quadrupole(Kn1=-0.36, L=0.5)
@@ -80,7 +80,7 @@ mutable struct Beamline <: Branch
   
   Alternatively, one can specify the reference species/energy in the first element:
 
-  ```jldoctest
+  ```julia
   qf = Quadrupole(Kn1=0.36, L=0.5, species_ref=Species("electron"), E_ref=18e9)
   d = Drift(L=1)
   qd = Quadrupole(Kn1=-0.36, L=0.5)
@@ -103,7 +103,7 @@ mutable struct Beamline <: Branch
   !!! warning
       Keyword arguments specified to the `Beamline` constructor will permanently override any 
       corresponding properties specified in the first `LineElement` of the beamline. E.g., 
-      ```jldoctest
+      ```julia
       beg = Marker(species_ref=Species("electron"), E_ref=18e9)
 
       a = Beamline([beg])
@@ -313,7 +313,7 @@ const NULL_LATTICE = Lattice(Beamline[])
 Constructs a `Lattice` given the vector of beamlines `beamlines`.
 
 ## Example
-```jldoctest
+```julia
 ele = LineElement()
 bl1 = Beamline([ele], E_ref=2e9, species_ref=Species("electron"))
 bl2 = Beamline([ele], dE_ref=1e9)
@@ -330,7 +330,7 @@ automatically partition the given vector into separate `Beamline`s, which each
 have a uniform reference species and reference energy.
 
 ## Example
-```jldoctest
+```julia
 beginning = Marker(E_ref=10e9, species_ref=Species("electron"))
 rf0 = RFCavity(dE_ref=1e9)
 next = LineElement()

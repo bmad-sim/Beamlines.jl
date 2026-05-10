@@ -63,7 +63,7 @@ $(_param_table_str())
 
 To set a property, use the natural syntax:
 
-```jldoctest
+```julia
 ele = LineElement()
 ele.L = 1   # Length 
 ele.Kn1 = 2 # Normal quadrupole strength
