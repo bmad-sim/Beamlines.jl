@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Quickstart Guide · Beamlines.jl</title><meta name="title" content="Quickstart Guide · Beamlines.jl"/><meta property="og:title" content="Quickstart Guide · Beamlines.jl"/><meta property="twitter:title" content="Quickstart Guide · Beamlines.jl"/><meta name="description" content="Documentation for Beamlines.jl."/><meta property="og:description" content="Documentation for Beamlines.jl."/><meta property="twitter:description" content="Documentation for Beamlines.jl."/><meta property="og:url" content="https://bmad-sim.github.io/Beamlines.jl/quickstart/"/><meta property="twitter:url" content="https://bmad-sim.github.io/Beamlines.jl/quickstart/"/><link rel="canonical" href="https://bmad-sim.github.io/Beamlines.jl/quickstart/"/><script data-outdated-warner src="../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.050/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL=".."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../assets/documenter.js"></script><script src="../search_index.js"></script><script src="../siteinfo.js"></script><script src="../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-mocha.css" data-theme-name="catppuccin-mocha"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-macchiato.css" data-theme-name="catppuccin-macchiato"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-frappe.css" data-theme-name="catppuccin-frappe"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-latte.css" data-theme-name="catppuccin-latte"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../">Beamlines.jl</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../">Home</a></li><li class="is-active"><a class="tocitem" href>Quickstart Guide</a><ul class="internal"><li><a class="tocitem" href="#Getting-Started"><span>Getting Started</span></a></li><li><a class="tocitem" href="#Deferred-Expressions"><span>Deferred Expressions</span></a></li><li><a class="tocitem" href="#Parameters"><span>Parameters</span></a></li><li><a class="tocitem" href="#Multiple-LineElements-in-(multiple)-Beamlines"><span>Multiple <code>LineElement</code>s in (multiple) <code>Beamline</code>s</span></a></li><li><a class="tocitem" href="#Polymorphism/Differentiability"><span>Polymorphism/Differentiability</span></a></li></ul></li><li><a class="tocitem" href="../parameters/">Parameter Groups</a></li><li><a class="tocitem" href="../api/">Full API</a></li><li><a class="tocitem" href="../developers/">For Developers</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li class="is-active"><a href>Quickstart Guide</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Quickstart Guide</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/bmad-sim/Beamlines.jl" title="View the repository on GitHub"><span class="docs-icon fa-brands"></span><span class="docs-label is-hidden-touch">GitHub</span></a><a class="docs-navbar-link" href="https://github.com/bmad-sim/Beamlines.jl/blob/main/docs/src/quickstart.md" title="Edit source on GitHub"><span class="docs-icon fa-solid"></span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h1 id="Quickstart-Guide"><a class="docs-heading-anchor" href="#Quickstart-Guide">Quickstart Guide</a><a id="Quickstart-Guide-1"></a><a class="docs-heading-anchor-permalink" href="#Quickstart-Guide" title="Permalink"></a></h1><h2 id="Getting-Started"><a class="docs-heading-anchor" href="#Getting-Started">Getting Started</a><a id="Getting-Started-1"></a><a class="docs-heading-anchor-permalink" href="#Getting-Started" title="Permalink"></a></h2><p>Let&#39;s start by constructing a simple FODO cell <code>Beamline</code>, which consists of a quadrupole magnet that focuses the beam in the horizontal plane (defocuses in the vertical), followed by a drift (empty space), then a quadrupole that defocuses in the horizontal plane (focuses in the vertical), and finally another drift. </p><p>To do this, we will define four <code>LineElement</code>s corresponding to each of these objects. The lengths of each object are specified by <code>L</code> (in meters), and the quadrupole strengths can be set using the property <code>Kn1</code>, where <code>n</code> means the &quot;normal&quot; multipole (<code>s</code> would be &quot;skew&quot;) and <code>1</code> means 1st order multipole (quadrupole). </p><pre><code class="language-julia hljs">using Beamlines
+
+qf = Quadrupole(Kn1=0.36, L=0.5)
+d = Drift(L=1.2)
+qd = Quadrupole(Kn1=-0.36, L=0.5)
+
+fodo = Beamline([qf, d, qd, d])</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Beamline:
+ species_ref = Inferred
+ p_over_q_ref = Inferred
+
+ <span class="sgr1"> Index </span> <span class="sgr1"> Name </span> <span class="sgr1"> Kind       </span> <span class="sgr1"> s [m] </span>
+  1              Quadrupole   0
+  2              Drift        0.5
+  3              Quadrupole   1.7
+  4              Drift        2.2
+</code></pre><p>As you can see, because we did not specify a reference particle species <code>species_ref</code>, nor a <strong>signed</strong> reference <a href="https://en.wikipedia.org/wiki/Rigidity_(electromagnetism)">magnetic rigidity</a> <code>p_over_q_ref</code>, both of those show <code>Inferred</code>. This means that it will infer those values from either a preceeding <code>Beamline</code>, or simply leave it up to a tracking code to decide. One can also specify <code>E_ref</code> or <code>pc_ref</code> instead of <code>p_over_q_ref</code> for convenience. Let&#39;s do that now, and specify electrons with a total reference energy of 18 GeV:</p><pre><code class="language-julia hljs">fodo = Beamline([qd, d, qd, d], species_ref=Species(&quot;electron&quot;), E_ref=18e9)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Beamline:
+ species_ref = electron
+ E_ref = 1.8e10
+
+ <span class="sgr1"> Index </span> <span class="sgr1"> Name </span> <span class="sgr1"> Kind       </span> <span class="sgr1"> s [m] </span>
+  1              Quadrupole   0
+  2              Drift        0.5
+  3              Quadrupole   1.7
+  4              Drift        2.2
+</code></pre><p><code>Beamlines.jl</code> uses the <a href="https://github.com/bmad-sim/AtomicAndPhysicalConstants.jl"><code>AtomicAndPhysicalConstants.jl</code></a> package for specifying particle species, and so any species defined by that package may be provided.</p><p>The rest of the output looks ok, except for the fact that the <code>name</code> column is empty! This is because we didn&#39;t specify a <code>name</code> property for each element. It would often be convenient if we can make the variable symbols (e.g. <code>qf</code>, <code>d</code>, etc.) automatically fill in the <code>name</code> field for each element. We can do exactly this by wrapping the element definitions in a <code>@elements</code> block:</p><pre><code class="language-julia hljs">@elements begin
+    qf = Quadrupole(Kn1=0.36, L=0.5)
+    d = Drift(L=1.2)
+    qd = Quadrupole(Kn1=-0.36, L=0.5)
+end
+
+fodo = Beamline([qf, d, qd, d], species_ref=Species(&quot;electron&quot;), E_ref=18e9)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Beamline:
+ species_ref = electron
+ E_ref = 1.8e10
+
+ <span class="sgr1"> Index </span> <span class="sgr1"> Name </span> <span class="sgr1"> Kind       </span> <span class="sgr1"> s [m] </span>
+  1       qf     Quadrupole   0
+  2       d      Drift        0.5
+  3       qd     Quadrupole   1.7
+  4       d      Drift        2.2
+</code></pre><p>Much better!</p><p>Python users may use the dict-based naming function <code>elements</code> instead.</p><article><details class="docstring" open="true"><summary id="Beamlines.@elements-quickstart"><a class="docstring-binding" href="#Beamlines.@elements-quickstart"><code>Beamlines.@elements</code></a> — <span class="docstring-category">Macro</span></summary><section><div><pre><code class="language-julia hljs">@elements ...;
+@elements begin
+  ...
+end</code></pre><p>Can be applied before the definition of any <code>LineElement</code>(s) in order to make  set the element <code>name</code> equal to the variable symbol automatically.</p><p><strong>Examples</strong></p><pre><code class="language-julia-repl hljs">julia&gt; @elements qf = Quadrupole();
+
+julia&gt; qf.name
+&quot;qf&quot;
+
+julia&gt; @elements begin
+         my_drift = Drift(L=0.5);
+         my_sextupole = Sextupole(Kn2L=3.2);
+       end;
+
+julia&gt; my_drift.name
+&quot;my_drift&quot;
+
+julia&gt; my_sextupole.name
+&quot;my_sextupole&quot;</code></pre></div><a class="docs-sourcelink" target="_blank" href="https://github.com/bmad-sim/Beamlines.jl/blob/2e7354e445afeb05944b0244b9bf1e859975dd57/src/element-name-handling.jl#L1-L28">source</a></section></details></article><article><details class="docstring" open="true"><summary id="Beamlines.elements-quickstart"><a class="docstring-binding" href="#Beamlines.elements-quickstart"><code>Beamlines.elements</code></a> — <span class="docstring-category">Function</span></summary><section><div><pre><code class="language-julia hljs">elements(eles_dict)</code></pre><p>For more Pythonic-workflows, <code>elements</code> receives a dictionary with key as the element name  and value as the element, and sets the <code>name</code> attribute for each element equal to its key.</p><p>Julia users should generally use the <code>@elements</code> macro instead.</p></div><a class="docs-sourcelink" target="_blank" href="https://github.com/bmad-sim/Beamlines.jl/blob/2e7354e445afeb05944b0244b9bf1e859975dd57/src/element-name-handling.jl#L64-L71">source</a></section></details></article><h2 id="Deferred-Expressions"><a class="docs-heading-anchor" href="#Deferred-Expressions">Deferred Expressions</a><a id="Deferred-Expressions-1"></a><a class="docs-heading-anchor-permalink" href="#Deferred-Expressions" title="Permalink"></a></h2><p>Earlier we set <code>qf.Kn1 = 0.36</code>, and <code>qd.Kn1 = -0.36</code>. But what if we want to ensure that <code>qd.Kn1 == -qf.Kn1</code> always? We can bake-in such an interdependence, common in particle accelerator parameters, using a &quot;deferred expression&quot; - an expression where evaluation is postponed until its result is actually needed, rather than immediately when it is defined. </p><p>To do this, let&#39;s first define a function that returns the current value of <code>-qf.Kn1</code>. We can do this without giving the function any explicit name using <a href="https://docs.julialang.org/en/v1/manual/functions/#man-anonymous-functions">lambda/anonymous functions</a>:</p><pre><code class="language-julia hljs">lambdafun = () -&gt; -qf.Kn1
+println(&quot;Before: &quot;, lambdafun())
+qf.Kn1 = 0.1
+println(&quot;After: &quot;, lambdafun())</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Before: -0.36
+After: -0.1</code></pre><p>Here <code>lambdafun</code> takes no arguments (specified by the empty tuple <code>()</code>) and returns <code>-qf.Kn1</code>. In the context of programming, <code>lambdafun</code> is specifically called a <a href="https://en.wikipedia.org/wiki/Closure_(computer_programming)"><strong>closure</strong></a>, because it &quot;encloses&quot; <code>qf</code>, and at the time of evaluation gets the <code>Kn1</code> of that enclosed <code>qf</code> and negates its sign.</p><p>Now we just wrap this function in <code>Beamlines</code>&#39;s <code>DefExpr</code> type, and we can set any <code>LineElement</code> parameter to be such a deferred expression:</p><pre><code class="language-julia hljs">qd.Kn1 = DefExpr(lambdafun)
+qd.Kn1</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">-0.1</code></pre><p>Now if we change <code>qf.Kn1</code>, evaluation of <code>qd.Kn1</code> will always be <code>-qf.Kn1</code>:</p><pre><code class="language-julia hljs">qf.Kn1 = 0.7
+qd.Kn1</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">-0.7</code></pre><p>Deferred expressions can also be manipulated like any other number:</p><pre><code class="language-julia hljs">a = 1
+da = DefExpr(()-&gt;a)
+b = 2
+db = DefExpr(()-&gt;b)
+dc = da + db
+println(dc())
+a = 4
+println(dc())
+dd = sin(dc)
+println(dd())</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">3
+6
+-0.27941549819892586</code></pre><p>One can really &quot;go crazy&quot; with deferred expressions if they want to. They can be infinitely nested, and you can write any function that the programming language allows, for example file I/O, or even control system gets/puts with a real accelerator for a digital twin.</p><h2 id="Parameters"><a class="docs-heading-anchor" href="#Parameters">Parameters</a><a id="Parameters-1"></a><a class="docs-heading-anchor-permalink" href="#Parameters" title="Permalink"></a></h2><p><code>Beamlines.jl</code> supports a continually-growing list of parameters to define accelerator elements. To see a full list of the parameters you can set, look at the docstring for the <code>LineElement</code> type. This can be retrieved in a Julia session using <code>Doc.docs(LineElement)</code>.</p><article><details class="docstring" open="true"><summary id="Beamlines.LineElement-quickstart"><a class="docstring-binding" href="#Beamlines.LineElement-quickstart"><code>Beamlines.LineElement</code></a> — <span class="docstring-category">Type</span></summary><section><div><pre><code class="language-julia hljs">LineElement</code></pre><p>The basic building block which makes up a <code>Beamline</code>. May be something physical like a  quadrupole magnet, or something non-physical like a point in the accelerator you want  to mark. A <code>LineElement</code> may define a region in space distinguished by the presence of  (possibly time-varying) electromagnetic fields, materials, apertures and other possible  properties.</p><p><code>LineElement</code> properties are split into &quot;parameter groups&quot; for convenient organization:</p><pre><code class="language-text hljs">
+  AlignmentParams         ApertureParams               BMultipoleParams
+   x_offset                x1_limit                     KnX
+   y_offset                x2_limit                     KsX
+   z_offset                y1_limit                     BnX
+   x_rot                   y2_limit                     BsX
+   y_rot                   aperture_shape               KnXL
+   tilt                    aperture_at                  KsXL
+                           aperture_shifts_with_body    BnXL
+                           aperture_active              BsXL
+                                                        tiltX
+
+  BeamlineParams          BendParams                   FourPotentialParams
+   beamline                g_ref                        four_potential
+   beamline_index          tilt_ref                     four_potential_params
+   s                       e1                           four_potential_normalized
+   s_downstream            e2
+   line                    edge1_int
+   branch                  edge2_int
+   branch_index
+
+  InitialBeamlineParams   MapParams                    MetaParams
+   species_ref             transport_map                alias
+   E_ref                   transport_map_params         label
+   pc_ref                                               description
+   p_over_q_ref
+   dE_ref
+   dpc_ref
+   dp_over_q_ref
+
+  PatchParams             RFParams                     UniversalParams
+   dt                      rf_frequency                 kind
+   dx                      harmon                       name
+   dy                      phi0                         L
+   dz                      zero_phase                   tracking_method
+   dx_rot                  traveling_wave
+   dy_rot                  is_crabcavity
+   dz_rot
+
+</code></pre><p>To set a property, use the natural syntax:</p><pre><code class="language-julia hljs">ele = LineElement()
+ele.L = 1   # Length 
+ele.Kn1 = 2 # Normal quadrupole strength
+ele.rf_frequency = 1e6 </code></pre><p>For detailed descriptions of properties in a given parameter group, see the documentation  for that parameter group.</p></div><a class="docs-sourcelink" target="_blank" href="https://github.com/bmad-sim/Beamlines.jl/blob/2e7354e445afeb05944b0244b9bf1e859975dd57/src/element-doc.jl#L50-L76">source</a></section></details></article><p>For a more detailed description of each parameter, see the docstrings for individual parameter groups. These are shown in the <a href="../parameters/#pgs">Parameter Groups</a> section of the documentation.</p><h2 id="Multiple-LineElements-in-(multiple)-Beamlines"><a class="docs-heading-anchor" href="#Multiple-LineElements-in-(multiple)-Beamlines">Multiple <code>LineElement</code>s in (multiple) <code>Beamline</code>s</a><a id="Multiple-LineElements-in-(multiple)-Beamlines-1"></a><a class="docs-heading-anchor-permalink" href="#Multiple-LineElements-in-(multiple)-Beamlines" title="Permalink"></a></h2><p>Let&#39;s go back to the earlier example,</p><pre><code class="language-julia hljs">@elements begin
+    qf = Quadrupole(Kn1=0.36, L=0.5)
+    d = Drift(L=1.2)
+    qd = Quadrupole(Kn1=-0.36, L=0.5)
+end
+
+fodo = Beamline([qf, d, qd, d], species_ref=Species(&quot;electron&quot;), E_ref=18e9);</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Beamline:
+ species_ref = electron
+ E_ref = 1.8e10
+
+ <span class="sgr1"> Index </span> <span class="sgr1"> Name </span> <span class="sgr1"> Kind       </span> <span class="sgr1"> s [m] </span>
+  1       qf     Quadrupole   0
+  2       d      Drift        0.5
+  3       qd     Quadrupole   1.7
+  4       d      Drift        2.2
+</code></pre><p>Here, <code>fodo</code> contains two instances of the line element <code>d</code>. Therefore, if the length of <code>d</code> is changed, then both instances of <code>d</code> will see this new, changed length:</p><pre><code class="language-julia hljs">d.L = 2.0
+println(fodo.line[2].L)
+println(fodo.line[4].L)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">2.0
+2.0</code></pre><p>However, both drifts in <code>fodo</code> are unique elements. We can check this using the <a href="https://docs.julialang.org/en/v1/base/base/#Core.:(===)"><code>===</code></a> operator:</p><pre><code class="language-julia hljs">println(fodo.line[2] === fodo.line[4])
+println(d === fodo.line[2])
+println(d === fodo.line[4])</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">false
+false
+false</code></pre><p>Under the hood, when an element is placed in a Beamline, a <strong>shallow copy</strong> of that element is created that points to the &quot;parent&quot; element, from which it inherits its parameters. So, in this above example when the &quot;get&quot; <code>fodo.line[2].L</code> is executed, the code goes to the parent element <code>d</code> and returns <code>d.L</code>. &quot;Sets&quot;, such as <code>fodo.line[2].L = 10</code>, will also pass through from the child to the parent:</p><pre><code class="language-julia hljs">fodo.line[2].L = 3.0
+println(d)
+println(fodo.line[4].L)
+println(d === fodo.line[4].L)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">LineElement:
+  UniversalParams
+   kind            = &quot;Drift&quot;
+   name            = &quot;d&quot;
+   L               = 3.0
+   tracking_method = SciBmadStandard(
+     radiation_damping_on      = false,
+     radiation_fluctuations_on = false,
+     ibs_damping_on            = false,
+     ibs_fluctuations_on       = false,
+   )
+
+
+3.0
+false</code></pre><p>The only case where a child element can have parameters different from its parent is when a given <a href="../parameters/#pgs">parameter group</a> is contained within the child. For example, <code>fodo.line[2]</code> and <code>fodo.line[4]</code> both have their own instance of <code>BeamlineParams</code>, from which we can extract things like <code>beamline_index</code>, <code>s</code>, and <code>s_downstream</code>. On the other hand, the parent element <code>d</code> does <em>not</em> have a <code>BeamlineParams</code>.</p><pre><code class="language-julia hljs">println(&quot;beamline_index:&quot;)
+println(fodo.line[2].beamline_index)
+println(fodo.line[4].beamline_index)
+
+println(&quot;s_downstream:&quot;)
+println(fodo.line[2].s_downstream)
+println(fodo.line[4].s_downstream)
+
+# This will error:
+try
+d.beamline_index
+catch err
+println(err)
+end</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">beamline_index:
+2
+4
+s_downstream:
+3.5
+7.0
+ErrorException(&quot;  Unable to get key beamline_index from LineElement: element is not in a Beamline. \n  If you placed this element in a Beamline, use `findchildren` to find \n  the child instances of this element in a given Beamline.\n&quot;)</code></pre><p>The parent element can be retrieved using <code>parent</code>:</p><pre><code class="language-julia hljs">fodo.line[2].parent</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">LineElement:
+  UniversalParams
+   kind            = &quot;Drift&quot;
+   name            = &quot;d&quot;
+   L               = 3.0
+   tracking_method = SciBmadStandard(
+     radiation_damping_on      = false,
+     radiation_fluctuations_on = false,
+     ibs_damping_on            = false,
+     ibs_fluctuations_on       = false,
+   )
+
+</code></pre><p>Sometimes it can be a pain to find exactly where in a beamline are the corresponding child elements. As such, the <code>findchildren</code> function is provided for convenience:</p><pre><code class="language-julia hljs">children = findchildren(d, fodo);</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">2-element Vector{LineElement}:
+ LineElement:
+  BeamlineParams          InheritParams
+   beamline_index = 2      parent = LineElement:
+   s              = 0.5     UniversalParams
+   s_downstream   = 3.5      kind            = &quot;Drift&quot;
+                             name            = &quot;d&quot;
+                             L               = 3.0
+                             tracking_method = SciBmadStandard(
+                               radiation_damping_on      = false,
+                               radiation_fluctuations_on = false,
+                               ibs_damping_on            = false,
+                               ibs_fluctuations_on       = false,
+                             )
+
+
+
+
+ LineElement:
+  BeamlineParams          InheritParams
+   beamline_index = 4      parent = LineElement:
+   s              = 4.0     UniversalParams
+   s_downstream   = 7.0      kind            = &quot;Drift&quot;
+                             name            = &quot;d&quot;
+                             L               = 3.0
+                             tracking_method = SciBmadStandard(
+                               radiation_damping_on      = false,
+                               radiation_fluctuations_on = false,
+                               ibs_damping_on            = false,
+                               ibs_fluctuations_on       = false,
+                             )
+
+
+
+</code></pre><p>Finally, elements in a beamline allow one to &quot;get&quot; parameters that may only be defined when said element is in a beamline. We showed the <code>s</code> and <code>s_downstream</code>, but another example would be the unnormalized magnetic field, if the normalied magnetic field is stored as an independent variable:</p><pre><code class="language-julia hljs">ele = Quadrupole(Kn1=2, L=2)
+bl = Beamline([ele], p_over_q_ref=3)
+println(bl.line[1].Bn1) # Returns Kn1 * p_over_q_ref = 2 * 3</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">6.0</code></pre><p>The last parameter &quot;set&quot; will always define what the independent variable is. So if we then set the unnormalized quadrupole strength <code>Bn1</code>, that will be the independent variable:</p><pre><code class="language-julia hljs">ele.Bn1 = 10
+println(bl.line[1].Kn1) # Returns Bn1 / p_over_q_ref = 10 / 3</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">3.3333333</code></pre><p>Now, if we then change the reference energy of the beamline, <code>Bn1</code> will remain constant but <code>Kn1</code> will change:</p><pre><code class="language-julia hljs">bl.p_over_q_ref = 4
+println(bl.line[1].Bn1) # == 10
+println(bl.line[1].Kn1) # Now equals 10 / 4</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">10.0
+2.5</code></pre><h2 id="Polymorphism/Differentiability"><a class="docs-heading-anchor" href="#Polymorphism/Differentiability">Polymorphism/Differentiability</a><a id="Polymorphism/Differentiability-1"></a><a class="docs-heading-anchor-permalink" href="#Polymorphism/Differentiability" title="Permalink"></a></h2><p>To enable full auto-differentiability of all accelerator parameters, <code>Beamlines.jl</code> is fully <strong>polymorphic</strong>. Full polymorphism this means that you can set any parameter to be any <em>type</em> that you want. For auto-differentiability, a special number type that propagates the partial derivative(s) with actual value must be used in-place of the regular 64-bit floating point numbers – polymorphism allows that. Differentiable codes in accelerator physics are <em>not</em> new: an early example of such a differentiable code is the <a href="https://cds.cern.ch/record/573082/files/sl-2002-044.pdf">Polymorphic Tracking Code (PTC)</a>, written in Fortran back in the 90s.</p><p>As an example, let&#39;s see how to compute the derivative of the total length of the beamline w.r.t. a particular element length. We will use the <a href="https://bmad-sim.github.io/GTPSA.jl/stable/"><code>GTPSA.jl</code></a> package to do so.</p><pre><code class="language-julia hljs">using GTPSA
+d1 = Descriptor(1, 1) # 1 variable, 1st order
+
+@elements begin
+    qf = Quadrupole(Kn1=0.36, L=0.5)
+    d = Drift(L=1.2)
+    qd = Quadrupole(Kn1=-0.36, L=0.5)
+end
+
+fodo = Beamline([qf, d, qd, d], species_ref=Species(&quot;electron&quot;), E_ref=18e9);
+println(fodo.line[end].s_downstream)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">3.4000000000000004</code></pre><p>Now we just need to update <code>L</code> to be a differential-algebra variable,</p><pre><code class="language-julia hljs">ΔL = vars(d1)[1] # get the first differential
+
+d.L += ΔL
+println(fodo.line[end].s_downstream)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">GTPSA.TPS64{GTPSA.Dynamic}:
+Descriptor(NV=1, MO=1)
+ COEFFICIENT             ORDER   EXPONENTS
+ 3.4000000000000004E+00    0     0
+ 2.0000000000000000E+00    1     1</code></pre><p>This output shows that the total length of <code>fodo</code> is equal to <span>$3.4 + 2L$</span>, which is exactly what we&#39;d expect given that there are two drifts. </p><p>Here we just showed the length, but **any*** accelerator parameters defined in <code>Beamlines.jl</code> can be set to any number type (fully polymorphic), so that derivatives can be computed using any automatic-differentiation package in Julia. </p><p>After computing derivatives, e.g. during an optimization, one might want to restore all number types back to their primitive values ( <code>Float64</code>, <code>Float32</code>, etc). This can be done using the <code>scalarize!</code> function:</p><pre><code class="language-julia hljs">scalarize!(fodo)
+println(fodo.line[end].s_downstream)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">3.4000000000000004</code></pre><article><details class="docstring" open="true"><summary id="Beamlines.scalarize!-quickstart"><a class="docstring-binding" href="#Beamlines.scalarize!-quickstart"><code>Beamlines.scalarize!</code></a> — <span class="docstring-category">Function</span></summary><section><div><pre><code class="language-julia hljs">scalarize!(ele::LineElement)</code></pre><p>Modifies the <code>LineElement</code> so all element-level parameters are regular number types.  This may be needed after optimizing the element&#39;s parameters using e.g. <code>ForwardDiff</code>,  <code>ReverseDiff</code>, or <code>GTPSA</code>, which will set the parameter equal to a special number type  that propagates the gradients.</p></div><a class="docs-sourcelink" target="_blank" href="https://github.com/bmad-sim/Beamlines.jl/blob/2e7354e445afeb05944b0244b9bf1e859975dd57/src/scalarize.jl#L6-L13">source</a></section><section><div><pre><code class="language-julia hljs">scalarize!(bl::Beamline)</code></pre><p>Modifies the <code>Beamline</code> and its <code>LineElement</code>s so all parameters are regular number types.  This may be needed after optimizing the element&#39;s parameters using e.g. <code>ForwardDiff</code>,  <code>ReverseDiff</code>, or <code>GTPSA</code>, which will set the parameter equal to a special number type  that propagates the gradients.</p></div><a class="docs-sourcelink" target="_blank" href="https://github.com/bmad-sim/Beamlines.jl/blob/2e7354e445afeb05944b0244b9bf1e859975dd57/src/scalarize.jl#L26-L33">source</a></section><section><div><pre><code class="language-julia hljs">scalarize!(branch::Branch)</code></pre><p>Modifies all <code>Beamline</code>s and their <code>LineElement</code>s in the <code>Branch</code> so all parameters are  regular number types. This may be needed after optimizing the element&#39;s parameters using  e.g. <code>ForwardDiff</code>, <code>ReverseDiff</code>, or <code>GTPSA</code>, which will set the parameter equal to a  special number type that propagates the gradients.</p></div><a class="docs-sourcelink" target="_blank" href="https://github.com/bmad-sim/Beamlines.jl/blob/2e7354e445afeb05944b0244b9bf1e859975dd57/src/scalarize.jl#L41-L48">source</a></section></details></article></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../">« Home</a><a class="docs-footer-nextpage" href="../parameters/">Parameter Groups »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.17.0 on <span class="colophon-date" title="Sunday 10 May 2026 21:00">Sunday 10 May 2026</span>. Using Julia version 1.12.6.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
