@@ -518,13 +518,7 @@ function get_bl_params(ele::LineElement, key::Symbol)
         return ref
       elseif key in (:E_ref, :pc_ref, :p_over_q_ref) # Key absolute
         if ref_meaning in (:E_ref, :pc_ref, :p_over_q_ref) # key absolute, ref_meaning absolute
-          species_ref = getfield(ibp, :species_ref)
-          if isnullspecies(species_ref)
-            error("
-              Unable to get $key: stored is $ref_meaning and computing $key requires a species_ref,
-              which has not been set.
-            ")
-          end
+          species_ref = get_bl_params(ele, :species_ref)
           if key == :E_ref
             if ref_meaning == :pc_ref
               return pc_to_E(species_ref, ref)
@@ -562,13 +556,7 @@ function get_bl_params(ele::LineElement, key::Symbol)
               return ref + getproperty(getfield(beamline, :branch).beamlines[branch_index-1], key)
             end
           else
-            species_ref = getfield(ibp, :species_ref)
-            if isnullspecies(species_ref)
-              error("
-                Unable to get $key: stored is $ref_meaning and computing $key requires a species_ref,
-                which has not been set.
-              ")
-            end
+            species_ref = get_bl_params(ele, :species_ref)
             if key == :E_ref
               species_ref = getfield(ibp, :species_ref)
               if isnullspecies(species_ref)
