@@ -1,61 +1,61 @@
 # [Parameter Groups](@id pgs)
 
 ## AlignmentParams 
-```@docs
+```@docs; canonical=false
 AlignmentParams
 ```
 
 ## ApertureParams 
-```@docs
+```@docs; canonical=false
 ApertureParams 
 ```
 
 ## BMultipoleParams 
-```@docs
+```@docs; canonical=false
 BMultipoleParams 
 ```
 
 ## BeamlineParams
-```@docs
+```@docs; canonical=false
 BeamlineParams
 ```
 
 ## BendParams  
-```@docs
+```@docs; canonical=false
 BendParams  
 ```
 
 ## FourPotentialParams 
-```@docs
+```@docs; canonical=false
 FourPotentialParams 
 ```
 
 ## InitialBeamlineParams  
-```@docs
+```@docs; canonical=false
 InitialBeamlineParams
 ```
 
 ## MapParams 
-```@docs
+```@docs; canonical=false
 MapParams 
 ```
 
 ## MetaParams 
-```@docs
+```@docs; canonical=false
 MetaParams 
 ```
 
 ## PatchParams 
-```@docs
+```@docs; canonical=false
 PatchParams 
 ```
 
 ## RFParams
-```@docs
+```@docs; canonical=false
 RFParams
 ```
 
 ## UniversalParams 
-```@docs
+```@docs; canonical=false
 UniversalParams 
 ```

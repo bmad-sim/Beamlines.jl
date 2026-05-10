@@ -60,7 +60,7 @@ To do this, let's first define a function that returns the current value of `-qf
 ```@example defexpr1
 using Beamlines # hide
 lambdafun = () -> -qf.Kn1
-println("Before: ", lamdbafun())
+println("Before: ", lambdafun())
 qf.Kn1 = 0.1
 println("After: ", lambdafun())
 ```
@@ -87,6 +87,7 @@ qd.Kn1
 Deferred expressions can also be manipulated like any other number:
 
 ```@example
+using Beamlines # hide
 a = 1
 da = DefExpr(()->a)
 b = 2
@@ -167,7 +168,11 @@ println(fodo.line[2].s_downstream)
 println(fodo.line[4].s_downstream)
 
 # This will error:
+try
 d.beamline_index
+catch err
+println(err)
+end
 ```
 
 The parent element can be retrieved using `parent`:
