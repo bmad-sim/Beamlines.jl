@@ -408,9 +408,7 @@ function Base.getproperty(b::Beamline, key::Symbol)
 end
 
 function Base.setproperty!(b::Beamline, key::Symbol, value)
-  if key == :line
-    setfield!(b, key, value) # This will error
-  elseif key in (:lattice, :lattice_index)
+  if key in (:line, :lattice, :lattice_index)
     error("Unable to set property $key: this field is protected")
   elseif key in (:E_ref, :pc_ref, :p_over_q_ref, :dE_ref, :dpc_ref, :dp_over_q_ref, :species_ref)
     if length(b.line) < 1
@@ -619,7 +617,6 @@ function Base.getproperty(ibp::InitialBeamlineParams, key::Symbol)
       ")
     end
   end
-  error("This error is unreachable. If reached, submit an issue to Beamlines")
 end
 
 function scalarize(a::InitialBeamlineParams)
