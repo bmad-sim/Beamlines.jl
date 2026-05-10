@@ -198,6 +198,42 @@ println(bl.line[1].Kn1) # Now equals 10 / 4
 
 To enable full auto-differentiability of all accelerator parameters, `Beamlines.jl` is fully **polymorphic**. Full polymorphism this means that you can set any parameter to be any _type_ that you want. For auto-differentiability, a special number type that propagates the partial derivative(s) with actual value must be used in-place of the regular 64-bit floating point numbers -- polymorphism allows that. Differentiable codes in accelerator physics are *not* new: an early example of such a differentiable code is the [Polymorphic Tracking Code (PTC)](https://cds.cern.ch/record/573082/files/sl-2002-044.pdf), written in Fortran back in the 90s.
 
-As an example, let's see how
+As an example, let's see how to compute the derivative of the total length of the beamline w.r.t. a particular element length. We will use the [`GTPSA.jl`](https://bmad-sim.github.io/GTPSA.jl/stable/) package to do so.
 
-After
+```@example gtpsa
+using GTPSA
+d1 = Descriptor(1, 1) # 1 variable, 1st order
+
+@elements begin
+    qf = Quadrupole(Kn1=0.36, L=0.5)
+    d = Drift(L=1.2)
+    qd = Quadrupole(Kn1=-0.36, L=0.5)
+end
+
+fodo = Beamline([qf, d, qd, d], species_ref=Species("electron"), E_ref=18e9);
+println(fodo.line[end].s_downstream)
+```
+
+Now we just need to update `L` to be a differential-algebra variable,
+
+```@example gtpsa
+ΔL = vars(d1)[1] # get the first differential
+
+d.L += ΔL
+println(fodo.line[end].s_downstream)
+```
+
+This output shows that the total length of `fodo` is equal to ``3.4 + 2L``, which is exactly what we'd expect given that there are two drifts. 
+
+Here we just showed the length, but **any*** accelerator parameters defined in `Beamlines.jl` can be set to any number type (fully polymorphic), so that derivatives can be computed using any automatic-differentiation package in Julia. 
+
+After computing derivatives, e.g. during an optimization, one might want to restore all number types back to their primitive values ( `Float64`, `Float32`, etc). This can be done using the `scalarize!` function:
+
+```@example gtpsa
+scalarize!(fodo)
+println(fodo.line[end].s_downstream)
+```
+
+```@docs
+scalarize!
+```
