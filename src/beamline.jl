@@ -1,18 +1,18 @@
-abstract type Branch end # Only subtype is Beamline
+abstract type _AbstractBeamline end # Only subtype is Beamline
 
-struct _Lattice{T<:Branch}
+struct _Branch{T<:_AbstractBeamline}
   beamlines::ReadOnlyVector{T,Vector{T}}
-  function _Lattice{T}(beamlines::Vector{T}) where {T<:Branch}
-    lat = new(ReadOnlyVector(beamlines))
+  function _Branch{T}(beamlines::Vector{T}) where {T<:_AbstractBeamline}
+    branch = new(ReadOnlyVector(beamlines))
     for i in eachindex(beamlines)
       bl = beamlines[i]
-      if getfield(bl, :lattice_index) != -1
-        error("Beamline $i is already in another Lattice!")
+      if getfield(bl, :branch_index) != -1
+        error("Beamline $i is already in another Branch!")
       end
-      setfield!(bl, :lattice, lat)
-      setfield!(bl, :lattice_index, i)
+      setfield!(bl, :branch, branch)
+      setfield!(bl, :branch_index, i)
     end
-    return lat
+    return branch
   end
 end
 
@@ -50,10 +50,10 @@ end
   end
 end
 
-mutable struct Beamline <: Branch
+mutable struct Beamline <: _AbstractBeamline
   const line::ReadOnlyVector{LineElement, Vector{LineElement}}
-  lattice::_Lattice{Beamline} # This should be HARD to change, not allowed easily
-  lattice_index::Int          # This should be HARD to change, not allowed easily
+  branch::_Branch{Beamline} # This should be HARD to change, not allowed easily
+  branch_index::Int          # This should be HARD to change, not allowed easily
 
   @doc"""
       Beamline(line; kwargs...)
@@ -148,7 +148,7 @@ mutable struct Beamline <: Branch
     # For Python sanity and linear-indexing guarantee
     line = convert(Vector{LineElement}, vec(line))
 
-    bl = new(ReadOnlyVector(Vector{LineElement}(undef, length(line))), NULL_LATTICE, -1)
+    bl = new(ReadOnlyVector(Vector{LineElement}(undef, length(line))), NULL_BRANCH, -1)
 
     for i in eachindex(bl.line)
       if i != 1 && haskey(getfield(line[i], :pdict), InitialBeamlineParams)
@@ -156,7 +156,7 @@ mutable struct Beamline <: Branch
           Cannot construct Beamline: element $i contains an InitialBeamlineParams 
           which can only be placed in the first element of a Beamline. To include 
           reference energy/species changes in the middle of an accelerator, use the 
-          Lattice constructor instead which will automatically construct separate 
+          Branch constructor instead which will automatically construct separate 
           Beamlines for each InitialBeamlineParams.
         ")
       end
@@ -197,8 +197,8 @@ end
 
 PROPS(::Type{Beamline}) = OrderedDict{String,String}(
   "line"          => "A read-only array of `LineElements` in the beamline, in order",
-  "lattice"       => "`Lattice` that the beamline is placed in, if any",
-  "lattice_index" => "Index of the beamline in the `Lattice`, if in a `Lattice`",
+  "branch"       => "`Branch` that the beamline is placed in, if any",
+  "branch_index" => "Index of the beamline in the `Branch`, if in a `Branch`",
 )
 
 """
@@ -254,9 +254,9 @@ function Base.show(io::IO, bl::Beamline)
   println(io, " "*String(ref_meaning), " = ", param_repr(ref))
   lines_used += 1
 
-  lattice_index = getfield(bl, :lattice_index)
-  if lattice_index != -1
-    println(io, " lattice_index", " = ", lattice_index)
+  branch_index = getfield(bl, :branch_index)
+  if branch_index != -1
+    println(io, " branch_index", " = ", branch_index)
     lines_used += 1
   end
 
@@ -296,21 +296,21 @@ function Base.show(io::IO, bl::Beamline)
 end
 
 """
-    Lattice
+    Branch
 
 Structure containing a vector of `Beamline`s, where currently each follows in-order, 
 one after the other. 
 
 ## Properties
-- `beamlines`: Vector of the beamlines in the `Lattice`
+- `beamlines`: Vector of the beamlines in the `Branch`
 """
-const Lattice = _Lattice{Beamline}
-const NULL_LATTICE = Lattice(Beamline[])
+const Branch = _Branch{Beamline}
+const NULL_BRANCH = Branch(Beamline[])
 
 """
-    Lattice(beamlines)
+    Branch(beamlines)
 
-Constructs a `Lattice` given the vector of beamlines `beamlines`.
+Constructs a `Branch` given the vector of beamlines `beamlines`.
 
 ## Example
 ```julia
@@ -318,14 +318,14 @@ ele = LineElement()
 bl1 = Beamline([ele], E_ref=2e9, species_ref=Species("electron"))
 bl2 = Beamline([ele], dE_ref=1e9)
 
-lat = Lattice([bl1, bl2])
+branch = Branch([bl1, bl2])
 ```
 
 ---
 
-    Lattice(elements; kwargs...)
+    Branch(elements; kwargs...)
 
-Constructs a `Lattice` given the vector of `LineElement`s `elements`. This will 
+Constructs a `Branch` given the vector of `LineElement`s `elements`. This will 
 automatically partition the given vector into separate `Beamline`s, which each 
 have a uniform reference species and reference energy.
 
@@ -335,10 +335,10 @@ beginning = Marker(E_ref=10e9, species_ref=Species("electron"))
 rf0 = RFCavity(dE_ref=1e9)
 next = LineElement()
 
-lat = Lattice([beginning, rf0, next]) # Partitioned into 2 `Beamline`s
+branch = Branch([beginning, rf0, next]) # Partitioned into 2 `Beamline`s
 ```
 """
-function Lattice(
+function Branch(
   elements::AbstractArray{<:LineElement};
   species_ref0::Species=Species(),
   E_ref0=nothing,
@@ -359,7 +359,7 @@ function Lattice(
   idxs = findall(t->haskey(getfield(t, :pdict), InitialBeamlineParams), elements)
   # If none, then only single Beamline
   if length(idxs) == 0
-    return Lattice([Beamline(elements; species_ref=species_ref0, kwarg_sym=>kwarg_val)])
+    return Branch([Beamline(elements; species_ref=species_ref0, kwarg_sym=>kwarg_val)])
   end
 
   n_beamlines = length(idxs)
@@ -378,26 +378,26 @@ function Lattice(
       beamlines[i] = Beamline(elements[idx0:idxf])
     end
   end
-  return Lattice(beamlines)
+  return Branch(beamlines)
 end
 
-Base.propertynames(::Beamline) = (:line, :lattice, :lattice_index, :p_over_q_ref, :E_ref, :pc_ref, :dp_over_q_ref, :dE_ref, :dpc_ref, :species_ref)
+Base.propertynames(::Beamline) = (:line, :branch, :branch_index, :p_over_q_ref, :E_ref, :pc_ref, :dp_over_q_ref, :dE_ref, :dpc_ref, :species_ref)
 
 function Base.getproperty(b::Beamline, key::Symbol)
   # Fast gets first, hopefully constant prop
-  if key in (:line, :lattice, :lattice_index)
+  if key in (:line, :branch, :branch_index)
     field = getfield(b, key)
-    if key in (:lattice, :lattice_index) && (field == -1 || field === NULL_LATTICE)
-      error("Unable to get $key: Beamline is not in a Lattice")
+    if key in (:branch, :branch_index) && (field == -1 || field === NULL_BRANCH)
+      error("Unable to get $key: Beamline is not in a Branch")
     end
     return field
   elseif key in (:E_ref, :pc_ref, :p_over_q_ref, :dE_ref, :dpc_ref, :dp_over_q_ref, :species_ref)
     if length(b.line) < 1
-      lattice_index = getfield(b, :lattice_index)
-      if lattice_index == -1 || lattice_index == 1
+      branch_index = getfield(b, :branch_index)
+      if branch_index == -1 || branch_index == 1
         error("Unable to get $key: $key of the Beamline is not set nor inferrable")
       else
-        return getproperty(getfield(b, :lattice).beamlines[lattice_index-1], key)
+        return getproperty(getfield(b, :branch).beamlines[branch_index-1], key)
       end
     else
       return getproperty(first(b.line), key)
@@ -408,7 +408,7 @@ function Base.getproperty(b::Beamline, key::Symbol)
 end
 
 function Base.setproperty!(b::Beamline, key::Symbol, value)
-  if key in (:line, :lattice, :lattice_index)
+  if key in (:line, :branch, :branch_index)
     error("Unable to set property $key: this field is protected")
   elseif key in (:E_ref, :pc_ref, :p_over_q_ref, :dE_ref, :dpc_ref, :dp_over_q_ref, :species_ref)
     if length(b.line) < 1
@@ -452,9 +452,9 @@ function Base.show(io::IO, bp::BeamlineParams)
   println(io, rpad(" s",width), " = ", param_repr(bp.s))
   println(io, rpad(" s_downstream",width), " = ", param_repr(bp.s_downstream))
 
-  lattice_index = getfield(bp.beamline, :lattice_index)
-  if lattice_index != -1
-    println(io, rpad(" lattice_index", width), " = ", lattice_index)
+  branch_index = getfield(bp.beamline, :branch_index)
+  if branch_index != -1
+    println(io, rpad(" branch_index", width), " = ", branch_index)
   end
 
   return
@@ -463,7 +463,7 @@ end
 # Make E_ref and p_over_q_ref (in beamline) be properties
 # Also make s a property of BeamlineParams
 # Note that because BeamlineParams is immutable, not setting rn
-Base.propertynames(::BeamlineParams) = (:beamline, :beamline_index, :s, :s_downstream, :p_over_q_ref, :E_ref, :pc_ref, :dp_over_q_ref, :dE_ref, :dpc_ref, :species_ref, :lattice, :lattice_index)
+Base.propertynames(::BeamlineParams) = (:beamline, :beamline_index, :s, :s_downstream, :p_over_q_ref, :E_ref, :pc_ref, :dp_over_q_ref, :dE_ref, :dpc_ref, :species_ref, :branch, :branch_index)
 
 function Base.setproperty!(bp::BeamlineParams, key::Symbol, value)
   # only settable at first element
@@ -475,7 +475,7 @@ function Base.setproperty!(bp::BeamlineParams, key::Symbol, value)
         Property $key is a Beamline property, and therefore is only settable at 
         at the first element in a Beamline Consider setting $key at the Beamline 
         level (e.g. beamline.$key = $value), or setting this parameter in an element 
-        prior to Lattice construction to automatically generate a separate Beamline.
+        prior to Branch construction to automatically generate a separate Beamline.
       ")
     end
   else
@@ -484,7 +484,7 @@ function Base.setproperty!(bp::BeamlineParams, key::Symbol, value)
 end
 
 function Base.getproperty(bp::BeamlineParams, key::Symbol)
-  if key in (:p_over_q_ref, :E_ref, :pc_ref, :species_ref, :lattice, :lattice_index, :ref)
+  if key in (:p_over_q_ref, :E_ref, :pc_ref, :species_ref, :branch, :branch_index, :ref)
     return deval(getproperty(bp.beamline, key))
   elseif key in (:dp_over_q_ref, :dE_ref, :dpc_ref)
     if bp.beamline_index != 1
@@ -532,7 +532,7 @@ PROPS(::Type{InitialBeamlineParams}) = OrderedDict{String,String}(
 Defines the reference species and energy of the beamline. These parameters may be "set" in the 
 first element of the beamline or at the `Beamline` level, and retrieved at any element in the 
 beamline. If the reference species or energy is not set, then it will inherit that quantity from 
-an upstream beamline if in a `Lattice`.
+an upstream beamline if in a `Branch`.
 
 ## Properties
 $(PROPSDOC(InitialBeamlineParams))
@@ -613,7 +613,7 @@ function Base.getproperty(ibp::InitialBeamlineParams, key::Symbol)
     else
       error("
         Unable to get property $key: InitialBeamlineParams has stored $(ibp.ref_meaning), and
-        so property $key depends on an upstream Lattice which has not been constructed yet.
+        so property $key depends on an upstream Branch which has not been constructed yet.
       ")
     end
   end

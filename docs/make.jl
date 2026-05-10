@@ -20,6 +20,7 @@ makedocs(;
     "Quickstart Guide" => "quickstart.md",
     "Parameter Groups" => "parameters.md",
     "Full API" => "api.md",
+    "For Developers" => "developers.md",
   ],
 )
 

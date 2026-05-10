@@ -30,9 +30,6 @@ fodo = Beamline([qf, d, qd, d], species_ref=Species("electron"), E_ref=18e9)
 
 See the [documentation](https://bmad-sim.github.io/Beamlines.jl) for more.
 
-# Development Rules
-All properties stored in `Beamline`s and `LineElement`s must be independent variables. There is no bookkeeping. Dependent variables should then be get/set by overriding `getproperty` and `setproperty!`, as well as implementing "virtual" properties in the provided construct. Note that virtual properties override regular properties. Also, any parameter group must be fully defined outside of the context of an element. E.g., the properties in `RFParams` should not mean different things depending on the `kind` of the element. This ensures consistency and that we cannot accidentally "corrupt" the state of an element.
-
 # Acknowledgements
 
 `Beamlines.jl` aims to provide the powerful lattice definitions enabled by [classic Bmad](https://github.com/bmad-sim/bmad-ecosystem), [`AcceleratorLattice.jl`](https://github.com/bmad-sim/AcceleratorLattice.jl), and the [Particle Accelerator Lattice Standard (PALS) project](https://github.com/campa-consortium/pals). The use of lazily-evaluated deferred expressions is inspired completely by [MAD-NG](https://github.com/MethodicalAcceleratorDesign/MAD-NG). This package would be a fragment of what it is today without all of these efforts.

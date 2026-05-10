@@ -1,0 +1,4 @@
+
+# For Developers
+
+All properties stored in `Beamline`s and `LineElement`s must be independent variables. There is no bookkeeping. Dependent variables should then be get/set by overriding `getproperty` and `setproperty!`, as well as implementing "virtual" properties in the provided construct. Note that virtual properties override regular properties. Also, any parameter group must be fully defined outside of the context of an element. E.g., the properties in `RFParams` should not mean different things depending on the `kind` of the element. This ensures consistency and that we cannot accidentally "corrupt" the state of an element.
