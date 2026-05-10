@@ -1456,7 +1456,7 @@ using ForwardDiff, GTPSA, ReverseDiff
     q2 = Drift(L = 1, dE_ref=1e6)
     m2 = Marker(E_ref = 10e9, species_ref=Species("electron"))
     lat2 = Lattice([m2, q2])
-    @test m2.species_ref == lat2.beamlines[1].line[2].species_ref
+    @test m2.species_ref == lat2.beamlines[2].line[1].species_ref
     @test lat2.beamlines[1].species_ref == lat2.beamlines[2].species_ref
 
 
@@ -1468,14 +1468,15 @@ using ForwardDiff, GTPSA, ReverseDiff
     @test ele2.Kn1 == ele.Kn1
     @test ele2.L == ele.L
     @test ele2.voltage == ele.voltage
-    @test !(bl.line[1].beamline === bl.line[2].beamline)
+    @test !(bl.line[1].beamline === bl2.line[1].beamline)
 
     # Empty the beamline
     ele = LineElement()
     bl = Beamline([ele, ele, ele])
+    blele1 = bl.line[1]
     empty!(bl)
     @test isempty(bl.line)
-    @test isnothing(bl.line[1].BeamlineParams)
+    @test isnothing(blele1.BeamlineParams)
     bl2 = Beamline([ele, ele])
     @test !isnothing(bl2.line[2].BeamlineParams)
 end
