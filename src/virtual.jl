@@ -485,20 +485,20 @@ function get_bl_params(ele::LineElement, key::Symbol)
     beamline = (pdict[BeamlineParams]::BeamlineParams).beamline
     ibp = first(beamline.line).InitialBeamlineParams
     if isnothing(ibp) # If first element does not have InitialBeamlineParams, then it is inferred from previous
-      lattice_index = getfield(beamline, :lattice_index)
-      if lattice_index == -1 || lattice_index == 1
+      branch_index = getfield(beamline, :branch_index)
+      if branch_index == -1 || branch_index == 1
         error("Unable to get $key: $key is not set nor inferrable")
       else
-        return getproperty(getfield(beamline, :lattice).beamlines[lattice_index-1], key)
+        return getproperty(getfield(beamline, :branch).beamlines[branch_index-1], key)
       end
     elseif key == :species_ref # Species
       field = getfield(ibp, :species_ref) 
       if isnullspecies(field)
-        lattice_index = getfield(beamline, :lattice_index)
-        if lattice_index == -1 || lattice_index == 1
+        branch_index = getfield(beamline, :branch_index)
+        if branch_index == -1 || branch_index == 1
           error("Unable to get $key: $key is not set nor inferrable")
         else
-          return getproperty(getfield(beamline, :lattice).beamlines[lattice_index-1], key)
+          return getproperty(getfield(beamline, :branch).beamlines[branch_index-1], key)
         end
       else
         return field
@@ -506,11 +506,11 @@ function get_bl_params(ele::LineElement, key::Symbol)
     else # key in (:E_ref, :pc_ref, :p_over_q_ref, :dE_ref, :dpc_ref, :dp_over_q_ref)
       ref = deval(getfield(ibp, :ref))
       if isnothing(ref)
-        lattice_index = getfield(beamline, :lattice_index)
-        if lattice_index == -1 || lattice_index == 1
+        branch_index = getfield(beamline, :branch_index)
+        if branch_index == -1 || branch_index == 1
           error("Unable to get $key: $key is not set nor inferrable")
         else
-          return getproperty(getfield(beamline, :lattice).beamlines[lattice_index-1], key)
+          return getproperty(getfield(beamline, :branch).beamlines[branch_index-1], key)
         end
       end
       ref_meaning = refmeaning_to_sym(getfield(ibp, :ref_meaning))
@@ -549,17 +549,17 @@ function get_bl_params(ele::LineElement, key::Symbol)
               (key == :pc_ref && ref_meaning == :dpc_ref) || 
               (key == :p_over_q_ref && ref_meaning == :dp_over_q_ref)
             # Can just add going backwards
-            lattice_index = getfield(beamline, :lattice_index)
-            if lattice_index == -1
+            branch_index = getfield(beamline, :branch_index)
+            if branch_index == -1
               error("
                 Unable to get property $key: because this Beamline has set $(ref_meaning),
-                the property $key must be dependent on an upstream Beamline in a Lattice, but 
-                the Beamline is not in a Lattice.
+                the property $key must be dependent on an upstream Beamline in a Branch, but 
+                the Beamline is not in a Branch.
               ")
-            elseif lattice_index == 1
+            elseif branch_index == 1
               return ref # Basically just assume zero for all "before" if first Beamline (out of thin air)
             else
-              return ref + getproperty(getfield(beamline, :lattice).beamlines[lattice_index-1], key)
+              return ref + getproperty(getfield(beamline, :branch).beamlines[branch_index-1], key)
             end
           else
             species_ref = getfield(ibp, :species_ref)
@@ -598,14 +598,14 @@ function get_bl_params(ele::LineElement, key::Symbol)
           end
         end
       else # Key relative
-        lattice_index = getfield(beamline, :lattice_index)
-        if lattice_index == -1
+        branch_index = getfield(beamline, :branch_index)
+        if branch_index == -1
           error("
             Unable to get property $key: because this Beamline has set $(ref_meaning),
-            the property $key must be dependent on an upstream Beamline in a Lattice, but 
-            the Beamline is not in a Lattice.
+            the property $key must be dependent on an upstream Beamline in a Branch, but 
+            the Beamline is not in a Branch.
           ") 
-        elseif lattice_index == 1
+        elseif branch_index == 1
           return ref # Basically just assume zero for all "before" if first Beamline (out of thin air)
         else
           species_ref = getfield(ibp, :species_ref)
@@ -616,11 +616,11 @@ function get_bl_params(ele::LineElement, key::Symbol)
             ")
           end
           if key == :dE_ref
-            return get_bl_params(first(beamline.line), :E_ref) - getfield(beamline, :lattice).beamlines[lattice_index-1].E_ref
+            return get_bl_params(first(beamline.line), :E_ref) - getfield(beamline, :branch).beamlines[branch_index-1].E_ref
           elseif key == :dpc_ref
-            return get_bl_params(first(beamline.line), :pc_ref) - getfield(beamline, :lattice).beamlines[lattice_index-1].pc_ref
+            return get_bl_params(first(beamline.line), :pc_ref) - getfield(beamline, :branch).beamlines[branch_index-1].pc_ref
           else
-            return get_bl_params(first(beamline.line), :p_over_q_ref) - getfield(beamline, :lattice).beamlines[lattice_index-1].p_over_q_ref
+            return get_bl_params(first(beamline.line), :p_over_q_ref) - getfield(beamline, :branch).beamlines[branch_index-1].p_over_q_ref
           end
         end
       end

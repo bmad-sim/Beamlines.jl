@@ -39,16 +39,16 @@ function scalarize!(bl::Beamline)
 end
 
 """
-    scalarize!(lat::Lattice)
+    scalarize!(branch::Branch)
 
-Modifies all `Beamline`s and their `LineElement`s in the `Lattice` so all parameters are 
+Modifies all `Beamline`s and their `LineElement`s in the `Branch` so all parameters are 
 regular number types. This may be needed after optimizing the element's parameters using 
 e.g. `ForwardDiff`, `ReverseDiff`, or `GTPSA`, which will set the parameter equal to a 
 special number type that propagates the gradients.
 """
-function scalarize!(lat::Lattice)
-    for bl in lat.beamlines
+function scalarize!(branch::Branch)
+    for bl in branch.beamlines
         scalarize!(bl)
     end
-    return lat
+    return branch
 end
