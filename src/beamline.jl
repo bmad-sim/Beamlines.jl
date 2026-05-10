@@ -2,7 +2,7 @@ abstract type _AbstractBeamline end # Only subtype is Beamline
 
 struct _Branch{T<:_AbstractBeamline}
   beamlines::ReadOnlyVector{T,Vector{T}}
-  function _Branch{T}(beamlines::Vector{T}) where {T<:Branch}
+  function _Branch{T}(beamlines::Vector{T}) where {T<:_AbstractBeamline}
     branch = new(ReadOnlyVector(beamlines))
     for i in eachindex(beamlines)
       bl = beamlines[i]
