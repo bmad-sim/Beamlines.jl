@@ -74,6 +74,13 @@ end
     exprs = [:(deval(Base.getfield(mp.transport_map_params, $i))) for i in 1:N]
     return :(MapParams(mp.transport_map, tuple($(exprs...))))
 end
+
+@generated function scalarize(mp::MapParams{F,P}) where {F,P<:Tuple}
+    N = length(P.parameters)
+    # Use getfield with literal integer arguments
+    exprs = [:(scalarize(Base.getfield(mp.transport_map_params, $i))) for i in 1:N]
+    return :(MapParams(mp.transport_map, tuple($(exprs...))))
+end
 # === END CLAUDE ===
 
 @kwdef mutable struct FourPotentialParams{F<:Function, P} <: AbstractParams
@@ -124,6 +131,20 @@ function Base.isapprox(a::FourPotentialParams, b::FourPotentialParams)
             a.four_potential_normalized == b.four_potential_normalized &&
             all(a.four_potential_params .≈ b.four_potential_params))
   end
+end
+
+@generated function deval(mp::FourPotentialParams{F,P}) where {F,P<:Tuple}
+    N = length(P.parameters)
+    # Use getfield with literal integer arguments
+    exprs = [:(deval(Base.getfield(mp.four_potential_params, $i))) for i in 1:N]
+    return :(MapParams(mp.four_potential, tuple($(exprs...)), mp.four_potential_normalized))
+end
+
+@generated function scalarize(mp::MapParams{F,P}) where {F,P<:Tuple}
+    N = length(P.parameters)
+    # Use getfield with literal integer arguments
+    exprs = [:(scalarize(Base.getfield(mp.four_potential_params, $i))) for i in 1:N]
+    return :(MapParams(mp.four_potential, tuple($(exprs...)), mp.four_potential_normalized))
 end
 
 @kwdef mutable struct MetaParams <: AbstractParams
