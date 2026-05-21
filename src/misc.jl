@@ -137,14 +137,14 @@ end
     N = length(P.parameters)
     # Use getfield with literal integer arguments
     exprs = [:(deval(Base.getfield(mp.four_potential_params, $i))) for i in 1:N]
-    return :(MapParams(mp.four_potential, tuple($(exprs...)), mp.four_potential_normalized))
+    return :(FourPotentialParams(mp.four_potential, tuple($(exprs...)), mp.four_potential_normalized))
 end
 
-@generated function scalarize(mp::MapParams{F,P}) where {F,P<:Tuple}
+@generated function scalarize(mp::FourPotentialParams{F,P}) where {F,P<:Tuple}
     N = length(P.parameters)
     # Use getfield with literal integer arguments
     exprs = [:(scalarize(Base.getfield(mp.four_potential_params, $i))) for i in 1:N]
-    return :(MapParams(mp.four_potential, tuple($(exprs...)), mp.four_potential_normalized))
+    return :(FourPotentialParams(mp.four_potential, tuple($(exprs...)), mp.four_potential_normalized))
 end
 
 @kwdef mutable struct MetaParams <: AbstractParams
