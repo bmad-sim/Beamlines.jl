@@ -476,6 +476,14 @@ function set_bl_params!(ele::LineElement, sym::Symbol, value)
 end
 
 function get_bl_params(ele::LineElement, key::Symbol)
+  prop = try_get_bl_params(ele, key)
+  if prop isa GetError
+    error(prop.msg)
+  end
+  return prop
+end
+
+function try_get_bl_params(ele::LineElement, key::Symbol)
   pdict = getfield(ele, :pdict)
   
   if haskey(pdict, BeamlineParams) # If element in a Beamline
@@ -487,18 +495,18 @@ function get_bl_params(ele::LineElement, key::Symbol)
     if isnothing(ibp) # If first element does not have InitialBeamlineParams, then it is inferred from previous
       branch_index = getfield(beamline, :branch_index)
       if branch_index == -1 || branch_index == 1
-        error("Unable to get $key: $key is not set nor inferrable")
+        return GetError("Unable to get $key: $key is not set nor inferrable")
       else
-        return getproperty(getfield(beamline, :branch).beamlines[branch_index-1], key)
+        return trygetproperty(getfield(beamline, :branch).beamlines[branch_index-1], key)
       end
     elseif key == :species_ref # Species
       field = getfield(ibp, :species_ref) 
       if isnullspecies(field)
         branch_index = getfield(beamline, :branch_index)
         if branch_index == -1 || branch_index == 1
-          error("Unable to get $key: $key is not set nor inferrable")
+          return GetError("Unable to get $key: $key is not set nor inferrable")
         else
-          return getproperty(getfield(beamline, :branch).beamlines[branch_index-1], key)
+          return trygetproperty(getfield(beamline, :branch).beamlines[branch_index-1], key)
         end
       else
         return field
@@ -508,9 +516,9 @@ function get_bl_params(ele::LineElement, key::Symbol)
       if isnothing(ref)
         branch_index = getfield(beamline, :branch_index)
         if branch_index == -1 || branch_index == 1
-          error("Unable to get $key: $key is not set nor inferrable")
+          return GetError("Unable to get $key: $key is not set nor inferrable")
         else
-          return getproperty(getfield(beamline, :branch).beamlines[branch_index-1], key)
+          return trygetproperty(getfield(beamline, :branch).beamlines[branch_index-1], key)
         end
       end
       ref_meaning = refmeaning_to_sym(getfield(ibp, :ref_meaning))
@@ -518,26 +526,15 @@ function get_bl_params(ele::LineElement, key::Symbol)
         return ref
       elseif key in (:E_ref, :pc_ref, :p_over_q_ref) # Key absolute
         if ref_meaning in (:E_ref, :pc_ref, :p_over_q_ref) # key absolute, ref_meaning absolute
-          species_ref = get_bl_params(ele, :species_ref)
-          if key == :E_ref
-            if ref_meaning == :pc_ref
-              return pc_to_E(species_ref, ref)
-            else
-              return R_to_E(species_ref, ref)
-            end
-          elseif key == :pc_ref
-            if ref_meaning == :E_ref
-              return E_to_pc(species_ref, ref)
-            else
-              return R_to_pc(species_ref, ref)
-            end
-          else
-            if ref_meaning == :pc_ref
-              return pc_to_R(species_ref, ref)
-            else
-              return E_to_R(species_ref, ref)
-            end
+          species_ref = try_get_bl_params(ele, :species_ref)
+          if species_ref isa GetError
+            # Make it more informative:
+            return GetError("
+              Unable to get $key: stored is $ref_meaning and computing $key requires a species_ref,
+              which has not been set nor is inferrable.
+              ")
           end
+          return ref_abs_convert(key, ref, ref_meaning, species_ref)
         else # Key absolute, ref_meaning relative
           if (key == :E_ref && ref_meaning == :dE_ref) || 
               (key == :pc_ref && ref_meaning == :dpc_ref) || 
@@ -545,7 +542,7 @@ function get_bl_params(ele::LineElement, key::Symbol)
             # Can just add going backwards
             branch_index = getfield(beamline, :branch_index)
             if branch_index == -1
-              error("
+              return GetError("
                 Unable to get property $key: because this Beamline has set $(ref_meaning),
                 the property $key must be dependent on an upstream Beamline in a Branch, but 
                 the Beamline is not in a Branch.
@@ -553,42 +550,31 @@ function get_bl_params(ele::LineElement, key::Symbol)
             elseif branch_index == 1
               return ref # Basically just assume zero for all "before" if first Beamline (out of thin air)
             else
-              return ref + getproperty(getfield(beamline, :branch).beamlines[branch_index-1], key)
+              return ref + trygetproperty(getfield(beamline, :branch).beamlines[branch_index-1], key)
             end
           else
-            species_ref = get_bl_params(ele, :species_ref)
-            if key == :E_ref
-              species_ref = getfield(ibp, :species_ref)
-              if isnullspecies(species_ref)
-                error("
-                  Unable to get $key: stored is $ref_meaning and computing $key requires a species_ref,
-                  which has not been set.
+            species_ref = try_get_bl_params(ele, :species_ref)
+            if species_ref isa GetError
+              # Make it more informative:
+              return GetError("
+                Unable to get $key: stored is $ref_meaning and computing $key requires a species_ref,
+                which has not been set nor is inferrable.
                 ")
-              end
-              if ref_meaning == :dpc_ref
-                return pc_to_E(species_ref, get_bl_params(first(beamline.line), :pc_ref))
-              else
-                return R_to_E(species_ref, get_bl_params(first(beamline.line), :p_over_q_ref))
-              end
-            elseif key == :pc_ref
-              if ref_meaning == :dE_ref
-                return E_to_pc(species_ref, get_bl_params(first(beamline.line), :E_ref))
-              else
-                return R_to_pc(species_ref, get_bl_params(first(beamline.line), :p_over_q_ref))
-              end
-            else # key == :p_over_q_ref
-              if ref_meaning == :dpc_ref
-                return pc_to_R(species_ref, get_bl_params(first(beamline.line), :pc_ref))
-              else
-                return E_to_R(species_ref, get_bl_params(first(beamline.line), :E_ref))
-              end
             end
+            ref_meaning_abs = ref_meaning_rel_to_abs(ref_meaning)
+            ref = try_get_bl_params(first(beamline.line), ref_meaning_abs)
+            if ref isa GetError
+              return GetError("
+                Unable to get $key: stored is $ref_meaning and $key is not inferrable.
+              ")
+            end
+            return ref_abs_convert(key, ref, ref_meaning_abs, species_ref)
           end
         end
       else # Key relative
         branch_index = getfield(beamline, :branch_index)
         if branch_index == -1
-          error("
+          return GetError("
             Unable to get property $key: because this Beamline has set $(ref_meaning),
             the property $key must be dependent on an upstream Beamline in a Branch, but 
             the Beamline is not in a Branch.
@@ -596,30 +582,80 @@ function get_bl_params(ele::LineElement, key::Symbol)
         elseif branch_index == 1
           return ref # Basically just assume zero for all "before" if first Beamline (out of thin air)
         else
-          species_ref = getfield(ibp, :species_ref)
-          if isnullspecies(species_ref)
-            error("
+          species_ref = try_get_bl_params(ele, :species_ref)
+          if species_ref isa GetError
+            # Make it more informative:
+            return GetError("
               Unable to get $key: stored is $ref_meaning and computing $key requires a species_ref,
-              which has not been set.
+              which has not been set nor is inferrable.
             ")
           end
-          if key == :dE_ref
-            return get_bl_params(first(beamline.line), :E_ref) - getfield(beamline, :branch).beamlines[branch_index-1].E_ref
-          elseif key == :dpc_ref
-            return get_bl_params(first(beamline.line), :pc_ref) - getfield(beamline, :branch).beamlines[branch_index-1].pc_ref
-          else
-            return get_bl_params(first(beamline.line), :p_over_q_ref) - getfield(beamline, :branch).beamlines[branch_index-1].p_over_q_ref
+          key_abs = ref_meaning_rel_to_abs(key)
+          ref_abs_f = try_get_bl_params(first(beamline.line), key_abs)
+          ref_abs_i = trygetproperty(getfield(beamline, :branch).beamlines[branch_index-1], key_abs)
+          if ref_abs_i isa GetError || ref_abs_f isa GetError
+            return GetError("
+              Unable to get $key: stored is $ref_meaning and $key is not inferrable.
+            ")
           end
+          return ref_abs_f - ref_abs_i
         end
       end
     end
   else # not in a Beamline, just return ibp
     ibp = ele.InitialBeamlineParams
     if isnothing(ibp)
-      error("Unable to get $key: $key is not set nor inferrable")
+      return GetError("Unable to get $key: $key is not set.")
     else
-      return getproperty(ibp, key)
+      return trygetproperty(ibp, key)
     end
+  end
+end
+
+function ref_abs_convert(key, ref, ref_meaning, species_ref)
+  if key == :E_ref
+    if ref_meaning == :pc_ref
+      return pc_to_E(species_ref, ref)
+    else
+      return R_to_E(species_ref, ref)
+    end
+  elseif key == :pc_ref
+    if ref_meaning == :E_ref
+      return E_to_pc(species_ref, ref)
+    else
+      return R_to_pc(species_ref, ref)
+    end
+  else
+    if ref_meaning == :pc_ref
+      return pc_to_R(species_ref, ref)
+    else
+      return E_to_R(species_ref, ref)
+    end
+  end
+end
+
+function ref_meaning_rel_to_abs(ref_meaning::Symbol)
+  if ref_meaning == :dE_ref
+    return :E_ref
+  elseif ref_meaning == :dpc_ref
+    return :pc_ref
+  elseif ref_meaning == :dp_over_q_ref
+    return :p_over_q_ref
+  else
+    error("Invalid ref_meaning specified")
+  end
+end
+
+
+function ref_meaning_abs_to_rel(ref_meaning::Symbol)
+  if ref_meaning == :E_ref
+    return :dE_ref
+  elseif ref_meaning == :pc_ref
+    return :dpc_ref
+  elseif ref_meaning == :p_over_q_ref
+    return :dp_over_q_ref
+  else
+    error("Invalid ref_meaning specified")
   end
 end
 
