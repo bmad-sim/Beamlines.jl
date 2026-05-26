@@ -15,9 +15,13 @@ param_repr(thing::Symbol) = String(thing)
 
 # Properties doc
 function PROPSDOC(::Type{T}) where {T}
-    doc = IOBuffer()
-    for (k,v) in PROPS(T)
-        println(doc, "- `$k`: $v")
-    end
-    return String(take!(doc))
+  doc = IOBuffer()
+  for (k,v) in PROPS(T)
+    println(doc, "- `$k`: $v")
+  end
+  return String(take!(doc))
+end
+
+struct GetError
+  msg::String
 end

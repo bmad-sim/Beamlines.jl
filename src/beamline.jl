@@ -384,23 +384,32 @@ end
 Base.propertynames(::Beamline) = (:line, :branch, :branch_index, :p_over_q_ref, :E_ref, :pc_ref, :dp_over_q_ref, :dE_ref, :dpc_ref, :species_ref)
 
 function Base.getproperty(b::Beamline, key::Symbol)
+  prop = trygetproperty(b, key)
+  if prop isa GetError
+    error(prop.msg)
+  end
+  return prop
+end
+
+function trygetproperty(b::Beamline, key::Symbol)
   # Fast gets first, hopefully constant prop
   if key in (:line, :branch, :branch_index)
     field = getfield(b, key)
     if key in (:branch, :branch_index) && (field == -1 || field === NULL_BRANCH)
-      error("Unable to get $key: Beamline is not in a Branch")
+      return GetError("Unable to get $key: Beamline is not in a Branch")
+    else
+      return field
     end
-    return field
   elseif key in (:E_ref, :pc_ref, :p_over_q_ref, :dE_ref, :dpc_ref, :dp_over_q_ref, :species_ref)
     if length(b.line) < 1
       branch_index = getfield(b, :branch_index)
       if branch_index == -1 || branch_index == 1
-        error("Unable to get $key: $key of the Beamline is not set nor inferrable")
+        return GetError("Unable to get $key: $key of the Beamline is not set nor inferrable")
       else
-        return getproperty(getfield(b, :branch).beamlines[branch_index-1], key)
+        return trygetproperty(getfield(b, :branch).beamlines[branch_index-1], key)
       end
     else
-      return getproperty(first(b.line), key)
+      return try_get_bl_params(first(b.line), key)
     end
   else
     error("Unable to get property $key from Beamline: Beamline does not have this property")
@@ -578,40 +587,46 @@ function Base.setproperty!(ibp::InitialBeamlineParams, key::Symbol, value)
 end
 
 function Base.getproperty(ibp::InitialBeamlineParams, key::Symbol)
+  prop = trygetproperty(ibp, key)
+  if prop isa GetError
+    error(prop.msg)
+  end
+  return prop
+end
+
+function trygetproperty(ibp::InitialBeamlineParams, key::Symbol)
   if key in (:ref, :species_ref, :ref_meaning)
     field = deval(getfield(ibp, key))
     if key == :ref && isnothing(field)
-      error("Unable to get ref: ref of the Beamline has not been set")
+      return GetError("Unable to get ref: ref has not been set")
     elseif key == :species_ref && isnullspecies(field)
-      error("Unable to get species_ref: species_ref of the Beamline has not been set")
+      return GetError("Unable to get species_ref: species_ref has not been set")
     end
     return field
   else
-    ref_meaning = refmeaning_to_sym(ibp.ref_meaning)
+    ref_meaning = refmeaning_to_sym(getfield(ibp, :ref_meaning))
     if key == ref_meaning
-      return ibp.ref
-    elseif key in (:p_over_q_ref, :E_ref, :pc_ref) && ref_meaning in (:p_over_q_ref, :E_ref, :pc_ref)
-      if key == :E_ref
-        if ref_meaning == :pc_ref
-          return pc_to_E(ibp.species_ref, ibp.ref)
-        else
-          return R_to_E(ibp.species_ref, ibp.ref)
-        end
-      elseif key == :pc_ref
-        if ref_meaning == :E_ref
-          return E_to_pc(ibp.species_ref, ibp.ref)
-        else
-          return R_to_pc(ibp.species_ref, ibp.ref)
-        end
-      else
-        if ref_meaning == :pc_ref
-          return pc_to_R(ibp.species_ref, ibp.ref)
-        else
-          return E_to_R(ibp.species_ref, ibp.ref)
-        end
+      ref = trygetproperty(ibp, :ref)
+      if ref isa GetError
+        return GetError("Unable to get $key: $key has not be set.")
       end
+      return ref
+    elseif key in (:p_over_q_ref, :E_ref, :pc_ref) && ref_meaning in (:p_over_q_ref, :E_ref, :pc_ref)
+      species_ref = trygetproperty(ibp, :species_ref)
+      if species_ref isa GetError
+        # Make it more informative:
+        return GetError("
+          Unable to get $key: stored is $ref_meaning and computing $key requires a species_ref,
+          which has not been set.
+        ")
+      end
+      ref = trygetproperty(ibp, :ref)
+      if ref isa GetError
+        return GetError("Unable to get $key: $ref_meaning has not be set.")
+      end
+      return ref_abs_convert(key, ref, ref_meaning, species_ref)
     else
-      error("
+      return GetError("
         Unable to get property $key: InitialBeamlineParams has stored $(ibp.ref_meaning), and
         so property $key depends on an upstream Branch which has not been constructed yet.
       ")
