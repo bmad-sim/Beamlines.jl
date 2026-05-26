@@ -646,19 +646,6 @@ function ref_meaning_rel_to_abs(ref_meaning::Symbol)
   end
 end
 
-
-function ref_meaning_abs_to_rel(ref_meaning::Symbol)
-  if ref_meaning == :E_ref
-    return :dE_ref
-  elseif ref_meaning == :pc_ref
-    return :dpc_ref
-  elseif ref_meaning == :p_over_q_ref
-    return :dp_over_q_ref
-  else
-    error("Invalid ref_meaning specified")
-  end
-end
-
 function get_parent_ele(ele::LineElement, ::Symbol)
   pdict = getfield(ele, :pdict)
   if haskey(pdict, InheritParams)
