@@ -460,13 +460,13 @@ function set_bl_params!(ele::LineElement, sym::Symbol, value)
     new_p_over_q_ref = sign(chargeof(value))*getfield(ibp, :ref)
     @info "Setting p_over_q_ref to $(new_p_over_q_ref) to match sign of new species_ref charge"
     setfield!(ibp, :ref, new_p_over_q_ref)
-  elseif sym == :p_over_q_ref && !isnullspecies(getfield(ibp, :species_ref)) &&
+  elseif sym == :p_over_q_ref && value isa Number && !isnullspecies(getfield(ibp, :species_ref)) &&
     sign(chargeof(getfield(ibp, :species_ref))) != sign(value)
     value = sign(chargeof(getfield(ibp, :species_ref)))*value
     @info "Setting p_over_q_ref to $(value) to match sign of stored species_ref charge"
   end
 
-  if sym in (:pc_ref, :E_ref)
+  if sym in (:pc_ref, :E_ref) && value isa Number
     if value < 0
       error("Negative value for $sym not allowed")
     end
