@@ -36,6 +36,7 @@ export AbstractParams,
        RFCavity,
        CrabCavity,
        Beamline,
+       Context,
        Controller,
        Patch,
        set!,
@@ -82,6 +83,7 @@ using FunctionWrappers: FunctionWrapper
 
 include("utils.jl")
 include("defexpr.jl")
+include("context.jl")
 include("element.jl")
 include("beamline.jl")
 include("scalarize.jl")

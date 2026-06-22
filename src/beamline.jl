@@ -53,8 +53,8 @@ end
 mutable struct Beamline <: _AbstractBeamline
   const line::ReadOnlyVector{LineElement, Vector{LineElement}}
   branch::_Branch{Beamline} # This should be HARD to change, not allowed easily
-  branch_index::Int          # This should be HARD to change, not allowed easily
-
+  branch_index::Int         # This should be HARD to change, not allowed easily
+  context::Context 
   @doc"""
       Beamline(line; kwargs...)
 
@@ -89,6 +89,8 @@ mutable struct Beamline <: _AbstractBeamline
   ```
 
   ## Keyword arguments
+  - `context`: A `Context` struct containing variables that can be stored in the beamline 
+      for convenience
   - `species_ref`: Reference species of the beamline. 
   - `E_ref`: Total reference energy [eV]
   - `pc_ref`: Reference momentum [eV/c]
@@ -131,6 +133,7 @@ mutable struct Beamline <: _AbstractBeamline
     dp_over_q_ref=nothing, 
     dE_ref=nothing, 
     dpc_ref=nothing,
+    context=Context(),
   )
     kwargs = (p_over_q_ref, E_ref, pc_ref, dp_over_q_ref, dE_ref, dpc_ref)
     kwarg_syms = (:p_over_q_ref, :E_ref, :pc_ref, :dp_over_q_ref, :dE_ref, :dpc_ref)
@@ -148,7 +151,7 @@ mutable struct Beamline <: _AbstractBeamline
     # For Python sanity and linear-indexing guarantee
     line = convert(Vector{LineElement}, vec(line))
 
-    bl = new(ReadOnlyVector(Vector{LineElement}(undef, length(line))), NULL_BRANCH, -1)
+    bl = new(ReadOnlyVector(Vector{LineElement}(undef, length(line))), NULL_BRANCH, -1, context)
 
     for i in eachindex(bl.line)
       if i != 1 && haskey(getfield(line[i], :pdict), InitialBeamlineParams)
@@ -196,7 +199,8 @@ mutable struct Beamline <: _AbstractBeamline
 end
 
 PROPS(::Type{Beamline}) = OrderedDict{String,String}(
-  "line"          => "A read-only array of `LineElements` in the beamline, in order",
+  "line"         => "A read-only array of `LineElements` in the beamline, in order",
+  "context"     => "`Context` struct containing control variables associated with the beamline",
   "branch"       => "`Branch` that the beamline is placed in, if any",
   "branch_index" => "Index of the beamline in the `Branch`, if in a `Branch`",
 )
@@ -204,11 +208,13 @@ PROPS(::Type{Beamline}) = OrderedDict{String,String}(
 """
     Beamline
 
-Structure containing a vector of `LineElement`s in an ordered sequence. The reference 
-species (specified as `species_ref` and reference energy (specified as one of `E_ref`, 
-`pc_ref`, `p_over_q_ref`, `dE_ref`, `dpc_ref`, or `dp_over_q_ref`) is uniform over the
-entire beamline. The most-recently specified of these reference energy quantites will 
-be stored as the independent variable, in the first `LineElement` of the `Beamline`.
+Structure containing a vector of `LineElement`s in an ordered sequence, and optionally 
+a `Context` struct containing conrol variables associated with the beamline for 
+convenience. The reference species (specified as `species_ref` and reference energy 
+(specified as one of `E_ref`, `pc_ref`, `p_over_q_ref`, `dE_ref`, `dpc_ref`, or 
+`dp_over_q_ref`) is uniform over the entire beamline. The most-recently specified of 
+these reference energy quantites will be stored as the independent variable, in the 
+first `LineElement` of the `Beamline`.
 
 ## Properties
 $(PROPSDOC(Beamline))
@@ -381,7 +387,7 @@ function Branch(
   return Branch(beamlines)
 end
 
-Base.propertynames(::Beamline) = (:line, :branch, :branch_index, :p_over_q_ref, :E_ref, :pc_ref, :dp_over_q_ref, :dE_ref, :dpc_ref, :species_ref)
+Base.propertynames(::Beamline) = (:line, :branch, :branch_index, :context, :p_over_q_ref, :E_ref, :pc_ref, :dp_over_q_ref, :dE_ref, :dpc_ref, :species_ref)
 
 function Base.getproperty(b::Beamline, key::Symbol)
   prop = trygetproperty(b, key)
@@ -393,7 +399,7 @@ end
 
 function trygetproperty(b::Beamline, key::Symbol)
   # Fast gets first, hopefully constant prop
-  if key in (:line, :branch, :branch_index)
+  if key in (:line, :branch, :branch_index, :context)
     field = getfield(b, key)
     if key in (:branch, :branch_index) && (field == -1 || field === NULL_BRANCH)
       return GetError("Unable to get $key: Beamline is not in a Branch")
@@ -419,6 +425,8 @@ end
 function Base.setproperty!(b::Beamline, key::Symbol, value)
   if key in (:line, :branch, :branch_index)
     error("Unable to set property $key: this field is protected")
+  elseif key == :context
+    setfield!(b, key, value)
   elseif key in (:E_ref, :pc_ref, :p_over_q_ref, :dE_ref, :dpc_ref, :dp_over_q_ref, :species_ref)
     if length(b.line) < 1
       error("Unable to set $key of Beamline with no elements")
