@@ -176,12 +176,12 @@ Base.isapprox(a::MetaParams, b::MetaParams) = true
 
 @kwdef mutable struct SRWakeParams{T,U} <: AbstractParams
   sr_longitudinal_wake::T = []
-  dt::U = Float32(0)
+  sr_longitudinal_wake_dt::U = Float32(0)
 end
 
 PROPS(::Type{SRWakeParams}) = OrderedDict{String,String}(
   "sr_longitudinal_wake" => "TODO",
-  "dt" => "TODO",
+  "sr_longitudinal_wake_dt" => "TODO",
 )
 
 """
@@ -196,5 +196,5 @@ SRWakeParams
 
 function Base.isapprox(a::SRWakeParams, b::SRWakeParams)
   return a.sr_longitudinal_wake ≈ b.sr_longitudinal_wake &&
-         a.dt ≈ b.dt
+         a.sr_longitudinal_wake_dt ≈ b.sr_longitudinal_wake_dt
 end

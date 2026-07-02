@@ -86,7 +86,7 @@ const PROPERTIES_MAP = Dict{Symbol,Type{<:AbstractParams}}(
   :description => MetaParams,
 
   :sr_longitudinal_wake => SRWakeParams,
-  :dt => SRWakeParams
+  :sr_longitudinal_wake_dt => SRWakeParams
 )
 
 const PARAMS_MAP = Dict{Symbol,Type{<:AbstractParams}}(
