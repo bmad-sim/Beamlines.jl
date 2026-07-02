@@ -172,3 +172,29 @@ MetaParams
 
 # isapprox ignores MetaParams
 Base.isapprox(a::MetaParams, b::MetaParams) = true
+
+
+@kwdef mutable struct SRWakeParams{T,U} <: AbstractParams
+  sr_longitudinal_wake::T = []
+  dt::U = Float32(0)
+end
+
+PROPS(::Type{SRWakeParams}) = OrderedDict{String,String}(
+  "sr_longitudinal_wake" => "TODO",
+  "dt" => "TODO",
+)
+
+"""
+    SRWakeParams
+
+Describe the parameters for the SR wakefield calculation.
+
+## Properties
+$(PROPSDOC(SRWakeParams))
+"""
+SRWakeParams
+
+function Base.isapprox(a::SRWakeParams, b::SRWakeParams)
+  return a.sr_longitudinal_wake ≈ b.sr_longitudinal_wake &&
+         a.dt ≈ b.dt
+end
