@@ -108,7 +108,7 @@ function DefExpr(f)
   return DefExpr{T}(f)
 end
 
-deval(d::DefExpr, c=NULL_CONTEXT) = d(c)
+deval(d::DefExpr, c::Context=NULL_CONTEXT) = d(c)
 deval(d, c=NULL_CONTEXT) = d
 
 Base.:+(da::DefExpr) = da

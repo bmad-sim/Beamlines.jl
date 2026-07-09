@@ -502,12 +502,12 @@ end
 
 function Base.getproperty(bp::BeamlineParams, key::Symbol)
   if key in (:p_over_q_ref, :E_ref, :pc_ref, :species_ref, :branch, :branch_index, :ref)
-    return deval(getproperty(bp.beamline, key))
+    return deval(getproperty(bp.beamline, key), getfield(bp.beamline, :context))
   elseif key in (:dp_over_q_ref, :dE_ref, :dpc_ref)
     if bp.beamline_index != 1
       return 0
     else
-      return deval(getproperty(bp.beamline, key))
+      return deval(getproperty(bp.beamline, key), getfield(bp.beamline, :context))
     end
   elseif key in (:s, :s_downstream)
     if key == :s
@@ -520,7 +520,7 @@ function Base.getproperty(bp::BeamlineParams, key::Symbol)
     end
     # s is the sum of the lengths of all preceding elements
     line = bp.beamline.line
-    return deval(sum(line[i].L for i in 1:n))
+    return deval(sum(line[i].L for i in 1:n), getfield(bp.beamline, :context))
   else
     return getfield(bp, key)
   end
