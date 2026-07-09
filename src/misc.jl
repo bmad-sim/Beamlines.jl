@@ -68,10 +68,10 @@ end
 
 # === THIS BLOCK WAS PARTIALLY WRITTEN BY CLAUDE ===
 # Generated function for arbitrary-length tuples
-@generated function deval(mp::MapParams{F,P}) where {F,P<:Tuple}
+@generated function deval(mp::MapParams{F,P}, c::Context=NULL_CONTEXT) where {F,P<:Tuple}
     N = length(P.parameters)
     # Use getfield with literal integer arguments
-    exprs = [:(deval(Base.getfield(mp.transport_map_params, $i))) for i in 1:N]
+    exprs = [:(deval(Base.getfield(mp.transport_map_params, $i), c)) for i in 1:N]
     return :(MapParams(mp.transport_map, tuple($(exprs...))))
 end
 
@@ -100,10 +100,10 @@ end
   # false means the potential/derivatives are four_potential.
 end
 
-@generated function deval(mp::FourPotentialParams{F,P}) where {F,P<:Tuple}
+@generated function deval(mp::FourPotentialParams{F,P}, c::Context=NULL_CONTEXT) where {F,P<:Tuple}
     N = length(P.parameters)
     # Use getfield with literal integer arguments
-    exprs = [:(deval(Base.getfield(mp.four_potential_params, $i))) for i in 1:N]
+    exprs = [:(deval(Base.getfield(mp.four_potential_params, $i), c)) for i in 1:N]
     return :(FourPotentialParams(mp.four_potential, tuple($(exprs...)), mp.four_potential_normalized))
 end
 

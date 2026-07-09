@@ -2,14 +2,14 @@ abstract type AbstractParams end
 isactive(::AbstractParams) = true
 isactive(::Nothing) = false
 
-@generated function deval(a::AbstractParams)
+@generated function deval(a::AbstractParams, c::Context=NULL_CONTEXT)
     apply = [
       begin
         # This is so deval never allocates another array unless is a DefExpr to deval
         if type <: AbstractArray && (eltype(type) <: DefExpr || isabstracttype(eltype(type)))
-          :(deval.(getproperty(a, $(QuoteNode(name)))))
+          :(deval.(getproperty(a, $(QuoteNode(name))), c))
         else
-          :(deval(getproperty(a, $(QuoteNode(name)))))
+          :(deval(getproperty(a, $(QuoteNode(name))), c))
         end 
       end for (type,name) in zip(fieldtypes(a),fieldnames(a))
     ]

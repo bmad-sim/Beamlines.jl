@@ -61,7 +61,8 @@ using Accessors,
       MacroTools,
       EnumX,
       ReadOnlyArrays,
-      PrettyTables
+      PrettyTables,
+      DataStructures
 
 export Species
 
@@ -82,8 +83,8 @@ using FunctionWrappers: FunctionWrapper
 # struct as one can sum the lengths of each preceding element in the Beamline.
 
 include("utils.jl")
-include("defexpr.jl")
 include("context.jl")
+include("defexpr.jl")
 include("element.jl")
 include("beamline.jl")
 include("scalarize.jl")

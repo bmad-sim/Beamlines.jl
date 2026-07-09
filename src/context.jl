@@ -2,6 +2,7 @@ mutable struct Context{T}
   d::Dict{Symbol,T}
   Context(; args...) = new{Any}(Dict{Symbol,Any}(args))
   Context{T}(; args...) where {T} = new{T}(Dict{Symbol,T}(args))
+  Context{T}(d::Dict{Symbol,T}) where {T} = new{T}(d)
 end
 
 uniontypes(T::Type)  = (T,)
@@ -16,6 +17,34 @@ uniontypes(U::Union) = (U.a, uniontypes(U.b)...)
   return :(convert($S, x))
 end
 
-Base.setproperty!(c::Context{T}, name::Symbol, value) where {T} = getfield(c, :d)[name] = coerce(T, value)
-Base.getproperty(c::Context, name::Symbol) = getfield(c, :d)[name]
-Base.propertynames(c::Context) = collect(keys(getfield(c, :d)))
+Base.setproperty!(c::Context{T}, name::Symbol, value) where {T} = (getfield(c, :d)[name] = coerce(T, value))
+
+function Base.getproperty(c::Context{T}, name::Symbol) where {T}
+  d = getfield(c, :d)
+  if haskey(d, name)
+    return d[name]::T
+  end
+  for gc in GLOBAL_CONTEXTS
+    gd = getfield(gc, :d)
+    haskey(gd, name) && return coerce(T, gd[name])::T
+  end
+  error("Variable $name is not defined in the local Context nor in GLOBAL_CONTEXTS")
+end
+
+function Base.propertynames(c::Context)
+  vars = collect(keys(getfield(c, :d)))
+  for gc in GLOBAL_CONTEXTS
+    if gc === c
+      continue
+    end
+    vars = vcat(vars, collect(keys(getfield(gc, :d))))
+  end
+  return unique(vars)
+end
+
+Base.copy(c::Context{T}) where {T} = Context{T}(copy(getfield(c, :d)))
+
+struct _NullContextT end
+const NULL_CONTEXT = Context{_NullContextT}()
+const GLOBAL_CONTEXTS = Stack{Context}()
+

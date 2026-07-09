@@ -68,65 +68,77 @@ julia> dd()
 ```
 """
 struct DefExpr{T}
-  f::FunctionWrapper{T,Tuple{}}
-  DefExpr{T}(f::FunctionWrapper{T,Tuple{}}) where {T} = new{T}(f)
+  f::FunctionWrapper{T,Tuple{Context}}
+  DefExpr{T}(f::FunctionWrapper{T,Tuple{Context}}) where {T} = new{T}(f)
 end
 
 # In Julia we don't need to do any conversion, just static asserts
 defconvert(::Type{T}, f) where {T} = f::T
 
 # Calling DefExpr
-(d::DefExpr{T})() where {T} = defconvert(T, d.f())
+(d::DefExpr{T})(c=NULL_CONTEXT) where {T} = defconvert(T, d.f(c))
 
 # Construct for Function -> DefExpr{FunctionWrapper}
 function DefExpr{T}(f) where {T}
-  return DefExpr{T}(FunctionWrapper{T,Tuple{}}(f))
+  if applicable(f)
+    return DefExpr{T}(FunctionWrapper{T,Tuple{Context}}((c=NULL_CONTEXT)->f()))
+  elseif applicable(f, NULL_CONTEXT)
+    return DefExpr{T}(FunctionWrapper{T,Tuple{Context}}(f))
+  else
+    error("Invalid input argument for DefExpr: function must have no arguments or accept a `Beamlines.Context`")
+  end
 end
 
 # Conversion of types to DefExpr
-DefExpr{T}(a::Number) where {T} = DefExpr{T}(()->convert(T,a))
-DefExpr{T}(a::DefExpr) where {T} = DefExpr{T}(()->convert(T,a()))
+DefExpr{T}(a::Number) where {T} = DefExpr{T}((c=NULL_CONTEXT)->convert(T, a))
+DefExpr{T}(a::DefExpr) where {T} = DefExpr{T}((c=NULL_CONTEXT)->convert(T, a(c)))
 
 # Make these apply via convert
 Base.convert(::Type{D}, a) where {D<:DefExpr} = D(a)
 
 # Now simple constructor for convenience
 function DefExpr(f)
-  T = Base.promote_op(f)
+  if applicable(f)
+    T = Base.promote_op(f)
+  elseif applicable(f, NULL_CONTEXT)
+    T = Base.promote_op(f, Tuple{Context})
+  else
+    T = Any
+  end
   return DefExpr{T}(f)
 end
 
-deval(d::DefExpr) = d()
-deval(d) = d
+deval(d::DefExpr, c=NULL_CONTEXT) = d(c)
+deval(d, c=NULL_CONTEXT) = d
 
 Base.:+(da::DefExpr) = da
-Base.:-(da::DefExpr) = DefExpr(()->-da())
-Base.:+(da::DefExpr, b)   = DefExpr(()-> da() + b   )
-Base.:+(a,   db::DefExpr) = DefExpr(()-> a    + db())
-Base.:+(da::DefExpr, db::DefExpr) = DefExpr(()-> da() + db())
+Base.:-(da::DefExpr) = DefExpr((c=NULL_CONTEXT)->-da(c))
+Base.:+(da::DefExpr, b)   = DefExpr((c=NULL_CONTEXT)-> da(c) + b   )
+Base.:+(a,   db::DefExpr) = DefExpr((c=NULL_CONTEXT)-> a    + db(c))
+Base.:+(da::DefExpr, db::DefExpr) = DefExpr((c=NULL_CONTEXT)-> da(c) + db(c))
 
-Base.:-(da::DefExpr, b)   = DefExpr(()-> da() - b   )
-Base.:-(a,   db::DefExpr) = DefExpr(()-> a    - db())
-Base.:-(da::DefExpr, db::DefExpr) = DefExpr(()-> da() - db())
+Base.:-(da::DefExpr, b)   = DefExpr((c=NULL_CONTEXT)-> da(c) - b   )
+Base.:-(a,   db::DefExpr) = DefExpr((c=NULL_CONTEXT)-> a    - db(c))
+Base.:-(da::DefExpr, db::DefExpr) = DefExpr((c=NULL_CONTEXT)-> da(c) - db(c))
 
-Base.:*(da::DefExpr, b)   = DefExpr(()-> da() * b   )
-Base.:*(a,   db::DefExpr) = DefExpr(()-> a    * db())
-Base.:*(da::DefExpr, db::DefExpr) = DefExpr(()-> da() * db())
+Base.:*(da::DefExpr, b)   = DefExpr((c=NULL_CONTEXT)-> da(c) * b   )
+Base.:*(a,   db::DefExpr) = DefExpr((c=NULL_CONTEXT)-> a    * db(c))
+Base.:*(da::DefExpr, db::DefExpr) = DefExpr((c=NULL_CONTEXT)-> da(c) * db(c))
 
-Base.:/(da::DefExpr, b)   = DefExpr(()-> da() / b   )
-Base.:/(a,   db::DefExpr) = DefExpr(()-> a    / db())
-Base.:/(da::DefExpr, db::DefExpr) = DefExpr(()-> da() / db())
+Base.:/(da::DefExpr, b)   = DefExpr((c=NULL_CONTEXT)-> da(c) / b   )
+Base.:/(a,   db::DefExpr) = DefExpr((c=NULL_CONTEXT)-> a    / db(c))
+Base.:/(da::DefExpr, db::DefExpr) = DefExpr((c=NULL_CONTEXT)-> da(c) / db(c))
 
-Base.:^(da::DefExpr, b)   = DefExpr(()-> da() ^ b   )
-Base.:^(a,   db::DefExpr) = DefExpr(()-> a    ^ db())
-Base.:^(da::DefExpr, db::DefExpr) = DefExpr(()-> da() ^ db())
+Base.:^(da::DefExpr, b)   = DefExpr((c=NULL_CONTEXT)-> da(c) ^ b   )
+Base.:^(a,   db::DefExpr) = DefExpr((c=NULL_CONTEXT)-> a    ^ db(c))
+Base.:^(da::DefExpr, db::DefExpr) = DefExpr((c=NULL_CONTEXT)-> da(c) ^ db(c))
 
 for t = (:sqrt, :exp, :log, :sin, :cos, :tan, :cot, :sinh, :cosh, :tanh, :inv,
   :coth, :asin, :acos, :atan, :acot, :asinh, :acosh, :atanh, :acoth, :sinc, :csc, 
   :csch, :acsc, :acsch, :sec, :sech, :asec, :asech, :conj, :log10, :isnan, :sign,
   :zero, :one)
 @eval begin
-Base.$t(d::DefExpr) = DefExpr(()-> ($t)(d()))
+Base.$t(d::DefExpr) = DefExpr((c=NULL_CONTEXT)-> ($t)(d()))
 end
 end
 
