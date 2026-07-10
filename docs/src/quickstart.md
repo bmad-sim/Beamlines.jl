@@ -200,6 +200,7 @@ DefExpr
 While `DefExpr`s can wrap variables in the given scope as shown in the previous section, it can be useful and convenient to have a contained place where all control variables exist; this is the purpose of the `Context`. `Context`s contain variables that can be optionally used when evaluating `DefExpr`s that are defined with a single input argument of type `Context`. This is best shown with an example:
 
 ```@repl context1
+using Beamlines # hide
 c1 = Context(a = 1);
 c2 = Context(a = 2);
 d = DefExpr(c -> c.a); # one-argument lambda function
@@ -212,6 +213,7 @@ d(c1)
 Contexts can be pushed on/popped from a global stack of contexts `GLOBAL_CONTEXTS`. In this case, when referencing a variable from a context, if it does not exist in that given context, then the first instance of that variable from the top of the `GLOBAL_CONTEXTS` stack will be used:
 
 ```@repl context2
+using Beamlines # hide
 c1 = Context(a = 1);
 push!(GLOBAL_CONTEXTS, c1);
 c2 = Context(b = 2);
@@ -227,6 +229,7 @@ If the variable does not exist anywhere, then an error will be thrown.
 For `DefExpr`s with a context input argument, a context must be provided in order to evaluate the deferred expression, or else an error will be thrown. For general, interactive use, contexts can be pushed on/popped from a global stack of contexts `GLOBAL_CONTEXTS`, which will be used if no context is provided:
 
 ```@repl context3
+using Beamlines # hide
 c1 = Context(a = 1);
 d = DefExpr(c -> c.a); # one-argument lambda function
 push!(GLOBAL_CONTEXTS, c1)
@@ -236,6 +239,7 @@ d() # Finds `a` from the `GLOBAL_CONTEXTS` stack
 All `Beamline`s have a `context` property to store a context, which all containing `LineElement` parameters defined use when getting properties at the element-level:
 
 ```@repl context4
+using Beamlines # hide
 c1 = Context(Kn1=0.36);
 qf = Quadrupole(Kn1=DefExpr(c -> c.Kn1), L=0.5);
 bl = Beamline([qf], context=c1);
