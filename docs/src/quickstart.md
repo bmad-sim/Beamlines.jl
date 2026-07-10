@@ -30,7 +30,7 @@ fodo = Beamline([qd, d, qd, d], species_ref=Species("electron"), E_ref=18e9)
 
 The rest of the output looks ok, except for the fact that the `name` column is empty! This is because we didn't specify a `name` property for each element. It would often be convenient if we can make the variable symbols (e.g. `qf`, `d`, etc.) automatically fill in the `name` field for each element. We can do exactly this by wrapping the element definitions in a `@elements` block:
 
-```@example defexpr1
+```@example second
 using Beamlines # hide
 @elements begin
     qf = Quadrupole(Kn1=0.36, L=0.5)
@@ -50,85 +50,11 @@ Python users may use the dict-based naming function `elements` instead.
 elements
 ```
 
-## Deferred Expressions
-
-Earlier we set `qf.Kn1 = 0.36`, and `qd.Kn1 = -0.36`. But what if we want to ensure that `qd.Kn1 == -qf.Kn1` always? We can bake-in such an interdependence, common in particle accelerator parameters, using a "deferred expression" - an expression where evaluation is postponed until its result is actually needed, rather than immediately when it is defined. 
-
-To do this, let's first define a function that returns the current value of `-qf.Kn1`. We can do this without giving the function any explicit name using [lambda/anonymous functions](https://docs.julialang.org/en/v1/manual/functions/#man-anonymous-functions):
-
-
-```@example defexpr1
-using Beamlines # hide
-lambdafun = () -> -qf.Kn1
-println("Before: ", lambdafun())
-qf.Kn1 = 0.1
-println("After: ", lambdafun())
-```
-
-Here `lambdafun` takes no arguments (specified by the empty tuple `()`) and returns `-qf.Kn1`. In the context of programming, `lambdafun` is specifically called a [**closure**](https://en.wikipedia.org/wiki/Closure_(computer_programming)), because it "encloses" `qf`, and at the time of evaluation gets the `Kn1` of that enclosed `qf` and negates its sign.
-
-Now we just wrap this function in `Beamlines`'s `DefExpr` type, and we can set any `LineElement` parameter to be such a deferred expression:
-
-```@example defexpr1
-using Beamlines # hide
-qd.Kn1 = DefExpr(lambdafun)
-qd.Kn1
-```
-
-Now if we change `qf.Kn1`, evaluation of `qd.Kn1` will always be `-qf.Kn1`:
-
-```@example defexpr1
-using Beamlines # hide
-qf.Kn1 = 0.7
-qd.Kn1
-```
-
-Deferred expressions can also be manipulated like any other number:
-
-```@example
-using Beamlines # hide
-a = 1
-da = DefExpr(()->a)
-b = 2
-db = DefExpr(()->b)
-dc = da + db
-println(dc())
-a = 4
-println(dc())
-dd = sin(dc)
-println(dd())
-```
-
-One can really "go crazy" with deferred expressions if they want to. They can be infinitely nested, and you can write any function that the programming language allows, for example file I/O, or even control system gets/puts with a real accelerator for a digital twin.
-
-## Parameters
-
-`Beamlines.jl` supports a continually-growing list of parameters to define accelerator elements. To see a full list of the parameters you can set, look at the docstring for the `LineElement` type. This can be retrieved in a Julia session using `Doc.docs(LineElement)`.
-
-```@docs; canonical=false
-LineElement
-```
-
-For a more detailed description of each parameter, see the docstrings for individual parameter groups. These are shown in the [Parameter Groups](@ref pgs) section of the documentation.
-
 ## Multiple `LineElement`s in (multiple) `Beamline`s
 
-Let's go back to the earlier example,
+Continuing with the FODO cell example above, note that `fodo` contains two instances of the line element `d`. Therefore, if the length of `d` is changed, then both instances of `d` will see this new, changed length:
 
-```@example multiple
-using Beamlines # hide
-@elements begin
-    qf = Quadrupole(Kn1=0.36, L=0.5)
-    d = Drift(L=1.2)
-    qd = Quadrupole(Kn1=-0.36, L=0.5)
-end
-
-fodo = Beamline([qf, d, qd, d], species_ref=Species("electron"), E_ref=18e9);
-```
-
-Here, `fodo` contains two instances of the line element `d`. Therefore, if the length of `d` is changed, then both instances of `d` will see this new, changed length:
-
-```@example multiple
+```@example second
 using Beamlines # hide
 d.L = 2.0
 println(fodo.line[2].L)
@@ -137,7 +63,7 @@ println(fodo.line[4].L)
 
 However, both drifts in `fodo` are unique elements. We can check this using the [`===`](https://docs.julialang.org/en/v1/base/base/#Core.:(===)) operator:
 
-```@example multiple
+```@example second
 using Beamlines # hide
 println(fodo.line[2] === fodo.line[4])
 println(d === fodo.line[2])
@@ -146,7 +72,7 @@ println(d === fodo.line[4])
 
 Under the hood, when an element is placed in a Beamline, a **shallow copy** of that element is created that points to the "parent" element, from which it inherits its parameters. So, in this above example when the "get" `fodo.line[2].L` is executed, the code goes to the parent element `d` and returns `d.L`. "Sets", such as `fodo.line[2].L = 10`, will also pass through from the child to the parent:
 
-```@example multiple
+```@example second
 using Beamlines # hide
 fodo.line[2].L = 3.0
 println(d)
@@ -156,7 +82,7 @@ println(d === fodo.line[4].L)
 
 The only case where a child element can have parameters different from its parent is when a given [parameter group](@ref pgs) is contained within the child. For example, `fodo.line[2]` and `fodo.line[4]` both have their own instance of `BeamlineParams`, from which we can extract things like `beamline_index`, `s`, and `s_downstream`. On the other hand, the parent element `d` does *not* have a `BeamlineParams`.
 
-```@example multiple
+```@example second
 using Beamlines # hide
 println("beamline_index:")
 println(fodo.line[2].beamline_index)
@@ -176,16 +102,16 @@ end
 
 The parent element can be retrieved using `parent`:
 
-```@example multiple
+```@example second
 using Beamlines # hide
 fodo.line[2].parent
 ```
 
-Sometimes it can be a pain to find exactly where in a beamline are the corresponding child elements. As such, the `findchildren` function is provided for convenience:
+Sometimes it can be a pain to find exactly where in a beamline are the corresponding child elements. As such, one can index the `Beamline` directly with a `LineElement` to obtain a vector of all child elements:
 
-```@example multiple
+```@example second
 using Beamlines # hide
-children = findchildren(d, fodo);
+children = fodo[d];
 ```
 
 Finally, elements in a beamline allow one to "get" parameters that may only be defined when said element is in a beamline. We showed the `s` and `s_downstream`, but another example would be the unnormalized magnetic field, if the normalied magnetic field is stored as an independent variable:
@@ -213,6 +139,121 @@ bl.p_over_q_ref = 4
 println(bl.line[1].Bn1) # == 10
 println(bl.line[1].Kn1) # Now equals 10 / 4
 ```
+
+## Deferred Expressions
+
+Earlier we set `qf.Kn1 = 0.36`, and `qd.Kn1 = -0.36`. But what if we want to ensure that `qd.Kn1 == -qf.Kn1` always? We can bake-in such an interdependence, common in particle accelerator parameters, using a "deferred expression" - an expression where evaluation is postponed until its result is actually needed, rather than immediately when it is defined. 
+
+To do this, let's first define a function that returns the current value of `-qf.Kn1`. We can do this without giving the function any explicit name using [lambda/anonymous functions](https://docs.julialang.org/en/v1/manual/functions/#man-anonymous-functions):
+
+
+```@example second
+using Beamlines # hide
+lambdafun = () -> -qf.Kn1
+println("Before: ", lambdafun())
+qf.Kn1 = 0.1
+println("After: ", lambdafun())
+```
+
+Here `lambdafun` takes no arguments (specified by the empty tuple `()`) and returns `-qf.Kn1`. In the context of programming, `lambdafun` is specifically called a [**closure**](https://en.wikipedia.org/wiki/Closure_(computer_programming)), because it "encloses" `qf`, and at the time of evaluation gets the `Kn1` of that enclosed `qf` and negates its sign.
+
+Now we just wrap this function in `Beamlines`'s `DefExpr` type, and we can set any `LineElement` parameter to be such a deferred expression:
+
+```@example second
+using Beamlines # hide
+qd.Kn1 = DefExpr(lambdafun)
+qd.Kn1
+```
+
+Now if we change `qf.Kn1`, evaluation of `qd.Kn1` will always be `-qf.Kn1`:
+
+```@example second
+using Beamlines # hide
+qf.Kn1 = 0.7
+qd.Kn1
+```
+
+Deferred expressions can also be manipulated like any other number:
+
+```@example
+using Beamlines # hide
+a = 1
+da = DefExpr(()->a)
+b = 2
+db = DefExpr(()->b)
+dc = da + db
+println(dc())
+a = 4
+println(dc())
+dd = sin(dc)
+println(dd())
+```
+
+One can really "go crazy" with deferred expressions if they want to. They can be infinitely nested, and you can write any function that the programming language allows, for example file I/O, or even control system gets/puts with a real accelerator for a digital twin.
+
+```@docs; canonical=false
+DefExpr
+```
+
+## Contexts
+
+While `DefExpr`s can wrap variables in the given scope as shown in the previous section, it can be useful and convenient to have a contained place where all control variables exist; this is the purpose of the `Context`. `Context`s contain variables that can be optionally used when evaluating `DefExpr`s that are defined with a single input argument of type `Context`. This is best shown with an example:
+
+```@repl context1
+c1 = Context(a = 1);
+c2 = Context(a = 2);
+d = DefExpr(c -> c.a); # one-argument lambda function
+d(c1)
+d(c2)
+c1.a = 3; # Can mutate the state of the variables
+d(c1)
+```
+
+Contexts can be pushed on/popped from a global stack of contexts `GLOBAL_CONTEXTS`. In this case, when referencing a variable from a context, if it does not exist in that given context, then the first instance of that variable from the top of the `GLOBAL_CONTEXTS` stack will be used:
+
+```@repl context2
+c1 = Context(a = 1);
+push!(GLOBAL_CONTEXTS, c1);
+c2 = Context(b = 2);
+c2.a # `a` does not in exist in `c2`, get from `GLOBAL_CONTEXTS`
+push!(GLOBAL_CONTEXTS, c2); 
+c3 = Context();
+c3.a
+c3.b
+```
+
+If the variable does not exist anywhere, then an error will be thrown.
+
+For `DefExpr`s with a context input argument, a context must be provided in order to evaluate the deferred expression, or else an error will be thrown. For general, interactive use, contexts can be pushed on/popped from a global stack of contexts `GLOBAL_CONTEXTS`, which will be used if no context is provided:
+
+```@repl context3
+c1 = Context(a = 1);
+d = DefExpr(c -> c.a); # one-argument lambda function
+push!(GLOBAL_CONTEXTS, c1)
+d() # Finds `a` from the `GLOBAL_CONTEXTS` stack
+```
+
+All `Beamline`s have a `context` property to store a context, which all containing `LineElement` parameters defined use when getting properties at the element-level:
+
+```@repl context4
+c1 = Context(Kn1=0.36);
+qf = Quadrupole(Kn1=DefExpr(c -> c.Kn1), L=0.5);
+bl = Beamline([qf], context=c1);
+bl[qf][1].Kn1 # Index the beamline with the `qf` to get all child `qf`s
+```
+```@docs; canonical=false
+Context
+```
+
+## Parameters
+
+`Beamlines.jl` supports a continually-growing list of parameters to define accelerator elements. To see a full list of the parameters you can set, look at the docstring for the `LineElement` type. This can be retrieved in a Julia session using `Doc.docs(LineElement)`.
+
+```@docs; canonical=false
+LineElement
+```
+
+For a more detailed description of each parameter, see the docstrings for individual parameter groups. These are shown in the [Parameter Groups](@ref pgs) section of the documentation.
 
 ## Polymorphism/Differentiability
 

@@ -66,7 +66,7 @@ uniontypes(U::Union) = (U.a, uniontypes(U.b)...)
 @generated function coerce(::Type{T}, x) where {T}
   members = T isa Union ? collect(uniontypes(T)) : [T]
   good = filter(S -> promote_type(x, S) === S, members)
-  isempty(good) && return :(throw(ArgumentError(string(typeof(x), " cannot be stored in ", $T))))
+  isempty(good) && return :(throw(InexactError(:coerce, T, x)))
   # narrowest qualifying member
   S = reduce((a, b) -> promote_type(a, b) === a ? b : a, good)
   return :(convert($S, x))

@@ -1525,4 +1525,26 @@ using ForwardDiff, GTPSA, ReverseDiff
     @test c4.a == 3
     @test c4.b == 4
     
+    # Typed Context tests
+    # Note c1 is still on GLOBAL_CONTEXTS w/ a = 3 and b = 4
+    @test_throws InexactError Context{Float64}(a = im)
+    ct1::Context{Float64} = Context{Float64}(c = 1)
+    @test typeof(DefExpr(()->ct1.c)) == DefExpr{Float64}
+    @test Base.promote_op(getproperty, Context{Float64}, Symbol) == Float64
+    @test typeof(DefExpr(()->ct1.a)) == DefExpr{Float64}
+    @test ct1.a isa Float64
+    @test ct1.b isa Float64
+    c1.c = im
+    @test ct1.c == 1
+    c1.d = im
+    @test_throws InexactError ct1.d
+
+    # Beamline context test
+    qf = Quadrupole(Kn1=DefExpr(c->c.a), L=DefExpr(c -> c.b))
+    @test qf.Kn1 == 3
+    bl = Beamline([qf], context=Context(a=7))
+    @test qf.Kn1 == 3
+    @test qf.L == 4
+    @test bl[qf][1].Kn1 == 7
+    @test bl[qf][1].L == 4
 end
