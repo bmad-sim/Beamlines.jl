@@ -313,18 +313,13 @@ end
 # For more complex params (e.g. BMultipoleParams) we will need custom override
 param_replace(p::AbstractParams, key::Symbol, value) = set(p, opcompose(PropertyLens(key)), value)
 
-
-function ele_deval(d::DefExpr, ele::LineElement) # Only called if d is DefExpr for speed
-  pdict = getfield(ele, :pdict)
-  if haskey(pdict, BeamlineParams)
-    return deval(d, (pdict[BeamlineParams]::BeamlineParams).beamline.context)
-  else
-    return deval(d)
-  end
-end
-ele_deval(d, ele::LineElement) = d
-
 function Base.getproperty(ele::LineElement, key::Symbol)
+  pdict = getfield(ele, :pdict)
+  context = haskey(pdict, BeamlineParams) ? ((pdict[BeamlineParams]::BeamlineParams).beamline.context) : (NULL_CONTEXT)
+  return @inline _getproperty(ele, key, context)
+end
+
+function _getproperty(ele::LineElement, key::Symbol, context::Context)
   pdict = getfield(ele, :pdict)
   if key == :pdict 
     error("Reading/writing directly to an element's parameter dictionary is not allowed. To get/set a parameter group use the syntax `<ele>.<parameter group name> = <parameter group>`. E.g. `ele.BMultipoleParams = BMultipoleParams()`")
@@ -335,20 +330,20 @@ function Base.getproperty(ele::LineElement, key::Symbol)
     elseif haskey(pdict, PARAMS_MAP[key]) # To get parameters struct
       return getindex(pdict, PARAMS_MAP[key]) # NO DEVAL HERE!
     elseif haskey(pdict, InheritParams)
-      return getproperty(get_parent(pdict), key)
+      return _getproperty(get_parent(pdict), key, context)
     else
       return nothing
     end
   elseif haskey(VIRTUAL_GETTER_MAP, key) # Virtual properties override regular properties
     # Virtual properties access the element by properties or parameter structs, so this should
     # also not worry about InheritParams
-    return ele_deval(VIRTUAL_GETTER_MAP[key](ele, key), ele)
+    return deval(VIRTUAL_GETTER_MAP[key](ele, key, context), context)
   elseif haskey(PROPERTIES_MAP, key)
     if haskey(pdict, PROPERTIES_MAP[key])  # To get a property in a parameter struct
       # If there is the parameter group, then the property 100% exists, don't worry about InheritParams
-      return ele_deval(getproperty(getindex(pdict, PROPERTIES_MAP[key]), key), ele)
+      return deval(getproperty(getindex(pdict, PROPERTIES_MAP[key]), key), context)
     elseif haskey(pdict, InheritParams)
-      return getproperty(get_parent(pdict), key)
+      return _getproperty(get_parent(pdict), key, context)
     else
       # DEFAULT VALUE!
       # Default value will be done by constructing the parameter group 

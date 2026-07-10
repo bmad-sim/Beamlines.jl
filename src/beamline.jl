@@ -415,7 +415,7 @@ function trygetproperty(b::Beamline, key::Symbol)
         return trygetproperty(getfield(b, :branch).beamlines[branch_index-1], key)
       end
     else
-      return try_get_bl_params(first(b.line), key)
+      return try_get_bl_params(first(b.line), key, getfield(b, :context))
     end
   else
     error("Unable to get property $key from Beamline: Beamline does not have this property")
