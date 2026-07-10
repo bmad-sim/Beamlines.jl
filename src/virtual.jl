@@ -109,19 +109,19 @@ function _promote_bm(b1::BMultipoleParams{S}, ::Type{T}) where {S,T}
   end
 end
 
-function set_BM_strength!(ele::LineElement, key::Symbol, ::Context, value)
+function set_BM_strength!(ele::LineElement, key::Symbol, context::Context, value)
   b1 = ele.BMultipoleParams
   if isnothing(b1)
     b1 = BMultipoleParams()
   end
-  b = @noinline _set_BM_strength!(ele, b1, key, value)
+  b = @noinline _set_BM_strength!(ele, context, b1, key, value)
   if !(b === b1)
     ele.BMultipoleParams = b
   end
   return value
 end
 
-function _set_BM_strength!(ele, b::BMultipoleParams, key, value)
+function _set_BM_strength!(ele, context::Context, b::BMultipoleParams, key, value)
   normal, order, normalized, integrated = BMULTIPOLE_STRENGTH_MAP[key]
 
   if !(order in b.order)
@@ -207,20 +207,20 @@ function set_bend_angle!(ele::LineElement, ::Symbol, context::Context, value)
     bm = BMultipoleParams()
     ele.BMultipoleParams = bm
   end
-  return @noinline _set_bend_angle!(ele, L, bm, bp, value)
+  return @noinline _set_bend_angle!(ele, context, L, bm, bp, value)
 end
 
-function _set_bend_angle!(ele, L, bm, bp, value)
+function _set_bend_angle!(ele, context, L, bm, bp, value)
   # Angle = K0*L -> K0 = angle/L
   if L == 0
     error("Cannot set angle of LineElement with L = 0 (did you specify `angle` before specifying `L`?)")
   end
   Kn0 = value/L
-  _set_bend_g!(ele, bp, bm, Kn0) # sets both g_ref and Kn0
+  _set_bend_g!(ele, context, bp, bm, Kn0) # sets both g_ref and Kn0
   return value
 end
 
-get_bend_g(::LineElement, ::Symbol) = error("Property `g` is write-only, and sets both `g_ref` and `Kn0` together.")
+get_bend_g(::LineElement, ::Symbol, ::Context) = error("Property `g` is write-only, and sets both `g_ref` and `Kn0` together.")
 
 function set_bend_g!(ele::LineElement, ::Symbol, context::Context, value)
   bp = ele.BendParams
@@ -648,7 +648,7 @@ function ref_meaning_rel_to_abs(ref_meaning::Symbol)
   end
 end
 
-function get_parent_ele(ele::LineElement, ::Symbol)
+function get_parent_ele(ele::LineElement, ::Symbol, ::Context)
   pdict = getfield(ele, :pdict)
   if haskey(pdict, InheritParams)
     return get_parent(pdict)

@@ -369,6 +369,7 @@ end
 
 function Base.setproperty!(ele::LineElement, key::Symbol, value)
   pdict = getfield(ele, :pdict)
+  context = haskey(pdict, BeamlineParams) ? ((pdict[BeamlineParams]::BeamlineParams).beamline.context) : (NULL_CONTEXT)
   if haskey(PARAMS_MAP, key) # Setting whole parameter struct
     if is_protected(pdict, key)
       error("Cannot set $(PARAMS_MAP[key]): parameter group is protected by ProtectParams. This can be unsafely-overridden using `unsafe_getparams`")
@@ -388,7 +389,7 @@ function Base.setproperty!(ele::LineElement, key::Symbol, value)
   elseif is_protected(pdict, key)
     error("Cannot set $key: property is protected by ProtectParams")
   elseif haskey(VIRTUAL_SETTER_MAP, key) # Virtual properties override regular properties
-    return VIRTUAL_SETTER_MAP[key](ele, key, value)
+    return VIRTUAL_SETTER_MAP[key](ele, key, context, value)
   elseif haskey(PROPERTIES_MAP, key)
     if !haskey(pdict, PROPERTIES_MAP[key])
       if haskey(pdict, InheritParams)
