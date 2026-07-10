@@ -52,7 +52,9 @@ export AbstractParams,
        scalarize,
        scalarize!,
 
-       findchildren
+       findchildren,
+
+       GLOBAL_CONTEXTS
 
 using Accessors, 
       AtomicAndPhysicalConstants,

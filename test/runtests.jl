@@ -1479,4 +1479,50 @@ using ForwardDiff, GTPSA, ReverseDiff
     @test isnothing(blele1.BeamlineParams)
     bl2 = Beamline([ele, ele])
     @test !isnothing(bl2.line[2].BeamlineParams)
+
+    # Context tests
+    c1 = Context(a = 1)
+    c1.b = 2
+    @test c1.a == 1
+    @test c1.b == 2
+    push!(GLOBAL_CONTEXTS, c1)
+    c2 = Context()
+    @test c2.a == 1
+    @test c2.b == 2
+    c1.a = 3
+    c1.b = 4
+    @test c2.a == 3
+    @test c2.b == 4
+
+    c2.b = 5
+    @test c1.b == 4
+    @test c2.b == 5
+    @test c2.a == 3
+    
+    push!(GLOBAL_CONTEXTS, c2)
+
+    c3 = Context()
+    @test c3.a == 3
+    @test c3.b == 5
+
+    c3.a = 6
+    push!(GLOBAL_CONTEXTS, c3)
+    @test c3.a == 6
+    @test c3.b == 5
+    @test c2.a == 6
+    @test c2.b == 5
+    @test c1.b == 4
+
+    c4 = Context()
+    @test c4.a == 6
+    @test c4.b == 5
+
+    @test c3 === pop!(GLOBAL_CONTEXTS)
+    @test c4.a == 3
+    @test c4.b == 5
+
+    @test c2 === pop!(GLOBAL_CONTEXTS)
+    @test c4.a == 3
+    @test c4.b == 4
+    
 end

@@ -8,6 +8,8 @@ are lambda functions that "close" over a variable in the current scope. They can
 be used to specify inter-dependent parameters in an accelerator and guarantee that 
 no parameter ever becomes "stale".
 
+Also see `Context`.
+
 ## Examples
 ```jldoctest
 julia> a = 0.36;
@@ -43,7 +45,6 @@ julia> qf.Kn1L
 Deferred expressions can be treated and operated with as regular numbers, even outside 
 the context of `Beamlines`, and can be evaluated by calling it like a function with no 
 arguments (with `()`):
-
 ```jldoctest
 julia> c = 64;
 
@@ -65,6 +66,16 @@ julia> dd = cd + 5;
 
 julia> dd()
 6.0
+```
+
+An optional `Context` argument can be provided:
+```jldoctest
+julia> d = DefExpr(c -> c.a + c.b);
+
+julia> c1 = Context(a = 1, b = 2);
+
+julia> d(c1)
+3
 ```
 """
 struct DefExpr{T}
@@ -101,7 +112,7 @@ function DefExpr(f)
   if applicable(f)
     T = Base.promote_op(f)
   elseif applicable(f, NULL_CONTEXT)
-    T = Base.promote_op(f, Tuple{Context})
+    T = Base.promote_op(f, Context)
   else
     T = Any
   end
