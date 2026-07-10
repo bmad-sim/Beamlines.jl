@@ -2,14 +2,14 @@ abstract type AbstractParams end
 isactive(::AbstractParams) = true
 isactive(::Nothing) = false
 
-@generated function deval(a::AbstractParams)
+@generated function deval(a::AbstractParams, c::Context=NULL_CONTEXT)
     apply = [
       begin
         # This is so deval never allocates another array unless is a DefExpr to deval
         if type <: AbstractArray && (eltype(type) <: DefExpr || isabstracttype(eltype(type)))
-          :(deval.(getproperty(a, $(QuoteNode(name)))))
+          :(deval.(getproperty(a, $(QuoteNode(name))), (c,)))
         else
-          :(deval(getproperty(a, $(QuoteNode(name)))))
+          :(deval(getproperty(a, $(QuoteNode(name))), c))
         end 
       end for (type,name) in zip(fieldtypes(a),fieldnames(a))
     ]
@@ -313,6 +313,17 @@ end
 # For more complex params (e.g. BMultipoleParams) we will need custom override
 param_replace(p::AbstractParams, key::Symbol, value) = set(p, opcompose(PropertyLens(key)), value)
 
+
+function ele_deval(d::DefExpr, ele::LineElement) # Only called if d is DefExpr for speed
+  pdict = getfield(ele, :pdict)
+  if haskey(pdict, BeamlineParams)
+    return deval(d, (pdict[BeamlineParams]::BeamlineParams).beamline.context)
+  else
+    return deval(d)
+  end
+end
+ele_deval(d, ele::LineElement) = d
+
 function Base.getproperty(ele::LineElement, key::Symbol)
   pdict = getfield(ele, :pdict)
   if key == :pdict 
@@ -331,11 +342,11 @@ function Base.getproperty(ele::LineElement, key::Symbol)
   elseif haskey(VIRTUAL_GETTER_MAP, key) # Virtual properties override regular properties
     # Virtual properties access the element by properties or parameter structs, so this should
     # also not worry about InheritParams
-    return deval(VIRTUAL_GETTER_MAP[key](ele, key))
+    return ele_deval(VIRTUAL_GETTER_MAP[key](ele, key), ele)
   elseif haskey(PROPERTIES_MAP, key)
     if haskey(pdict, PROPERTIES_MAP[key])  # To get a property in a parameter struct
       # If there is the parameter group, then the property 100% exists, don't worry about InheritParams
-      return deval(getproperty(getindex(pdict, PROPERTIES_MAP[key]), key))
+      return ele_deval(getproperty(getindex(pdict, PROPERTIES_MAP[key]), key), ele)
     elseif haskey(pdict, InheritParams)
       return getproperty(get_parent(pdict), key)
     else

@@ -37,7 +37,7 @@ function _get_BM_strength(ele, b::BMultipoleParams, key)
     return zero(first(b.n))
   end
   i = o2i(b,order)
-  strength = deval(normal ? b.n[i] : b.s[i])
+  strength = ele_deval(normal ? b.n[i] : b.s[i], ele)
   stored_normalized = b.normalized[i]
   stored_integrated = b.integrated[i]
   # Yes there is a simpler way to write the below but this 
@@ -512,7 +512,7 @@ function try_get_bl_params(ele::LineElement, key::Symbol)
         return field
       end
     else # key in (:E_ref, :pc_ref, :p_over_q_ref, :dE_ref, :dpc_ref, :dp_over_q_ref)
-      ref = deval(getfield(ibp, :ref))
+      ref = ele_deval(getfield(ibp, :ref), ele)
       if isnothing(ref)
         branch_index = getfield(beamline, :branch_index)
         if branch_index == -1 || branch_index == 1
