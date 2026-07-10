@@ -1547,4 +1547,13 @@ using ForwardDiff, GTPSA, ReverseDiff
     @test qf.L == 4
     @test bl[qf][1].Kn1 == 7
     @test bl[qf][1].L == 4
+    
+    empty!(GLOBAL_CONTEXTS)
+    push!(GLOBAL_CONTEXTS, Context(L = 5))
+    c = Context(L = 6)
+    ele = Drift(L=DefExpr(c -> c.L))
+    bl = Beamline([ele], E_ref=18e9, species_ref=Species("electron"))
+    @test bl[ele][1].L == 5
+    bl.context = c
+    @test bl[ele][1].L == 6
 end
