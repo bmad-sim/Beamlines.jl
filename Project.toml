@@ -31,6 +31,7 @@ BeamlinesReverseDiffExt = "ReverseDiff"
 [compat]
 Accessors = "0.1.42"
 AtomicAndPhysicalConstants = "0.9, 0.10"
+DataStructures = "0.19"
 EnumX = "1.0.5"
 ForwardDiff = "0.10,1"
 FunctionWrappers = "1.1.3"
