@@ -63,8 +63,9 @@ using Accessors,
       MacroTools,
       EnumX,
       ReadOnlyArrays,
-      PrettyTables,
-      DataStructures
+      PrettyTables
+      
+using DataStructures: Stack
 
 export Species
 
