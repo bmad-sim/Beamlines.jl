@@ -22,22 +22,22 @@ ele.BMultipoleParams        # Goes to InheritParams to get parent
 
 =#
 
-function get_BM_strength(ele::LineElement, key::Symbol)
-  b = ele.BMultipoleParams
+function get_BM_strength(ele::LineElement, key::Symbol, context)
+  b = deval(ele.BMultipoleParams, context)
   if isnothing(b)
     return 0f0
   end
-  return @noinline _get_BM_strength(ele, b, key)
+  return @noinline _get_BM_strength(ele, b, key, context)
 end
 
-function _get_BM_strength(ele, b::BMultipoleParams, key)
+function _get_BM_strength(ele, b::BMultipoleParams, key, context)
   normal, order, normalized, integrated = BMULTIPOLE_STRENGTH_MAP[key]
   # Default
   if !(order in b.order)
     return zero(first(b.n))
   end
   i = o2i(b,order)
-  strength = deval(normal ? b.n[i] : b.s[i])
+  strength = normal ? b.n[i] : b.s[i]
   stored_normalized = b.normalized[i]
   stored_integrated = b.integrated[i]
   # Yes there is a simpler way to write the below but this 
@@ -46,7 +46,7 @@ function _get_BM_strength(ele, b::BMultipoleParams, key)
     if stored_integrated == integrated
       return strength
     else
-      L = ele.L
+      L = _getproperty(ele, :L, context)
       if stored_integrated == false 
         # user asking for integrated strength of non-integrated BMultipole
         return strength*L
@@ -66,7 +66,7 @@ function _get_BM_strength(ele, b::BMultipoleParams, key)
         error("Unable to get $key of LineElement: Unnormalized multipole is stored, but the element is not within a Beamline with a set p_over_q_ref")
       end
     end
-    p_over_q_ref = ele.p_over_q_ref
+    p_over_q_ref = _getproperty(ele, :p_over_q_ref, context)
     if stored_integrated == integrated
       if stored_normalized == false
         # user asking for normalized strength of unnormalized BMultipole
@@ -76,7 +76,7 @@ function _get_BM_strength(ele, b::BMultipoleParams, key)
         return strength*p_over_q_ref
       end
     else
-      L = ele.L
+      L = _getproperty(ele, :L, context)
       if stored_normalized == false
         if stored_integrated == false
           return strength/p_over_q_ref*L
@@ -109,19 +109,19 @@ function _promote_bm(b1::BMultipoleParams{S}, ::Type{T}) where {S,T}
   end
 end
 
-function set_BM_strength!(ele::LineElement, key::Symbol, value)
+function set_BM_strength!(ele::LineElement, key::Symbol, context::Context, value)
   b1 = ele.BMultipoleParams
   if isnothing(b1)
     b1 = BMultipoleParams()
   end
-  b = @noinline _set_BM_strength!(ele, b1, key, value)
+  b = @noinline _set_BM_strength!(ele, context, b1, key, value)
   if !(b === b1)
     ele.BMultipoleParams = b
   end
   return value
 end
 
-function _set_BM_strength!(ele, b::BMultipoleParams, key, value)
+function _set_BM_strength!(ele, context::Context, b::BMultipoleParams, key, value)
   normal, order, normalized, integrated = BMULTIPOLE_STRENGTH_MAP[key]
 
   if !(order in b.order)
@@ -177,7 +177,7 @@ function _set_BM_strength!(ele, b::BMultipoleParams, key, value)
 
   # Switching integrated status
   if b.integrated[i] != integrated
-    L = ele.L
+    L = _getproperty(ele, :L, context)
     old_other_val = normal ? b.s[i] : b.n[i]
     new_other_val = old_other_val*(integrated ? L : 1/L)
     b = _promote_bm(b, promote_type(typeof(value),typeof(new_other_val)))
@@ -193,10 +193,10 @@ function _set_BM_strength!(ele, b::BMultipoleParams, key, value)
   return b
 end
 
-get_bend_angle(::LineElement, ::Symbol) = error("Property `angle` is write-only, and sets both `g_ref` and `Kn0` together")
+get_bend_angle(::LineElement, ::Symbol, ::Context) = error("Property `angle` is write-only, and sets both `g_ref` and `Kn0` together")
 
-function set_bend_angle!(ele::LineElement, ::Symbol, value)
-  L = ele.L
+function set_bend_angle!(ele::LineElement, ::Symbol, context::Context, value)
+  L = _getproperty(ele, :L, context)
   bm = ele.BMultipoleParams
   bp = ele.BendParams
   if isnothing(bp)
@@ -207,22 +207,22 @@ function set_bend_angle!(ele::LineElement, ::Symbol, value)
     bm = BMultipoleParams()
     ele.BMultipoleParams = bm
   end
-  return @noinline _set_bend_angle!(ele, L, bm, bp, value)
+  return @noinline _set_bend_angle!(ele, context, L, bm, bp, value)
 end
 
-function _set_bend_angle!(ele, L, bm, bp, value)
+function _set_bend_angle!(ele, context, L, bm, bp, value)
   # Angle = K0*L -> K0 = angle/L
   if L == 0
     error("Cannot set angle of LineElement with L = 0 (did you specify `angle` before specifying `L`?)")
   end
   Kn0 = value/L
-  _set_bend_g!(ele, bp, bm, Kn0) # sets both g_ref and Kn0
+  _set_bend_g!(ele, context, bp, bm, Kn0) # sets both g_ref and Kn0
   return value
 end
 
-get_bend_g(::LineElement, ::Symbol) = error("Property `g` is write-only, and sets both `g_ref` and `Kn0` together.")
+get_bend_g(::LineElement, ::Symbol, ::Context) = error("Property `g` is write-only, and sets both `g_ref` and `Kn0` together.")
 
-function set_bend_g!(ele::LineElement, ::Symbol, value)
+function set_bend_g!(ele::LineElement, ::Symbol, context::Context, value)
   bp = ele.BendParams
   bm = ele.BMultipoleParams
   if isnothing(bp)
@@ -233,20 +233,20 @@ function set_bend_g!(ele::LineElement, ::Symbol, value)
     bm = BMultipoleParams()
     ele.BMultipoleParams = bm
   end
-  return @noinline _set_bend_g!(ele, bp, bm, value)
+  return @noinline _set_bend_g!(ele, context, bp, bm, value)
 end
 
-function _set_bend_g!(ele::LineElement, bp::BendParams{S}, bm::BMultipoleParams, value) where {S}
+function _set_bend_g!(ele::LineElement, context::Context, bp::BendParams{S}, bm::BMultipoleParams, value) where {S}
   T = promote_type(S, typeof(value))
   if T != S || bp.g_ref != value
     bp = set(bp, opcompose(PropertyLens(:g_ref)), T(value))
     ele.BendParams = bp
   end
-  @noinline set_BM_strength!(ele, :Kn0, T(value))
+  @noinline set_BM_strength!(ele, :Kn0, context, T(value))
   return value
 end
 
-function get_BM_independent(ele::LineElement, ::Symbol)
+function get_BM_independent(ele::LineElement, ::Symbol, ::Context)
   b = ele.BMultipoleParams
   return @noinline _get_BM_independent(b)
 end
@@ -261,7 +261,7 @@ function _get_BM_independent(b)
   return v
 end
 
-function set_BM_independent!(ele::LineElement, ::Symbol, value)
+function set_BM_independent!(ele::LineElement, ::Symbol, context::Context, value)
   eltype(value) == @NamedTuple{order::Int, normalized::Bool, integrated::Bool}  || error("Please provide a list/array/tuple with eltype @NamedTuple{order::Int, normalized::Bool, integrated::Bool} to specify the multipole properties you want to set as independent variables.")
   b = ele.BMultipoleParams
   if isnothing(b)
@@ -281,23 +281,25 @@ function set_BM_independent!(ele::LineElement, ::Symbol, value)
       n = oldn
       s = olds
       if old_normalized != normalized
+        p_over_q_ref = _getproperty(ele, :p_over_q_ref, context)
         if old_normalized == true
-          n *= ele.p_over_q_ref
-          s *= ele.p_over_q_ref
+          n *= p_over_q_ref
+          s *= p_over_q_ref
         else
-          n /= ele.p_over_q_ref
-          s /= ele.p_over_q_ref
+          n /= p_over_q_ref
+          s /= p_over_q_ref
         end
       end
 
       if old_integrated != integrated
+        L = _getproperty(ele, :L, context)
         if old_integrated == true
-          ele.L != 0 || error("Unable to set change multipole order $order to have independent variable $sym: element length L = 0")
-          n /= ele.L
-          s /= ele.L
+          L != 0 || error("Unable to set change multipole order $order to have independent variable $sym: element length L = 0")
+          n /= L
+          s /= L
         else
-          n *= ele.L
-          s *= ele.L
+          n *= L
+          s *= L
         end
       end
       T = promote_type(typeof(n),typeof(oldn))
@@ -321,19 +323,19 @@ end
 # When field_master = true, the B fields are the independent variables
 # If false, the normalized strengths are the independent variables
 # so field_master = !normalized in my BMultipole structure
-function set_field_master!(ele::LineElement, ::Symbol, value::Bool)
+function set_field_master!(ele::LineElement, ::Symbol, context::Context, value::Bool)
   BM_independent = _get_BM_independent(ele.BMultipoleParams)
   c = map(t->(; order=t.order, normalized=!value, integrated=t.integrated), BM_independent)
-  return set_BM_independent!(ele, :nothing, c)
+  return set_BM_independent!(ele, :nothing, context, c)
 end
 
-function set_integrated_master!(ele::LineElement, ::Symbol, value::Bool)
+function set_integrated_master!(ele::LineElement, ::Symbol, context::Context, value::Bool)
   BM_independent = _get_BM_independent(ele.BMultipoleParams)
   c = map(t->(; order=t.order, normalized=t.normalized, integrated=value), BM_independent)
-  return set_BM_independent!(ele, :nothing, c)
+  return set_BM_independent!(ele, :nothing, context, c)
 end
 
-function get_field_master(ele::LineElement, ::Symbol)
+function get_field_master(ele::LineElement, ::Symbol, ::Context)
   b = ele.BMultipoleParams
   return @noinline _get_field_master(b)
 end
@@ -349,7 +351,7 @@ function _get_field_master(b)
   return !check
 end
 
-function get_integrated_master(ele::LineElement, ::Symbol)
+function get_integrated_master(ele::LineElement, ::Symbol, ::Context)
   b = ele.BMultipoleParams
   return @noinline _get_integrated_master(b)
 end
@@ -365,7 +367,7 @@ function _get_integrated_master(b)
   return check
 end
 
-function get_cavity_rate(ele::LineElement, key::Symbol)
+function get_cavity_rate(ele::LineElement, key::Symbol, ::Context)
   rfp = ele.RFParams
   if isnothing(rfp) || getfield(rfp, :rate_meaning) == RateMeaning.Indeterminate
     return 0f0 # Default value
@@ -393,7 +395,7 @@ function get_cavity_rate(ele::LineElement, key::Symbol)
   end
 end
 
-function set_cavity_rate!(ele::LineElement, key::Symbol, value)
+function set_cavity_rate!(ele::LineElement, key::Symbol, ::Context, value)
   rf1 = ele.RFParams
   if isnothing(rf1)
     rf1 = RFParams()
@@ -419,7 +421,7 @@ function _set_cavity_rate!(rf::RFParams{S}, key, value) where {S}
   return rf
 end
 
-function set_harmon_master!(ele::LineElement, ::Symbol, value::Bool)
+function set_harmon_master!(ele::LineElement, ::Symbol, ::Context, value::Bool)
   rfp = ele.RFParams
   if isnothing(rfp)
     ele.RFParams = RFParams(harmon_master=value)
@@ -443,7 +445,7 @@ end
 # Override is only needed bc error is thrown if either reference
 # species or reference energy are not set and generic setter 
 # first does a get to check if type promotion needed
-function set_bl_params!(ele::LineElement, sym::Symbol, value)
+function set_bl_params!(ele::LineElement, sym::Symbol, ::Context, value)
   if !isnothing(ele.BeamlineParams) && ele.beamline_index != 1
     error("Unable to set $sym of an element that is in a beamline and not the first element of the beamline.")
   end
@@ -475,15 +477,15 @@ function set_bl_params!(ele::LineElement, sym::Symbol, value)
   return setproperty!(ibp, sym, value)
 end
 
-function get_bl_params(ele::LineElement, key::Symbol)
-  prop = try_get_bl_params(ele, key)
+function get_bl_params(ele::LineElement, key::Symbol, context::Context)
+  prop = try_get_bl_params(ele, key, context)
   if prop isa GetError
     error(prop.msg)
   end
   return prop
 end
 
-function try_get_bl_params(ele::LineElement, key::Symbol)
+function try_get_bl_params(ele::LineElement, key::Symbol, context::Context)
   pdict = getfield(ele, :pdict)
   
   if haskey(pdict, BeamlineParams) # If element in a Beamline
@@ -512,7 +514,7 @@ function try_get_bl_params(ele::LineElement, key::Symbol)
         return field
       end
     else # key in (:E_ref, :pc_ref, :p_over_q_ref, :dE_ref, :dpc_ref, :dp_over_q_ref)
-      ref = deval(getfield(ibp, :ref))
+      ref = deval(getfield(ibp, :ref), context)
       if isnothing(ref)
         branch_index = getfield(beamline, :branch_index)
         if branch_index == -1 || branch_index == 1
@@ -526,7 +528,7 @@ function try_get_bl_params(ele::LineElement, key::Symbol)
         return ref
       elseif key in (:E_ref, :pc_ref, :p_over_q_ref) # Key absolute
         if ref_meaning in (:E_ref, :pc_ref, :p_over_q_ref) # key absolute, ref_meaning absolute
-          species_ref = try_get_bl_params(ele, :species_ref)
+          species_ref = try_get_bl_params(ele, :species_ref, context)
           if species_ref isa GetError
             # Make it more informative:
             return GetError("
@@ -553,7 +555,7 @@ function try_get_bl_params(ele::LineElement, key::Symbol)
               return ref + trygetproperty(getfield(beamline, :branch).beamlines[branch_index-1], key)
             end
           else
-            species_ref = try_get_bl_params(ele, :species_ref)
+            species_ref = try_get_bl_params(ele, :species_ref, context)
             if species_ref isa GetError
               # Make it more informative:
               return GetError("
@@ -562,7 +564,7 @@ function try_get_bl_params(ele::LineElement, key::Symbol)
                 ")
             end
             ref_meaning_abs = ref_meaning_rel_to_abs(ref_meaning)
-            ref = try_get_bl_params(first(beamline.line), ref_meaning_abs)
+            ref = try_get_bl_params(first(beamline.line), ref_meaning_abs, context)
             if ref isa GetError
               return GetError("
                 Unable to get $key: stored is $ref_meaning and $key is not inferrable.
@@ -582,7 +584,7 @@ function try_get_bl_params(ele::LineElement, key::Symbol)
         elseif branch_index == 1
           return ref # Basically just assume zero for all "before" if first Beamline (out of thin air)
         else
-          species_ref = try_get_bl_params(ele, :species_ref)
+          species_ref = try_get_bl_params(ele, :species_ref, context)
           if species_ref isa GetError
             # Make it more informative:
             return GetError("
@@ -591,7 +593,7 @@ function try_get_bl_params(ele::LineElement, key::Symbol)
             ")
           end
           key_abs = ref_meaning_rel_to_abs(key)
-          ref_abs_f = try_get_bl_params(first(beamline.line), key_abs)
+          ref_abs_f = try_get_bl_params(first(beamline.line), key_abs, context)
           ref_abs_i = trygetproperty(getfield(beamline, :branch).beamlines[branch_index-1], key_abs)
           if ref_abs_i isa GetError || ref_abs_f isa GetError
             return GetError("
@@ -646,7 +648,7 @@ function ref_meaning_rel_to_abs(ref_meaning::Symbol)
   end
 end
 
-function get_parent_ele(ele::LineElement, ::Symbol)
+function get_parent_ele(ele::LineElement, ::Symbol, ::Context)
   pdict = getfield(ele, :pdict)
   if haskey(pdict, InheritParams)
     return get_parent(pdict)

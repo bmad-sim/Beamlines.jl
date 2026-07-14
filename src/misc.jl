@@ -68,10 +68,10 @@ end
 
 # === THIS BLOCK WAS PARTIALLY WRITTEN BY CLAUDE ===
 # Generated function for arbitrary-length tuples
-@generated function deval(mp::MapParams{F,P}) where {F,P<:Tuple}
+@generated function deval(mp::MapParams{F,P}, c::Context=NULL_CONTEXT) where {F,P<:Tuple}
     N = length(P.parameters)
     # Use getfield with literal integer arguments
-    exprs = [:(deval(Base.getfield(mp.transport_map_params, $i))) for i in 1:N]
+    exprs = [:(deval(Base.getfield(mp.transport_map_params, $i), c)) for i in 1:N]
     return :(MapParams(mp.transport_map, tuple($(exprs...))))
 end
 
@@ -83,27 +83,39 @@ end
 end
 # === END CLAUDE ===
 
+"""
+    mutable struct FourPotentialParams{F<:Function, P} <: AbstractParams
+
+Defines the electromagnetic four-potential of an element via the `four_potential` function.
+
+## Fields
+
+- `four_potential(x, y, s, t, p=nothing)`  -- Function of type `F` that returns:
+  `                          ((ϕ, Ax, Ay, As), (∂ϕ/∂x,  ∂ϕ/∂y,  ∂ϕ/∂s,  ∂ϕ/∂t,`
+  `                                            ∂Ax/∂x, ∂Ax/∂y, ∂Ax/∂s, ∂Ax/∂t,`
+  `                                            ∂Ay/∂x, ∂Ay/∂y, ∂Ay/∂s, ∂Ay/∂t,`
+  `                                            ∂As/∂x, ∂As/∂y, ∂As/∂s, ∂As/∂t))`.
+  If `four_potential[2]` is `nothing`, the derivatives are computed by automatic
+  differentiation during tracking, which is probably slower.
+
+- `four_potential_params`  -- Default is `nothing`. Parameters of type `P` passed to the four_potential function.
+- `four_potential_normalized`  -- Set to `true` means the potential/derivatives are
+  `p_over_q_ref * four_potential`; `false` means the potential/derivatives are
+  `four_potential`.
+"""
 @kwdef mutable struct FourPotentialParams{F<:Function, P} <: AbstractParams
   four_potential::F = (x, y, s, t, p=nothing) -> ((0, 0, 0, 0), (0, 0, 0, 0,
                                                                  0, 0, 0, 0,
                                                                  0, 0, 0, 0,
-                                                                 0, 0, 0, 0)) 
-  # Returns ((ϕ, Ax, Ay, As), (∂ϕ/∂x,  ∂ϕ/∂y,  ∂ϕ/∂s,  ∂ϕ/∂t,
-  #                            ∂Ax/∂x, ∂Ax/∂y, ∂Ax/∂s, ∂Ax/∂t,
-  #                            ∂Ay/∂x, ∂Ay/∂y, ∂Ay/∂s, ∂Ay/∂t,
-  #                            ∂As/∂x, ∂As/∂y, ∂As/∂s, ∂As/∂t).
-  # If four_potential[2] is nothing, the derivatives are computed by 
-  # automatic differentiation during tracking, which is probably slower.
+                                                                 0, 0, 0, 0))
   four_potential_params::P = nothing
-  four_potential_normalized::Bool = false 
-  # true means the potential/derivatives are p_over_q_ref * four_potential;
-  # false means the potential/derivatives are four_potential.
+  four_potential_normalized::Bool = false
 end
 
-@generated function deval(mp::FourPotentialParams{F,P}) where {F,P<:Tuple}
+@generated function deval(mp::FourPotentialParams{F,P}, c::Context=NULL_CONTEXT) where {F,P<:Tuple}
     N = length(P.parameters)
     # Use getfield with literal integer arguments
-    exprs = [:(deval(Base.getfield(mp.four_potential_params, $i))) for i in 1:N]
+    exprs = [:(deval(Base.getfield(mp.four_potential_params, $i), c)) for i in 1:N]
     return :(FourPotentialParams(mp.four_potential, tuple($(exprs...)), mp.four_potential_normalized))
 end
 
@@ -119,20 +131,6 @@ PROPS(::Type{FourPotentialParams}) = OrderedDict{String,String}(
   "four_potential_params"     => "TODO",
   "four_potential_normalized" => "TODO",
 )
-
-"""
-    FourPotentialParams
-
-TODO
-
-## Properties
-$(PROPSDOC(FourPotentialParams))
-
-## Examples
-
-TODO
-"""
-FourPotentialParams
 
 function Base.isapprox(a::FourPotentialParams, b::FourPotentialParams)
   if xor(isnothing(a.four_potential_params), isnothing(b.four_potential_params))

@@ -2,14 +2,14 @@ abstract type AbstractParams end
 isactive(::AbstractParams) = true
 isactive(::Nothing) = false
 
-@generated function deval(a::AbstractParams)
+@generated function deval(a::AbstractParams, c::Context=NULL_CONTEXT)
     apply = [
       begin
         # This is so deval never allocates another array unless is a DefExpr to deval
         if type <: AbstractArray && (eltype(type) <: DefExpr || isabstracttype(eltype(type)))
-          :(deval.(getproperty(a, $(QuoteNode(name)))))
+          :(deval.(getproperty(a, $(QuoteNode(name))), (c,)))
         else
-          :(deval(getproperty(a, $(QuoteNode(name)))))
+          :(deval(getproperty(a, $(QuoteNode(name))), c))
         end 
       end for (type,name) in zip(fieldtypes(a),fieldnames(a))
     ]
@@ -315,6 +315,12 @@ param_replace(p::AbstractParams, key::Symbol, value) = set(p, opcompose(Property
 
 function Base.getproperty(ele::LineElement, key::Symbol)
   pdict = getfield(ele, :pdict)
+  context = haskey(pdict, BeamlineParams) ? ((pdict[BeamlineParams]::BeamlineParams).beamline.context) : (NULL_CONTEXT)
+  return @inline _getproperty(ele, key, context)
+end
+
+function _getproperty(ele::LineElement, key::Symbol, context::Context)
+  pdict = getfield(ele, :pdict)
   if key == :pdict 
     error("Reading/writing directly to an element's parameter dictionary is not allowed. To get/set a parameter group use the syntax `<ele>.<parameter group name> = <parameter group>`. E.g. `ele.BMultipoleParams = BMultipoleParams()`")
     #ret = getfield(ele, :pdict)
@@ -324,20 +330,20 @@ function Base.getproperty(ele::LineElement, key::Symbol)
     elseif haskey(pdict, PARAMS_MAP[key]) # To get parameters struct
       return getindex(pdict, PARAMS_MAP[key]) # NO DEVAL HERE!
     elseif haskey(pdict, InheritParams)
-      return getproperty(get_parent(pdict), key)
+      return _getproperty(get_parent(pdict), key, context)
     else
       return nothing
     end
   elseif haskey(VIRTUAL_GETTER_MAP, key) # Virtual properties override regular properties
     # Virtual properties access the element by properties or parameter structs, so this should
     # also not worry about InheritParams
-    return deval(VIRTUAL_GETTER_MAP[key](ele, key))
+    return deval(VIRTUAL_GETTER_MAP[key](ele, key, context), context)
   elseif haskey(PROPERTIES_MAP, key)
     if haskey(pdict, PROPERTIES_MAP[key])  # To get a property in a parameter struct
       # If there is the parameter group, then the property 100% exists, don't worry about InheritParams
-      return deval(getproperty(getindex(pdict, PROPERTIES_MAP[key]), key))
+      return deval(getproperty(getindex(pdict, PROPERTIES_MAP[key]), key), context)
     elseif haskey(pdict, InheritParams)
-      return getproperty(get_parent(pdict), key)
+      return _getproperty(get_parent(pdict), key, context)
     else
       # DEFAULT VALUE!
       # Default value will be done by constructing the parameter group 
@@ -363,6 +369,7 @@ end
 
 function Base.setproperty!(ele::LineElement, key::Symbol, value)
   pdict = getfield(ele, :pdict)
+  context = haskey(pdict, BeamlineParams) ? ((pdict[BeamlineParams]::BeamlineParams).beamline.context) : (NULL_CONTEXT)
   if haskey(PARAMS_MAP, key) # Setting whole parameter struct
     if is_protected(pdict, key)
       error("Cannot set $(PARAMS_MAP[key]): parameter group is protected by ProtectParams. This can be unsafely-overridden using `unsafe_getparams`")
@@ -382,7 +389,7 @@ function Base.setproperty!(ele::LineElement, key::Symbol, value)
   elseif is_protected(pdict, key)
     error("Cannot set $key: property is protected by ProtectParams")
   elseif haskey(VIRTUAL_SETTER_MAP, key) # Virtual properties override regular properties
-    return VIRTUAL_SETTER_MAP[key](ele, key, value)
+    return VIRTUAL_SETTER_MAP[key](ele, key, context, value)
   elseif haskey(PROPERTIES_MAP, key)
     if !haskey(pdict, PROPERTIES_MAP[key])
       if haskey(pdict, InheritParams)

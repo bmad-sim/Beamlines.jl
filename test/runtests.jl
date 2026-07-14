@@ -1479,4 +1479,81 @@ using ForwardDiff, GTPSA, ReverseDiff
     @test isnothing(blele1.BeamlineParams)
     bl2 = Beamline([ele, ele])
     @test !isnothing(bl2.line[2].BeamlineParams)
+
+    # Context tests
+    c1 = Context(a = 1)
+    c1.b = 2
+    @test c1.a == 1
+    @test c1.b == 2
+    push!(GLOBAL_CONTEXTS, c1)
+    c2 = Context()
+    @test c2.a == 1
+    @test c2.b == 2
+    c1.a = 3
+    c1.b = 4
+    @test c2.a == 3
+    @test c2.b == 4
+
+    c2.b = 5
+    @test c1.b == 4
+    @test c2.b == 5
+    @test c2.a == 3
+    
+    push!(GLOBAL_CONTEXTS, c2)
+
+    c3 = Context()
+    @test c3.a == 3
+    @test c3.b == 5
+
+    c3.a = 6
+    push!(GLOBAL_CONTEXTS, c3)
+    @test c3.a == 6
+    @test c3.b == 5
+    @test c2.a == 6
+    @test c2.b == 5
+    @test c1.b == 4
+
+    c4 = Context()
+    @test c4.a == 6
+    @test c4.b == 5
+
+    @test c3 === pop!(GLOBAL_CONTEXTS)
+    @test c4.a == 3
+    @test c4.b == 5
+
+    @test c2 === pop!(GLOBAL_CONTEXTS)
+    @test c4.a == 3
+    @test c4.b == 4
+    
+    # Typed Context tests
+    # Note c1 is still on GLOBAL_CONTEXTS w/ a = 3 and b = 4
+    @test_throws InexactError Context{Float64}(a = im)
+    ct1::Context{Float64} = Context{Float64}(c = 1)
+    @test typeof(DefExpr(()->ct1.c)) == DefExpr{Float64}
+    @test Base.promote_op(getproperty, Context{Float64}, Symbol) == Float64
+    @test typeof(DefExpr(()->ct1.a)) == DefExpr{Float64}
+    @test ct1.a isa Float64
+    @test ct1.b isa Float64
+    c1.c = im
+    @test ct1.c == 1
+    c1.d = im
+    @test_throws InexactError ct1.d
+
+    # Beamline context test
+    qf = Quadrupole(Kn1=DefExpr(c->c.a), L=DefExpr(c -> c.b))
+    @test qf.Kn1 == 3
+    bl = Beamline([qf], context=Context(a=7))
+    @test qf.Kn1 == 3
+    @test qf.L == 4
+    @test bl[qf][1].Kn1 == 7
+    @test bl[qf][1].L == 4
+    
+    empty!(GLOBAL_CONTEXTS)
+    push!(GLOBAL_CONTEXTS, Context(L = 5))
+    c = Context(L = 6)
+    ele = Drift(L=DefExpr(c -> c.L))
+    bl = Beamline([ele], E_ref=18e9, species_ref=Species("electron"))
+    @test bl[ele][1].L == 5
+    bl.context = c
+    @test bl[ele][1].L == 6
 end

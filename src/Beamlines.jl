@@ -36,6 +36,7 @@ export AbstractParams,
        RFCavity,
        CrabCavity,
        Beamline,
+       Context,
        Controller,
        Patch,
        set!,
@@ -51,7 +52,9 @@ export AbstractParams,
        scalarize,
        scalarize!,
 
-       findchildren
+       findchildren,
+
+       GLOBAL_CONTEXTS
 
 using Accessors, 
       AtomicAndPhysicalConstants,
@@ -61,6 +64,8 @@ using Accessors,
       EnumX,
       ReadOnlyArrays,
       PrettyTables
+      
+using DataStructures: Stack
 
 export Species
 
@@ -81,6 +86,7 @@ using FunctionWrappers: FunctionWrapper
 # struct as one can sum the lengths of each preceding element in the Beamline.
 
 include("utils.jl")
+include("context.jl")
 include("defexpr.jl")
 include("element.jl")
 include("beamline.jl")
