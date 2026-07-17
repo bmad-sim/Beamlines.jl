@@ -2,6 +2,7 @@ using Beamlines
 using Beamlines: isactive
 using Test
 using ForwardDiff, GTPSA, ReverseDiff
+using PythonCall
 
 @testset "Beamlines.jl" begin
     L = 5.0f0
@@ -1556,4 +1557,30 @@ using ForwardDiff, GTPSA, ReverseDiff
     @test bl[ele][1].L == 5
     bl.context = c
     @test bl[ele][1].L == 6
+end
+
+# Exercises BeamlinesPythonCallExt: building a DefExpr from a Python callable or
+# value. Requires PythonCall (which provisions Python via CondaPkg on first use).
+@testset "BeamlinesPythonCallExt (DefExpr from Python)" begin
+    # 0-argument callable
+    @test DefExpr(pyeval(Py, "lambda: 1.0", Main))() == 1.0
+
+    # Context-accepting callable, closing over the real Context at evaluation time
+    dctx = DefExpr(pyeval(Py, "lambda c: c.k1", Main))
+    @test dctx(Context(k1 = 0.36)) == 0.36
+
+    # plain Python value
+    @test DefExpr(pyeval(Py, "0.5", Main))() == 0.5
+
+    # *args absorbs the Context (arity treated as >= 1)
+    @test DefExpr(pyeval(Py, "lambda *a: 2.0", Main))(Context(k1 = 0.0)) == 2.0
+
+    # a defaulted parameter is not "required" -> 0-argument form
+    @test DefExpr(pyeval(Py, "lambda x=1: 3.0", Main))() == 3.0
+
+    # a callable whose signature cannot be introspected still constructs
+    @test DefExpr(pyeval(Py, "print", Main)) isa DefExpr
+
+    # operator overloading composes through the existing DefExpr operators
+    @test (DefExpr(pyeval(Py, "lambda: 1.0", Main)) + 10)() == 11.0
 end
