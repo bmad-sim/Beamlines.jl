@@ -173,13 +173,21 @@ Base.isapprox(a::MetaParams, b::MetaParams) = true
 
 
 @kwdef mutable struct SRWakeParams{T,U} <: AbstractParams
-  sr_longitudinal_wake::T = []
-  sr_longitudinal_wake_dt::U = Float32(0)
+  sr_wake_x::T          = []
+  sr_detuning_wake_x::T = []
+  sr_wake_y::T          = []
+  sr_detuning_wake_y::T = []
+  sr_wake_z::T = []
+  sr_wake_dt::U = Float32(0)
 end
 
 PROPS(::Type{SRWakeParams}) = OrderedDict{String,String}(
-  "sr_longitudinal_wake" => "TODO",
-  "sr_longitudinal_wake_dt" => "TODO",
+  "sr_wake_x" => "TODO",
+  "sr_detuning_wake_x" => "TODO",
+  "sr_wake_y" => "TODO",
+  "sr_detuning_wake_y" => "TODO",
+  "sr_wake_z" => "TODO",
+  "sr_wake_dt" => "TODO",
 )
 
 """
@@ -193,6 +201,10 @@ $(PROPSDOC(SRWakeParams))
 SRWakeParams
 
 function Base.isapprox(a::SRWakeParams, b::SRWakeParams)
-  return a.sr_longitudinal_wake ≈ b.sr_longitudinal_wake &&
-         a.sr_longitudinal_wake_dt ≈ b.sr_longitudinal_wake_dt
+  return a.sr_wake_x ≈ b.sr_wake_x &&
+         a.sr_detuning_wake_x ≈ b.sr_detuning_wake_x &&
+         a.sr_wake_y ≈ b.sr_wake_y &&
+         a.sr_detuning_wake_y ≈ b.sr_detuning_wake_y &&
+         a.sr_wake_z ≈ b.sr_wake_z &&
+         a.sr_wake_dt ≈ b.sr_wake_dt
 end
