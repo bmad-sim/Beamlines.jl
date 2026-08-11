@@ -851,6 +851,8 @@ using ForwardDiff, GTPSA, ReverseDiff
       ele = LineElement(Kn1L = DefExpr(()->1))
       @test ele.Kn2L == 0
       @test one(DefExpr(()->2))() == 1
+      @test abs(DefExpr(()->-L))() == abs(L)
+      @test abs(DefExpr(()->L))() == abs(L)
     end
     ele = LineElement(x1_limit=123,
                       x2_limit=456,
@@ -1577,10 +1579,11 @@ using ForwardDiff, GTPSA, ReverseDiff
     @test (d - e)(ctx) == -5.0
     @test (d * e)(ctx) == -6.0
     @test (d / e)(ctx) == -1.5
+    @test abs(d)(ctx)  == 3.0
     @test sign(d)(ctx) == -1.0
     @test sin(d)(ctx)  == sin(-3.0)
     # Nested/compound expressions too
-    @test (sign(d) + e * 2)(ctx) == 3.0
+    @test (abs(d) + e * 2)(ctx) == 7.0
 
     # A Beamline's stored context must reach parameters built from operators.
     qq = Quadrupole(Kn1=-DefExpr(c -> c.k1), L=0.5)
