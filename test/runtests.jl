@@ -1556,4 +1556,34 @@ using ForwardDiff, GTPSA, ReverseDiff
     @test bl[ele][1].L == 5
     bl.context = c
     @test bl[ele][1].L == 6
+
+    # Operators must forward the Context to the operands, rather than
+    # evaluating them against NULL_CONTEXT.
+    empty!(GLOBAL_CONTEXTS)
+    ctx = Context(a = -3.0, b = 2.0)
+    d = DefExpr(c -> c.a)
+    e = DefExpr(c -> c.b)
+    @test (-d)(ctx)   == 3.0
+    @test (+d)(ctx)   == -3.0
+    @test (d + 1)(ctx) == -2.0
+    @test (1 + d)(ctx) == -2.0
+    @test (d - 1)(ctx) == -4.0
+    @test (1 - d)(ctx) == 4.0
+    @test (d * 2)(ctx) == -6.0
+    @test (2 * d)(ctx) == -6.0
+    @test (d / 2)(ctx) == -1.5
+    @test (d ^ 2)(ctx) == 9.0
+    @test (d + e)(ctx) == -1.0
+    @test (d - e)(ctx) == -5.0
+    @test (d * e)(ctx) == -6.0
+    @test (d / e)(ctx) == -1.5
+    @test sign(d)(ctx) == -1.0
+    @test sin(d)(ctx)  == sin(-3.0)
+    # Nested/compound expressions too
+    @test (sign(d) + e * 2)(ctx) == 3.0
+
+    # A Beamline's stored context must reach parameters built from operators.
+    qq = Quadrupole(Kn1=-DefExpr(c -> c.k1), L=0.5)
+    blq = Beamline([qq], context=Context(k1 = 0.36))
+    @test blq[qq][1].Kn1 ≈ -0.36
 end
