@@ -244,7 +244,7 @@ function Base.show(io::IO, bl::Beamline)
   name = :Inferred
   try 
     species_ref = bl.species_ref
-    name = species_ref.name
+    name = nameof(species_ref)
   catch
   end
   println(io, " species_ref", " = ", name)
@@ -569,7 +569,7 @@ function Base.show(io::IO, ibp::InitialBeamlineParams)
   name = :Inferred
   try 
     species_ref = ibp.species_ref
-    name = species_ref.name
+    name = nameof(species_ref)
   catch
   end
   println(io, rpad(" species_ref", width), " = ", name)
