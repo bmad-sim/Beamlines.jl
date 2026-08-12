@@ -90,11 +90,18 @@ defconvert(::Type{T}, f) where {T} = f::T
 (d::DefExpr{T})(c=NULL_CONTEXT) where {T} = defconvert(T, d.f(c))
 
 # Construct for Function -> DefExpr{FunctionWrapper}
+#
+# The Context-accepting branch is tested FIRST. The operators below build their
+# results as `(c=NULL_CONTEXT)->...`, which is applicable both with and without
+# an argument; taking the 0-argument branch for those would re-wrap them as
+# `(c=NULL_CONTEXT)->f()` and silently discard the Context supplied at call
+# time. Genuine 0-argument lambdas (`()->a`) are not applicable with a Context,
+# so they still take the second branch.
 function DefExpr{T}(f) where {T}
-  if applicable(f)
-    return DefExpr{T}(FunctionWrapper{T,Tuple{Context}}((c=NULL_CONTEXT)->f()))
-  elseif applicable(f, NULL_CONTEXT)
+  if applicable(f, NULL_CONTEXT)
     return DefExpr{T}(FunctionWrapper{T,Tuple{Context}}(f))
+  elseif applicable(f)
+    return DefExpr{T}(FunctionWrapper{T,Tuple{Context}}((c=NULL_CONTEXT)->f()))
   else
     error("Invalid input argument for DefExpr: function must have no arguments or accept a `Beamlines.Context`")
   end
@@ -109,10 +116,10 @@ Base.convert(::Type{D}, a) where {D<:DefExpr} = D(a)
 
 # Now simple constructor for convenience
 function DefExpr(f)
-  if applicable(f)
-    T = Base.promote_op(f)
-  elseif applicable(f, NULL_CONTEXT)
+  if applicable(f, NULL_CONTEXT)
     T = Base.promote_op(f, Context)
+  elseif applicable(f)
+    T = Base.promote_op(f)
   else
     T = Any
   end
@@ -147,9 +154,9 @@ Base.:^(da::DefExpr, db::DefExpr) = DefExpr((c=NULL_CONTEXT)-> da(c) ^ db(c))
 for t = (:sqrt, :exp, :log, :sin, :cos, :tan, :cot, :sinh, :cosh, :tanh, :inv,
   :coth, :asin, :acos, :atan, :acot, :asinh, :acosh, :atanh, :acoth, :sinc, :csc, 
   :csch, :acsc, :acsch, :sec, :sech, :asec, :asech, :conj, :log10, :isnan, :sign,
-  :zero, :one)
+  :abs, :zero, :one)
 @eval begin
-Base.$t(d::DefExpr) = DefExpr((c=NULL_CONTEXT)-> ($t)(d()))
+Base.$t(d::DefExpr) = DefExpr((c=NULL_CONTEXT)-> ($t)(d(c)))
 end
 end
 
