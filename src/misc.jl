@@ -145,6 +145,8 @@ function Base.isapprox(a::FourPotentialParams, b::FourPotentialParams)
   end
 end
 
+#---------------------------------------------------------------------------------------------------
+
 @kwdef mutable struct MetaParams <: AbstractParams
   alias::String = ""
   label::String = ""
@@ -170,3 +172,30 @@ MetaParams
 
 # isapprox ignores MetaParams
 Base.isapprox(a::MetaParams, b::MetaParams) = true
+
+#---------------------------------------------------------------------------------------------------
+
+
+
+@kwdef mutable struct VaultParams <: AbstractParams
+  vault::Dict{String,Any} = Dict{String,Any}()
+end
+
+PROPS(::Type{VaultParams}) = OrderedDict{String,String}(
+  "vault" => "Dictionary for storing state information about an element",
+)
+
+"""
+    mutable struct VaultParams <: AbstractParams
+
+Storage area for saving state information about an element.
+Examples:
+- Storing the existing RF voltage when turning RF off. 
+  To turn the RF back on, the value in the vault can be used.
+- Storing different tracking method configurations so switching between different ways
+  of tracking can be easily done.
+- Storing different lattice configurations. For example, "colliding beam" conditions.
+
+## Properties
+$(PROPSDOC(MetaParams))
+""" VaultParams
