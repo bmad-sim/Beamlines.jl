@@ -84,6 +84,8 @@ const PROPERTIES_MAP = Dict{Symbol,Type{<:AbstractParams}}(
   :alias => MetaParams,
   :label => MetaParams,
   :description => MetaParams,
+
+  :vault => VaultParams,
 )
 
 const PARAMS_MAP = Dict{Symbol,Type{<:AbstractParams}}(
@@ -99,4 +101,5 @@ const PARAMS_MAP = Dict{Symbol,Type{<:AbstractParams}}(
   :FourPotentialParams => FourPotentialParams,
   :MetaParams => MetaParams,
   :InitialBeamlineParams => InitialBeamlineParams,
+  :VaultParams => VaultParams,
 )
