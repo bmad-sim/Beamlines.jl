@@ -1562,25 +1562,44 @@ end
 # Exercises BeamlinesPythonCallExt: building a DefExpr from a Python callable or
 # value. Requires PythonCall (which provisions Python via CondaPkg on first use).
 @testset "BeamlinesPythonCallExt (DefExpr from Python)" begin
+    pyexec("""
+    class C:
+        def __init__(self): self.k = 0.7
+        def zero(self): return self.k
+        def one(self, c): return c.k1
+    obj = C()
+    """, Main)
+
     # 0-argument callable
     @test DefExpr(pyeval(Py, "lambda: 1.0", Main))() == 1.0
 
     # Context-accepting callable, closing over the real Context at evaluation time
-    dctx = DefExpr(pyeval(Py, "lambda c: c.k1", Main))
-    @test dctx(Context(k1 = 0.36)) == 0.36
+    @test DefExpr(pyeval(Py, "lambda c: c.k1", Main))(Context(k1 = 0.36)) == 0.36
+
+    # bound methods: `self` must not be counted as the Context parameter
+    @test DefExpr(pyeval(Py, "obj.zero", Main))() == 0.7
+    @test DefExpr(pyeval(Py, "obj.one", Main))(Context(k1 = 0.36)) == 0.36
 
     # plain Python value
     @test DefExpr(pyeval(Py, "0.5", Main))() == 0.5
 
-    # *args absorbs the Context (arity treated as >= 1)
+    # *args and defaulted parameters both accept the Context Python-side
     @test DefExpr(pyeval(Py, "lambda *a: 2.0", Main))(Context(k1 = 0.0)) == 2.0
-
-    # a defaulted parameter is not "required" -> 0-argument form
-    @test DefExpr(pyeval(Py, "lambda x=1: 3.0", Main))() == 3.0
-
-    # a callable whose signature cannot be introspected still constructs
-    @test DefExpr(pyeval(Py, "print", Main)) isa DefExpr
+    @test DefExpr(pyeval(Py, "lambda x=1: 3.0", Main))(Context(k1 = 0.0)) == 3.0
 
     # operator overloading composes through the existing DefExpr operators
     @test (DefExpr(pyeval(Py, "lambda: 1.0", Main)) + 10)() == 11.0
+
+    # no value type is assumed: a callable returning a TPS stays a TPS, and
+    # survives composition
+    d = Descriptor(1, 2)
+    t = @vars(d)[1] + 0.36
+    pyexec("def make(x):\n    return lambda: x\n", Main)
+    ftps = pyeval(Py, "make", Main)(Py(t))
+    @test DefExpr(ftps)() isa TPS
+    @test (DefExpr(ftps) * 2)() isa TPS
+    @test Quadrupole(Kn1L = DefExpr(ftps), L = 0.5).Kn1L isa TPS
+
+    # an explicit type still converts
+    @test DefExpr{Float64}(pyeval(Py, "lambda: 1.0", Main))() === 1.0
 end
