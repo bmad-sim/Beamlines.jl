@@ -35,6 +35,10 @@ function scalarize!(bl::Beamline)
     for ele in bl.line
         scalarize!(ele)
     end
+    dict = getfield(bl.context, :d)
+    for (k,v) in dict
+        dict[k] = scalarize(v)
+    end
     return bl 
 end
 
