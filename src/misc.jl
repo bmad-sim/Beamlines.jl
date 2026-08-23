@@ -86,7 +86,7 @@ end
 """
     mutable struct FourPotentialParams{F<:Function, P} <: AbstractParams
 
-xDefines the electromagnetic four-potential of an element via the `four_potential` function.
+Defines the electromagnetic four-potential of an element via the `four_potential` function.
 
 ## Fields
 
