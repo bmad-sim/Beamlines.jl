@@ -189,6 +189,7 @@ end
 function Base.isapprox(a::BMultipoleParams, b::BMultipoleParams)
   return all(a.n          .≈ b.n) &&
          all(a.s          .≈ b.s) &&
+         all(a.tilt       .≈ b.tilt) &&
          all(a.order      .≈ b.order) &&
          all(a.normalized .≈ b.normalized) &&
          all(a.integrated .≈ b.integrated)

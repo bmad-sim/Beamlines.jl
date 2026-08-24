@@ -112,14 +112,33 @@ using ForwardDiff, GTPSA, ReverseDiff
     @test ele.BMultipoleParams[2] == BMultipole(0.36,0.,0.,2,true,false)
     @test ele.Kn2 == 0 # Default value
     @test_throws ErrorException ele.BMultipoleParams[3]
+
+    @test !isactive(ele.EMultipoleParams)
+    @test ele.En1 == 0 # Default value
+    ele.En1 = 0.36
+    @test isactive(ele.EMultipoleParams)
+    @test ele.En1 == 0.36
+    @test ele.En1L == 0.36*ele.L
+    @test ele.EMultipoleParams.n[1] == 0.36
+    @test !ele.EMultipoleParams.integrated[1]
+    @test ele.BMultipoleParams.order[1] == 2
+    @test ele.EMultipoleParams[2] == EMultipole(0.36,0.,0.,2,false)
+    @test ele.En2 == 0 # Default value
+    @test_throws ErrorException ele.EMultipoleParams[3]
     
     ele.L = 2.0
     @test ele.Kn1 == 0.36
     @test ele.Kn1L == 2.0*0.36
 
+    @test ele.En1 == 0.36
+    @test ele.En1L == 2.0*0.36
+
     ele.L = 2.0*im
     @test ele.Kn1 == 0.36
     @test ele.Kn1L == 2.0*im*0.36
+
+    @test ele.En1 == 0.36
+    @test ele.En1L == 2.0*im*0.36
 
     ele.Bn2L = 0.50
     @test ele.Bn2L == 0.50
@@ -128,6 +147,8 @@ using ForwardDiff, GTPSA, ReverseDiff
     @test ele.BMultipoleParams.integrated[2]
     @test !ele.BMultipoleParams.normalized[2]
     @test ele.BMultipoleParams[3] == BMultipole(0.50,0.,0.,3,false,true)
+
+    ele.En2L = 0.50
     
     # Test iteration over BMultipoles
     i = 1
@@ -141,6 +162,18 @@ using ForwardDiff, GTPSA, ReverseDiff
     end
     @test i == 3
 
+    # Now EMultipoles
+    i = 1
+    for bm in ele.EMultipoleParams
+      if i == 1
+        @test bm == EMultipole(0.36,0.,0.,2,false)
+      else
+        @test bm == EMultipole(0.50,0.,0.,3,true)
+      end
+       i += 1
+    end
+    @test i == 3
+
     @test eltype(ele.BMultipoleParams) == Float64
     ele.Bn2L = 1.2*ele.L
     @test eltype(ele.BMultipoleParams) == ComplexF64 # promotion because length is complex
@@ -148,6 +181,12 @@ using ForwardDiff, GTPSA, ReverseDiff
     @test ele.Bn2L == 1.2*ele.L
     @test ele.Kn1 == 0.36
     @test ele.Kn1L == 2.0*im*0.36
+
+    @test eltype(ele.EMultipoleParams) == Float64
+    ele.En2L = 1.2*ele.L
+    @test eltype(ele.EMultipoleParams) == ComplexF64
+    @test ele.En2 == 1.2
+    @test ele.En2L == 1.2*ele.L
 
     BM_indep = ele.BM_independent
     @test (; order=3, normalized=false, integrated=true) in BM_indep
@@ -161,12 +200,29 @@ using ForwardDiff, GTPSA, ReverseDiff
     @test ele.Bn2 == 1.2
     @test ele.Kn1 == 0.36
 
+    EM_indep = ele.EM_independent
+    @test (; order=3, integrated=true) in EM_indep
+    @test (; order=2, integrated=false) in EM_indep
+
+    ele.EM_independent = [(; order=3, integrated=false),
+                          (; order=2, integrated=true)]
+    EM_indep2 = ele.EM_independent
+    @test (; order=3, integrated=false) in EM_indep2
+    @test (; order=2, integrated=true) in EM_indep2
+    @test ele.En2 == 1.2
+
     ele.BMultipoleParams = nothing
     ele.L = 5.0f0
     @test !isactive(ele.BMultipoleParams)
     ele.tilt0 = 1.0f0
     @test ele.BMultipoleParams.integrated[1]
     @test ele.BMultipoleParams.normalized[1]
+
+    ele.EMultipoleParams = nothing
+    ele.L = 5.0f0
+    @test !isactive(ele.EMultipoleParams)
+    ele.etilt0 = 1.0f0
+    @test ele.EMultipoleParams.integrated[1]
 
     b1 = SBend(L=1.0f0, g=0.2f0)
     @test b1.Kn0 == 0.2f0
@@ -254,6 +310,11 @@ using ForwardDiff, GTPSA, ReverseDiff
     a.Bn1L = 0.5
     @test a.Bn1L ≈ 0.5
 
+    a.En1 = 0.5
+    @test a.En1 ≈ 0.5
+    a.En1L = 0.5
+    @test a.En1L ≈ 0.5
+
     a.Kn2 = 1.2
     @test a.Kn2 ≈ 1.2
     a.Kn2L = 1.2
@@ -262,6 +323,11 @@ using ForwardDiff, GTPSA, ReverseDiff
     @test a.Bn2L ≈ 1.2
     a.Bn2 = 1.2
     @test a.Bn2 ≈ 1.2
+
+    a.En2L = 1.2
+    @test a.En2L ≈ 1.2
+    a.En2 = 1.2
+    @test a.En2 ≈ 1.2
 
     a.Bn3L = 5.6
     @test a.Bn3L ≈ 5.6
@@ -272,6 +338,11 @@ using ForwardDiff, GTPSA, ReverseDiff
     a.Kn3 = 5.6
     @test a.Kn3 ≈ 5.6
 
+    a.En3L = 5.6
+    @test a.En3L ≈ 5.6
+    a.En3 = 5.6
+    @test a.En3 ≈ 5.6
+
     a.Kn4L = 7.8
     @test a.Kn4L ≈ 7.8
     a.Kn4 = 7.8
@@ -281,11 +352,22 @@ using ForwardDiff, GTPSA, ReverseDiff
     a.Ks4 = 7.8
     @test a.Ks4 ≈ 7.8
 
+    a.En4L = 7.8
+    @test a.En4L ≈ 7.8
+    a.En4 = 7.8
+    @test a.En4 ≈ 7.8
+
     ele.BMultipoleParams = nothing
     ele.Bsol = 1.0
     ele.Bn1L = 2.0
     ele.Kn2 = 3.0
     ele.Kn3L = 4.0
+
+    ele.EMultipoleParams = nothing
+    ele.En0 = 1.0
+    ele.En1L = 2.0
+    ele.En2 = 3.0
+    ele.En3L = 4.0
 
     BM_indep = ele.BM_independent
     @test length(BM_indep) == 4
@@ -297,6 +379,17 @@ using ForwardDiff, GTPSA, ReverseDiff
     @test ele.Bn1L == 2.0
     @test ele.Kn2 == 3.0
     @test ele.Kn3L == 4.0
+
+    EM_indep = ele.EM_independent
+    @test length(EM_indep) == 4
+    @test (; order=1, integrated=false) in EM_indep
+    @test (; order=2, integrated=true) in EM_indep
+    @test (; order=3, integrated=false) in EM_indep
+    @test (; order=4, integrated=true) in EM_indep
+    @test ele.En0 == 1.0
+    @test ele.En1L == 2.0
+    @test ele.En2 == 3.0
+    @test ele.En3L == 4.0
 
     ele.BM_independent = [(; order=0, normalized=true, integrated=true),
                           (; order=2, normalized=true, integrated=false),
@@ -311,11 +404,30 @@ using ForwardDiff, GTPSA, ReverseDiff
     @test (; order=4, normalized=false, integrated=false) in BM_indep2
     @test (; order=5, normalized=true, integrated=false) in BM_indep2
 
+    ele.EM_independent = [(; order=1, integrated=true),
+                          (; order=2, integrated=false),
+                          (; order=3, integrated=true),
+                          (; order=4, integrated=false),
+                          (; order=5, integrated=false)]
+    EM_indep2 = ele.EM_independent
+    @test length(BM_indep2) == 5
+    @test (; order=1, integrated=true) in EM_indep2
+    @test (; order=2, integrated=false) in EM_indep2
+    @test (; order=3, integrated=true) in EM_indep2
+    @test (; order=4, integrated=false) in EM_indep2
+    @test (; order=5, integrated=false) in EM_indep2
+
     @test ele.Bsol == 1.0
     @test ele.Bn1L == 2.0
     @test ele.Kn2 == 3.0
     @test ele.Kn3L == 4.0
     @test ele.Kn4 == 0.0
+
+    @test ele.En0 == 1.0
+    @test ele.En1L == 2.0
+    @test ele.En2 == 3.0
+    @test ele.En3L == 4.0
+    @test ele.En4 == 0.0
 
     ele.Kn4 = 5.0
     ele.field_master = true
@@ -328,11 +440,15 @@ using ForwardDiff, GTPSA, ReverseDiff
     @test (; order=4, normalized=false, integrated=false) in BM_indep3
     @test (; order=5, normalized=false, integrated=false) in BM_indep3
 
+    ele.En4 = 5.0
+
     @test ele.Bsol == 1.0
     @test ele.Bn1L == 2.0
     @test ele.Kn2 == 3.0
     @test ele.Kn3L == 4.0
     @test ele.Kn4 == 5.0
+
+    @test ele.En4 == 5.0
 
     ele.field_master = false   
     @test ele.field_master == false
@@ -362,6 +478,18 @@ using ForwardDiff, GTPSA, ReverseDiff
     @test ele.Kn3L == 4.0
     @test ele.Kn4 == 5.0
 
+    ele.EM_independent = [(; order=1, integrated=true),
+                          (; order=2, integrated=false),
+                          (; order=3, integrated=true),
+                          (; order=4, integrated=false),
+                          (; order=5, integrated=false)]
+    @test length(ele.BM_independent) == 5
+    @test ele.En0 == 1.0
+    @test ele.En1L == 2.0
+    @test ele.En2 == 3.0
+    @test ele.En3L == 4.0
+    @test ele.En4 == 5.0
+
     ele.integrated_master = true
     @test ele.integrated_master == true
     BM_indep5 = ele.BM_independent
@@ -377,6 +505,21 @@ using ForwardDiff, GTPSA, ReverseDiff
     @test ele.Kn3L == 4.0
     @test ele.Kn4 == 5.0
 
+    ele.e_integrated_master = true
+    @test ele.e_integrated_master == true
+    EM_indep5 = ele.EM_independent
+    @test length(EM_indep5) == 5
+    @test (; order=1, integrated=true) in EM_indep5
+    @test (; order=2, integrated=true) in EM_indep5
+    @test (; order=3, integrated=true) in EM_indep5
+    @test (; order=4, integrated=true) in EM_indep5
+    @test (; order=5, integrated=true) in EM_indep5
+    @test ele.En0 == 1.0
+    @test ele.En1L == 2.0
+    @test ele.En2 == 3.0
+    @test ele.En3L == 4.0
+    @test ele.En4 == 5.0
+
     ele.integrated_master = false
     @test ele.integrated_master == false
     BM_indep6 = ele.BM_independent
@@ -391,6 +534,21 @@ using ForwardDiff, GTPSA, ReverseDiff
     @test ele.Kn2 == 3.0
     @test ele.Kn3L == 4.0
     @test ele.Kn4 == 5.0
+
+    ele.e_integrated_master = false
+    @test ele.e_integrated_master == false
+    EM_indep6 = ele.EM_independent
+    @test length(EM_indep6) == 5
+    @test (; order=1, integrated=false) in EM_indep6
+    @test (; order=2, integrated=false) in EM_indep6
+    @test (; order=3, integrated=false) in EM_indep6
+    @test (; order=4, integrated=false) in EM_indep6
+    @test (; order=5, integrated=false) in EM_indep6
+    @test ele.En0 == 1.0
+    @test ele.En1L == 2.0
+    @test ele.En2 == 3.0
+    @test ele.En3L == 4.0
+    @test ele.En4 == 5.0
 
 
     #=
