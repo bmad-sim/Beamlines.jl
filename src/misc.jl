@@ -91,14 +91,12 @@ Defines the electromagnetic four-potential of an element via the `four_potential
 ## Fields
 
 - `four_potential(x, y, s, t, p=nothing)`  -- Function of type `F` that returns a two component
-  array `(C, D)` with both `C` and `D` being themselves arrays:\\
+  tuple `(C, D)` with both `C` and `D` being themselves tuples:\\
   `\u2800 C = (ϕ, Ax, Ay, As)`\\
   `\u2800 D = (∂ϕ/∂x,  ∂ϕ/∂y,  ∂ϕ/∂s, ∂ϕ/∂t,` \\
   `\u2800      ∂Ax/∂x, ∂Ax/∂y, ∂Ax/∂s, ∂Ax/∂t,` \\
   `\u2800      ∂Ay/∂x, ∂Ay/∂y, ∂Ay/∂s, ∂Ay/∂t,` \\
   `\u2800      ∂As/∂x, ∂As/∂y, ∂As/∂s, ∂As/∂t)` \\
-  If `D` is `nothing`, the derivatives are computed by automatic
-  differentiation during tracking, which is probably slower.
 
 - `four_potential_params`  -- Default is `nothing`. Parameters of type `P` passed to the four_potential function.
 - `four_potential_normalized`  -- Set to `true` means the potential/derivatives are
