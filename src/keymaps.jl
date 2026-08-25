@@ -23,6 +23,29 @@ const PROPERTIES_MAP = Dict{Symbol,Type{<:AbstractParams}}(
   :tilt20 => BMultipoleParams,
   :tilt21 => BMultipoleParams,
 
+  :etilt0 =>  EMultipoleParams,
+  :etilt1 =>  EMultipoleParams,
+  :etilt2 =>  EMultipoleParams,
+  :etilt3 =>  EMultipoleParams,
+  :etilt4 =>  EMultipoleParams,
+  :etilt5 =>  EMultipoleParams,
+  :etilt6 =>  EMultipoleParams,
+  :etilt7 =>  EMultipoleParams,
+  :etilt8 =>  EMultipoleParams,
+  :etilt9 =>  EMultipoleParams,
+  :etilt10 => EMultipoleParams,
+  :etilt11 => EMultipoleParams,
+  :etilt12 => EMultipoleParams,
+  :etilt13 => EMultipoleParams,
+  :etilt14 => EMultipoleParams,
+  :etilt15 => EMultipoleParams,
+  :etilt16 => EMultipoleParams,
+  :etilt17 => EMultipoleParams,
+  :etilt18 => EMultipoleParams,
+  :etilt19 => EMultipoleParams,
+  :etilt20 => EMultipoleParams,
+  :etilt21 => EMultipoleParams,
+
   :L => UniversalParams,
   :tracking_method => UniversalParams,
   :kind => UniversalParams,
@@ -88,6 +111,7 @@ const PROPERTIES_MAP = Dict{Symbol,Type{<:AbstractParams}}(
 
 const PARAMS_MAP = Dict{Symbol,Type{<:AbstractParams}}(
   :BMultipoleParams => BMultipoleParams,
+  :EMultipoleParams => EMultipoleParams,
   :UniversalParams => UniversalParams,
   :BeamlineParams => BeamlineParams,
   :BendParams => BendParams,
@@ -98,5 +122,5 @@ const PARAMS_MAP = Dict{Symbol,Type{<:AbstractParams}}(
   :MapParams => MapParams,
   :FourPotentialParams => FourPotentialParams,
   :MetaParams => MetaParams,
-  :InitialBeamlineParams => InitialBeamlineParams,
+  :InitialBeamlineParams => InitialBeamlineParams
 )

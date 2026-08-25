@@ -193,6 +193,94 @@ function _set_BM_strength!(ele, context::Context, b::BMultipoleParams, key, valu
   return b
 end
 
+function get_EM_strength(ele::LineElement, key::Symbol, context)
+  b = deval(ele.EMultipoleParams, context)
+  if isnothing(b)
+    return 0f0
+  end
+  return @noinline _get_EM_strength(ele, b, key, context)
+end
+
+function _get_EM_strength(ele, b::EMultipoleParams, key, context)
+  normal, order, integrated = EMULTIPOLE_STRENGTH_MAP[key]
+  # Default
+  if !(order in b.order)
+    return zero(first(b.n))
+  end
+  i = o2i(b,order)
+  strength = normal ? b.n[i] : b.s[i]
+  stored_integrated = b.integrated[i]
+  if stored_integrated == integrated
+    return strength
+  else
+    L = _getproperty(ele, :L, context)
+    if stored_integrated == false 
+      # user asking for integrated strength of non-integrated EMultipole
+      return strength*L
+    else
+      # user asking for non-integrated strength of integrated EMultipole
+      if L == 0
+        error("Unable to get $key of LineElement: Integrated multipole is stored, but the element length L = 0")
+      end
+      return strength/L
+    end
+  end
+end
+
+function _promote_em(b1::EMultipoleParams{S}, ::Type{T}) where {S,T}
+  SNEW = promote_type(S, T)
+  if S == SNEW
+    return b1
+  else
+    return EMultipoleParams{SNEW}(b1)
+  end
+end
+
+function set_EM_strength!(ele::LineElement, key::Symbol, context::Context, value)
+  b1 = ele.EMultipoleParams
+  if isnothing(b1)
+    b1 = EMultipoleParams()
+  end
+  b = @noinline _set_EM_strength!(ele, context, b1, key, value)
+  if !(b === b1)
+    ele.EMultipoleParams = b
+  end
+  return value
+end
+
+function _set_EM_strength!(ele, context::Context, b::EMultipoleParams, key, value)
+  normal, order, integrated = EMULTIPOLE_STRENGTH_MAP[key]
+
+  if !(order in b.order)
+    b = addord(b, order, integrated)
+  end
+
+  i = o2i(b, order)
+  if b.integrated[i] == integrated
+      # EASY!
+      b = _promote_em(b, typeof(value))
+      bm = normal ? b.n : b.s
+      bm[i] = value
+  end
+
+  # Switching integrated status
+  if b.integrated[i] != integrated
+    L = _getproperty(ele, :L, context)
+    old_other_val = normal ? b.s[i] : b.n[i]
+    new_other_val = old_other_val*(integrated ? L : 1/L)
+    b = _promote_em(b, promote_type(typeof(value),typeof(new_other_val)))
+    @reset b.integrated[i] = integrated
+    if normal
+      b.n[i] = value
+      b.s[i] = new_other_val
+    else
+      b.s[i] = value
+      b.n[i] = new_other_val
+    end
+  end
+  return b
+end
+
 get_bend_angle(::LineElement, ::Symbol, ::Context) = error("Property `angle` is write-only, and sets both `g_ref` and `Kn0` together")
 
 function set_bend_angle!(ele::LineElement, ::Symbol, context::Context, value)
@@ -363,6 +451,89 @@ function _get_integrated_master(b)
   check = first(b.integrated)
   if !all(t->t==check, b.integrated)
     error("Unable to get integrated_master: BMultipoleParams contains at least one BMultipole with the integrated strength as the independent variable and at least one other BMultipole with the non-integrated strength as the independent variable")
+  end
+  return check
+end
+
+function get_EM_independent(ele::LineElement, ::Symbol, ::Context)
+  b = ele.EMultipoleParams
+  return @noinline _get_EM_independent(b)
+end
+
+function _get_EM_independent(b)
+  if isnothing(b)
+    return SVector{0,@NamedTuple{order::Int, integrated::Bool}}[]
+  end
+  v = StaticArrays.sacollect(SVector{length(b),@NamedTuple{order::Int, integrated::Bool}}, begin 
+    (; order=b.order[i], integrated=b.integrated[i])
+  end for i in 1:length(b))
+  return v
+end
+
+function set_EM_independent!(ele::LineElement, ::Symbol, context::Context, value)
+  eltype(value) == @NamedTuple{order::Int, integrated::Bool}  || error("Please provide a list/array/tuple with eltype @NamedTuple{order::Int, integrated::Bool} to specify the multipole properties you want to set as independent variables.")
+  b = ele.EMultipoleParams
+  if isnothing(b)
+    b = EMultipoleParams()
+    ele.EMultipoleParams = b
+  end
+  for bm in value
+    if bm.order in b.order
+      order = bm.order
+      integrated = bm.integrated
+      i = o2i(b, bm.order)
+      oldn = b.n[i]
+      olds = b.s[i] 
+      old_integrated = b.integrated[i]
+      n = oldn
+      s = olds
+
+      if old_integrated != integrated
+        L = _getproperty(ele, :L, context)
+        if old_integrated == true
+          L != 0 || error("Unable to set change multipole order $order to have independent variable $sym: element length L = 0")
+          n /= L
+          s /= L
+        else
+          n *= L
+          s *= L
+        end
+      end
+      T = promote_type(typeof(n),typeof(oldn))
+      if T != typeof(oldn)
+        b = EMultipoleParams{T}(b)
+        ele.EMultipoleParams = b
+      end
+      b.n[i] = n
+      b.s[i] = s
+      @reset b.integrated[i] = integrated
+      ele.EMultipoleParams = b
+    else # just add it in , easy
+      b = addord(b, bm.order, bm.integrated)
+      ele.EMultipoleParams = b
+    end
+  end
+  return value
+end
+
+function set_e_integrated_master!(ele::LineElement, ::Symbol, context::Context, value::Bool)
+  EM_independent = _get_EM_independent(ele.EMultipoleParams)
+  c = map(t->(; order=t.order, integrated=value), EM_independent)
+  return set_EM_independent!(ele, :nothing, context, c)
+end
+
+function get_e_integrated_master(ele::LineElement, ::Symbol, ::Context)
+  b = ele.EMultipoleParams
+  return @noinline _get_e_integrated_master(b)
+end
+
+function _get_e_integrated_master(b)
+  if isnothing(b)
+    error("Unable to get integrated_master: LineElement does not contain EMultipoleParams")
+  end
+  check = first(b.integrated)
+  if !all(t->t==check, b.integrated)
+    error("Unable to get integrated_master: EMultipoleParams contains at least one EMultipole with the integrated strength as the independent variable and at least one other EMultipole with the non-integrated strength as the independent variable")
   end
   return check
 end
@@ -659,13 +830,16 @@ end
 
 const VIRTUAL_GETTER_MAP = Dict{Symbol,Function}(
   [key => get_BM_strength for (key, value) in BMULTIPOLE_STRENGTH_MAP]...,
+  [key => get_EM_strength for (key, value) in EMULTIPOLE_STRENGTH_MAP]...,
 
   :angle => get_bend_angle,
   :g => get_bend_g,
 
   :BM_independent => get_BM_independent,
+  :EM_independent => get_EM_independent,
   :field_master => get_field_master,
   :integrated_master => get_integrated_master,
+  :e_integrated_master => get_e_integrated_master,
 
   :rf_frequency => get_cavity_rate,
   :harmon => get_cavity_rate,
@@ -683,13 +857,16 @@ const VIRTUAL_GETTER_MAP = Dict{Symbol,Function}(
 
 const VIRTUAL_SETTER_MAP = Dict{Symbol,Function}(
   [key => set_BM_strength! for (key, value) in BMULTIPOLE_STRENGTH_MAP]...,
+  [key => set_EM_strength! for (key, value) in EMULTIPOLE_STRENGTH_MAP]...,
 
   :angle => set_bend_angle!,
   :g => set_bend_g!,
 
   :BM_independent => set_BM_independent!,
+  :EM_independent => set_EM_independent!,
   :field_master => set_field_master!,
   :integrated_master => set_integrated_master!,
+  :e_integrated_master => set_e_integrated_master!,
 
   :rf_frequency => set_cavity_rate!,
   :harmon => set_cavity_rate!,

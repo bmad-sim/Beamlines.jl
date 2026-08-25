@@ -25,6 +25,11 @@ BeamlineParams
 BendParams  
 ```
 
+## EMultipoleParams 
+```@docs; canonical=false
+EMultipoleParams 
+```
+
 ## FourPotentialParams 
 ```@docs; canonical=false
 FourPotentialParams 
