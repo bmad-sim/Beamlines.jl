@@ -20,7 +20,7 @@ end
 
 PROPS(::Type{EMultipoleParams}) = OrderedDict{String,String}(
   "EnX"    => "Order X normal strength in [V/m^(X+1)] (nonintegrated)",
-  "EsX"    => "Order X skew strength   in [V/m^(X+1()] (nonintegrated)",
+  "EsX"    => "Order X skew strength   in [V/m^(X+1)] (nonintegrated)",
   "EnXL"   => "Order X normal strength in [V/m^X] (integrated)",
   "EsXL"   => "Order X skew strength in [V/m^X] (integrated)",
   "etiltX" => "Tilt to only order X multipole",
