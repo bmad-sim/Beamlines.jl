@@ -22,12 +22,12 @@ end
 PROPS(::Type{BMultipoleParams}) = OrderedDict{String,String}(
   "KnX"  => "Order X normal strength in [1/m^(X+1)] (normalized, nonintegrated)",
   "KsX"  => "Order X skew strength   in [1/m^(X+1)] (normalized, nonintegrated)",
-  "BnX"  => "Order X normal strength in [T/m^(X+1)] (unnormalized, nonintegrated)",
-  "BsX"  => "Order X skew strength   in [T/m^(X+1)] (unnormalized, nonintegrated)",
+  "BnX"  => "Order X normal strength in [T/m^X] (unnormalized, nonintegrated)",
+  "BsX"  => "Order X skew strength   in [T/m^X] (unnormalized, nonintegrated)",
   "KnXL" => "Order X normal strength in [1/m^X] (normalized, integrated)",
   "KsXL" => "Order X skew strength in [1/m^X] (normalized, integrated)",
-  "BnXL" => "Order X normal strength in [T/m^X] (unnormalized, integrated)",
-  "BsXL" => "Order X skew strength in [T/m^X] (unnormalized, integrated)",
+  "BnXL" => "Order X normal strength in [T/m^(X-1)] (unnormalized, integrated)",
+  "BsXL" => "Order X skew strength in [T/m^(X-1)] (unnormalized, integrated)",
   "tiltX" => "Tilt to only order X multipole",
 )
 
