@@ -126,6 +126,27 @@ function DefExpr(f)
   return DefExpr{T}(f)
 end
 
+# A DefExpr wraps a FunctionWrapper, whose default display is a wall of raw pointers
+# that says nothing about the expression. What is actually interesting about a deferred
+# expression is what it evaluates to right now, so show that instead. Evaluating during
+# display is consistent with the rest of the package, where simply getting a parameter
+# devals it; deferred expressions are expected to be cheap and free of side effects.
+function Base.show(io::IO, d::DefExpr{T}) where {T}
+  str = try
+    str = repr(d(), context=IOContext(io, :compact => true, :limit => true))
+    # Collapse to a single line so a DefExpr nests cleanly inside the display of
+    # whatever holds it (a Context listing, a parameter group, a log message).
+    nl = findfirst('\n', str)
+    isnothing(nl) ? str : rstrip(str[1:prevind(str, nl)]) * "\u2026"
+  catch
+    # A deferred expression is allowed to reference variables that are not defined
+    # yet -- that is the point of deferring it -- so display must not fail when one
+    # cannot be evaluated.
+    "#undef"
+  end
+  print(io, "DefExpr{", T, "}(\u2192 ", str, ")")
+end
+
 deval(d::DefExpr, c::Context=NULL_CONTEXT) = d(c)
 deval(d, c=NULL_CONTEXT) = d
 

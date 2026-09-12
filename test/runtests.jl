@@ -1747,4 +1747,39 @@ using ForwardDiff, GTPSA, ReverseDiff
     qq = Quadrupole(Kn1=-DefExpr(c -> c.k1), L=0.5)
     blq = Beamline([qq], context=Context(k1 = 0.36))
     @test blq[qq][1].Kn1 ≈ -0.36
+
+    # Showing a DefExpr must report the value it currently evaluates to, rather
+    # than the raw FunctionWrapper pointers.
+    empty!(GLOBAL_CONTEXTS)
+    dshow = 0.36
+    ds = DefExpr(()->dshow)
+    @test repr(ds) == "$(typeof(ds))(\u2192 0.36)"
+    dshow = 0.7
+    @test repr(ds) == "$(typeof(ds))(\u2192 0.7)"
+    # Operators build new DefExprs; those show their value too.
+    @test repr(-ds + 2) == "$(typeof(-ds + 2))(\u2192 1.3)"
+    # The declared return type is part of the display.
+    @test repr(DefExpr{Float64}(0.5)) == "DefExpr{Float64}(\u2192 0.5)"
+
+    # A DefExpr that cannot be evaluated right now must still display, since
+    # referring to not-yet-defined variables is the point of deferring.
+    dctx = DefExpr(c -> c.om_om1^2)
+    @test repr(dctx) == "$(typeof(dctx))(\u2192 #undef)"
+    @test endswith(repr(DefExpr(()->error("boom"))), "(\u2192 #undef)")
+    # Once the variable is reachable, the value shows up.
+    push!(GLOBAL_CONTEXTS, Context(om_om1 = 3.0))
+    @test repr(dctx) == "$(typeof(dctx))(\u2192 9.0)"
+    empty!(GLOBAL_CONTEXTS)
+
+    # The display stays on one line so a DefExpr nests inside other shows.
+    for d in (ds, dctx, -ds + 2, DefExpr(()->[1.0 2.0; 3.0 4.0]),
+              DefExpr(()->error("boom")), DefExpr(()->"hi"))
+      @test !occursin("\n", repr(d))
+    end
+
+    # Parameter groups holding DefExprs become readable as a result.
+    qshow = Quadrupole(Kn1L=DefExpr(()->dshow), L=0.5)
+    qstr = repr("text/plain", qshow.BMultipoleParams)
+    @test occursin("Kn1L", qstr) && occursin("\u2192 0.7", qstr)
+    @test !occursin("Ptr{Nothing}", qstr)
 end
