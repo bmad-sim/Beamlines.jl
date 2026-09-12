@@ -1,9 +1,43 @@
 abstract type _AbstractBeamline end # Only subtype is Beamline
+abstract type _AbstractBranch end   # Only subtype is Branch
 
-struct _Branch{T<:_AbstractBeamline}
-  beamlines::ReadOnlyVector{T,Vector{T}}
+#---------------------------------------------------------------------------------------------------
+
+struct _Lattice{B<:_AbstractBranch}
+  branches::ReadOnlyVector{B,Vector{B}}
+  function _Lattice{B}(branches::Vector{B}) where {B<:_AbstractBranch}
+    lattice = new(ReadOnlyVector(branches))
+    for i in eachindex(branches)
+      br = branches[i]
+      if getfield(br, :lattice_index) != -1
+        error("Branch $i is already in another Lattice!")
+      end
+      setfield!(br, :lattice, lattice)
+      setfield!(br, :lattice_index, i)
+    end
+    return lattice
+  end
+end
+
+#---------------------------------------------------------------------------------------------------
+
+"""
+    mutable struct _Branch{T<:_AbstractBeamline} <: _AbstractBranch
+
+`_Branch` exists to break a mutual type recursion since
+`Beamline` has a reference to a `Branch`, and `Branch` needs a vector of `Beamline`s. 
+Julia has no forward declarations, so to get around this, `_Branch` is used.
+
+Why not just use `Branch{T}` and skip defining `_Branch`?
+This could be done but in this case `Branch` would become a `UnionAll` rather than a concrete type
+leading to type instability.
+"""
+mutable struct _Branch{T<:_AbstractBeamline} <: _AbstractBranch
+  const beamlines::ReadOnlyVector{T,Vector{T}}
+  lattice::_Lattice{_Branch{T}} # This should be HARD to change, not allowed easily
+  lattice_index::Int            # This should be HARD to change, not allowed easily
   function _Branch{T}(beamlines::Vector{T}) where {T<:_AbstractBeamline}
-    branch = new(ReadOnlyVector(beamlines))
+    branch = new(ReadOnlyVector(beamlines), NULL_LATTICE, -1)
     for i in eachindex(beamlines)
       bl = beamlines[i]
       if getfield(bl, :branch_index) != -1
@@ -15,6 +49,8 @@ struct _Branch{T<:_AbstractBeamline}
     return branch
   end
 end
+
+#---------------------------------------------------------------------------------------------------
 
 @enumx RefMeaning p_over_q_ref E_ref pc_ref dp_over_q_ref dE_ref dpc_ref
 
@@ -49,6 +85,8 @@ end
     return RefMeaning.dpc_ref
   end
 end
+
+#---------------------------------------------------------------------------------------------------
 
 mutable struct Beamline <: _AbstractBeamline
   const line::ReadOnlyVector{LineElement, Vector{LineElement}}
@@ -301,6 +339,8 @@ function Base.show(io::IO, bl::Beamline)
   return
 end
 
+#---------------------------------------------------------------------------------------------------
+
 """
     Branch
 
@@ -309,9 +349,30 @@ one after the other.
 
 ## Properties
 - `beamlines`: Vector of the beamlines in the `Branch`
+- `lattice`: `Lattice` that the branch is placed in, if any
+- `lattice_index`: Index of the branch in the `Lattice`, if in a `Lattice`
 """
 const Branch = _Branch{Beamline}
+
+"""
+    Lattice
+
+Structure containing a vector of `Branch`es. 
+
+## Properties
+- `branches`: Vector of the branches in the `Lattice`
+"""
+const Lattice = _Lattice{Branch}
+
+# NULL_LATTICE must be defined before NULL_BRANCH: the `_Branch` constructor 
+# references it. Both are constructed from empty vectors, so neither loop body runs.
+const NULL_LATTICE = Lattice(Branch[])
 const NULL_BRANCH = Branch(Beamline[])
+
+Base.show(io::IO, ::Type{Branch}) = print(io, "Branch")
+Base.show(io::IO, ::Type{Lattice}) = print(io, "Lattice")
+
+#---------------------------------------------------------------------------------------------------
 
 """
     Branch(beamlines)
@@ -386,6 +447,75 @@ function Branch(
   end
   return Branch(beamlines)
 end
+
+#---------------------------------------------------------------------------------------------------
+
+"""
+    Lattice(branches)
+
+Constructs a `Lattice` given the vector of branches `branches`.
+
+## Example
+```julia
+bl1 = Beamline([Marker(E_ref=10e9, species_ref=Species("electron")), Drift(L=1)])
+bl2 = Beamline([Drift(L=2)])
+
+lattice = Lattice([Branch([bl1]), Branch([bl2])])
+```
+
+---
+
+    Lattice(beamlines)
+
+Constructs a `Lattice` containing a single `Branch` made up of the vector of 
+`Beamline`s `beamlines`.
+
+## Example
+```julia
+bl1 = Beamline([Marker(E_ref=10e9, species_ref=Species("electron")), Drift(L=1)])
+bl2 = Beamline([Drift(L=2)])
+
+lattice = Lattice([bl1, bl2]) # Equivalent to Lattice([Branch([bl1, bl2])])
+```
+"""
+function Lattice(beamlines::Vector{Beamline})
+  return Lattice([Branch(beamlines)])
+end
+
+#---------------------------------------------------------------------------------------------------
+
+Base.propertynames(::Branch) = (:beamlines, :lattice, :lattice_index)
+
+function Base.getproperty(b::Branch, key::Symbol)
+  prop = trygetproperty(b, key)
+  if prop isa GetError
+    error(prop.msg)
+  end
+  return prop
+end
+
+function trygetproperty(b::Branch, key::Symbol)
+  if key in (:beamlines, :lattice, :lattice_index)
+    field = getfield(b, key)
+    if key in (:lattice, :lattice_index) && (field == -1 || field === NULL_LATTICE)
+      return GetError("Unable to get $key: Branch is not in a Lattice")
+    else
+      return field
+    end
+  else
+    error("Unable to get property $key from Branch: Branch does not have this property")
+  end
+end
+
+function Base.setproperty!(b::Branch, key::Symbol, value)
+  if key in (:beamlines, :lattice, :lattice_index)
+    error("Unable to set property $key: this field is protected")
+  else
+    error("Unable to set property $key of Branch: Branch does not have this property")
+  end
+end
+
+#---------------------------------------------------------------------------------------------------
 
 Base.propertynames(::Beamline) = (:line, :branch, :branch_index, :context, :p_over_q_ref, :E_ref, :pc_ref, :dp_over_q_ref, :dE_ref, :dpc_ref, :species_ref)
 

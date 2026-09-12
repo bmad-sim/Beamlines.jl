@@ -44,6 +44,7 @@ export AbstractParams,
        Patch,
        set!,
        Branch,
+       Lattice,
 
        deepcopy_no_beamline,
 
