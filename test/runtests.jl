@@ -1747,4 +1747,25 @@ using ForwardDiff, GTPSA, ReverseDiff
     qq = Quadrupole(Kn1=-DefExpr(c -> c.k1), L=0.5)
     blq = Beamline([qq], context=Context(k1 = 0.36))
     @test blq[qq][1].Kn1 ≈ -0.36
+
+    # Showing a Context must list every variable, sorted by name, and must not
+    # truncate the way the underlying Dict's show does past 10 entries.
+    empty!(GLOBAL_CONTEXTS)
+    cshow = Context(a1 = 1e-10, b2 = 2e-10, c3 = 3e-10, d4 = 4e-10,
+                    ov_1_v1 = DefExpr(c -> c.om_om1^2), ov_1_v2 = 0.0,
+                    ov2_w1 = 1.0, ov2_w2 = 0.0, om_om1 = 0.0,
+                    gg_1_g1 = 2.0, gg_1_g2 = 0.0, hh_h1 = 2.0, hh_h2 = 0.0,
+                    q2_Kn0 = 8e-10)
+    str = repr("text/plain", cshow)
+    @test !occursin("…", str)
+    for var in (:a1, :b2, :c3, :d4, :ov_1_v1, :ov_1_v2, :ov2_w1, :ov2_w2,
+                :om_om1, :gg_1_g1, :gg_1_g2, :hh_h1, :hh_h2, :q2_Kn0)
+      @test occursin(String(var), str)
+    end
+    # Variables are listed in sorted order, one per line after the header.
+    listed = [Symbol(strip(first(split(line, " = ")))) for line in split(strip(str), "\n")[2:end]]
+    @test listed == sort(collect(propertynames(cshow)))
+    @test occursin("14 variables", str)
+    @test occursin("1 variable:", repr("text/plain", Context(a = 1)))
+    @test occursin("0 variables", repr("text/plain", Context()))
 end
