@@ -88,80 +88,82 @@ end
 
 #---------------------------------------------------------------------------------------------------
 
+"""
+    Beamline(line; kwargs...)
+
+Constructs a `Beamline` out of the `LineElement`s in the vector `line`. The `LineElement`s 
+in the `Beamline` will be automatically constructed as children of those `LineElement`s in 
+`line`, inheriting all of their properties. 
+
+The reference energy of the beamline may be optionally specified using one of the keyword 
+arguments: `E_ref`, `pc_ref`, `p_over_q_ref`, `dE_ref`, `dpc_ref`, or `dp_over_q_ref`.
+Whichever of these is specified will be the independent variable. The species of 
+the beamline may be optionally specified using the `species_ref` keyword argument.
+Specifying either of these keyword arguments will permanently override both the reference 
+species and energy defined in the first `LineElement` -- see the warning below.
+
+## Examples
+```julia
+qf = Quadrupole(Kn1=0.36, L=0.5)
+d = Drift(L=1)
+qd = Quadrupole(Kn1=-0.36, L=0.5)
+
+fodo = Beamline([qf, d, qd, d], species_ref=Species("electron"), E_ref=18e9)
+```
+
+Alternatively, one can specify the reference species/energy in the first element:
+
+```julia
+qf = Quadrupole(Kn1=0.36, L=0.5, species_ref=Species("electron"), E_ref=18e9)
+d = Drift(L=1)
+qd = Quadrupole(Kn1=-0.36, L=0.5)
+
+fodo = Beamline([qf, d, qd, d])
+```
+
+## Keyword arguments
+- `context`: A `Context` struct containing variables that can be stored in the beamline 
+    for convenience
+- `species_ref`: Reference species of the beamline. 
+- `E_ref`: Total reference energy [eV]
+- `pc_ref`: Reference momentum [eV/c]
+- `p_over_q_ref`: A *signed* reference magnetic rigidity [T * m]
+- `dE_ref`: Change in total reference energy w.r.t. the directly-upstream beamline in 
+    units [eV]
+- `dpc_ref`: Change in reference momentum w.r.t. the directly-upstream beamline in 
+    units [eV/c]
+- `dp_over_q_ref`: Change in *signed* reference magnetic rigidty w.r.t. the directly 
+    upstream beamline [T * m]
+
+!!! warning
+    Keyword arguments specified to the `Beamline` constructor will permanently override any 
+    corresponding properties specified in the first `LineElement` of the beamline. E.g., 
+    ```julia
+    beg = Marker(species_ref=Species("electron"), E_ref=18e9)
+
+    a = Beamline([beg])
+    b = Beamline([beg], species_ref=Species("proton"), E_ref=1e9)
+
+    a.E_ref == beg.E_ref == 18e9 # true
+    b.E_ref == 1e9               # true
+    b.E_ref != beg.E_ref         # true
+
+    # If `beg` is reset:
+    beg.species_ref = Species("positron")
+
+    # `a` will still inherit it, but `b` will not:
+    a.species_ref == beg.species_ref   # true
+    b.species_ref == Species("proton") # true
+    b.species_ref != beg.species_ref   # true
+    ```
+"""
+Beamline(line; kwargs...)
+
 mutable struct Beamline <: _AbstractBeamline
   const line::ReadOnlyVector{LineElement, Vector{LineElement}}
   branch::_Branch{Beamline} # This should be HARD to change, not allowed easily
   branch_index::Int         # This should be HARD to change, not allowed easily
   context::Context 
-  @doc"""
-      Beamline(line; kwargs...)
-
-  Constructs a `Beamline` out of the `LineElement`s in the vector `line`. The `LineElement`s 
-  in the `Beamline` will be automatically constructed as children of those `LineElement`s in 
-  `line`, inheriting all of their properties. 
-  
-  The reference energy of the beamline may be optionally specified using one of the keyword 
-  arguments: `E_ref`, `pc_ref`, `p_over_q_ref`, `dE_ref`, `dpc_ref`, or `dp_over_q_ref`.
-  Whichever of these is specified will be the independent variable. The species of 
-  the beamline may be optionally specified using the `species_ref` keyword argument.
-  Specifying either of these keyword arguments will permanently override both the reference 
-  species and energy defined in the first `LineElement` -- see the warning below.
-
-  ## Examples
-  ```julia
-  qf = Quadrupole(Kn1=0.36, L=0.5)
-  d = Drift(L=1)
-  qd = Quadrupole(Kn1=-0.36, L=0.5)
-
-  fodo = Beamline([qf, d, qd, d], species_ref=Species("electron"), E_ref=18e9)
-  ```
-  
-  Alternatively, one can specify the reference species/energy in the first element:
-
-  ```julia
-  qf = Quadrupole(Kn1=0.36, L=0.5, species_ref=Species("electron"), E_ref=18e9)
-  d = Drift(L=1)
-  qd = Quadrupole(Kn1=-0.36, L=0.5)
-
-  fodo = Beamline([qf, d, qd, d])
-  ```
-
-  ## Keyword arguments
-  - `context`: A `Context` struct containing variables that can be stored in the beamline 
-      for convenience
-  - `species_ref`: Reference species of the beamline. 
-  - `E_ref`: Total reference energy [eV]
-  - `pc_ref`: Reference momentum [eV/c]
-  - `p_over_q_ref`: A *signed* reference magnetic rigidity [T * m]
-  - `dE_ref`: Change in total reference energy w.r.t. the directly-upstream beamline in 
-      units [eV]
-  - `dpc_ref`: Change in reference momentum w.r.t. the directly-upstream beamline in 
-      units [eV/c]
-  - `dp_over_q_ref`: Change in *signed* reference magnetic rigidty w.r.t. the directly 
-      upstream beamline [T * m]
-
-  !!! warning
-      Keyword arguments specified to the `Beamline` constructor will permanently override any 
-      corresponding properties specified in the first `LineElement` of the beamline. E.g., 
-      ```julia
-      beg = Marker(species_ref=Species("electron"), E_ref=18e9)
-
-      a = Beamline([beg])
-      b = Beamline([beg], species_ref=Species("proton"), E_ref=1e9)
-
-      a.E_ref == beg.E_ref == 18e9 # true
-      b.E_ref == 1e9               # true
-      b.E_ref != beg.E_ref         # true
-
-      # If `beg` is reset:
-      beg.species_ref = Species("positron")
-
-      # `a` will still inherit it, but `b` will not:
-      a.species_ref == beg.species_ref   # true
-      b.species_ref == Species("proton") # true
-      b.species_ref != beg.species_ref   # true
-      ```
-  """
   function Beamline(
     line;
     species_ref::Union{Species,DefExpr{Species}}=Species(),  
@@ -236,12 +238,16 @@ mutable struct Beamline <: _AbstractBeamline
   end
 end
 
+#---------------------------------------------------------------------------------------------------
+
 PROPS(::Type{Beamline}) = OrderedDict{String,String}(
   "line"         => "A read-only array of `LineElements` in the beamline, in order",
   "context"     => "`Context` struct containing control variables associated with the beamline",
   "branch"       => "`Branch` that the beamline is placed in, if any",
   "branch_index" => "Index of the beamline in the `Branch`, if in a `Branch`",
 )
+
+#---------------------------------------------------------------------------------------------------
 
 """
     Beamline
@@ -256,8 +262,9 @@ first `LineElement` of the `Beamline`.
 
 ## Properties
 $(PROPSDOC(Beamline))
-"""
-Beamline
+""" Beamline
+
+#---------------------------------------------------------------------------------------------------
 
 """
     empty!(::Beamline)
