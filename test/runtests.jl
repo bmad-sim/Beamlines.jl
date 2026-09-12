@@ -1748,38 +1748,89 @@ using ForwardDiff, GTPSA, ReverseDiff
     blq = Beamline([qq], context=Context(k1 = 0.36))
     @test blq[qq][1].Kn1 ≈ -0.36
 
-    # Showing a DefExpr must report the value it currently evaluates to, rather
-    # than the raw FunctionWrapper pointers.
-    empty!(GLOBAL_CONTEXTS)
-    dshow = 0.36
-    ds = DefExpr(()->dshow)
-    @test repr(ds) == "$(typeof(ds))(\u2192 0.36)"
-    dshow = 0.7
-    @test repr(ds) == "$(typeof(ds))(\u2192 0.7)"
-    # Operators build new DefExprs; those show their value too.
-    @test repr(-ds + 2) == "$(typeof(-ds + 2))(\u2192 1.3)"
-    # The declared return type is part of the display.
-    @test repr(DefExpr{Float64}(0.5)) == "DefExpr{Float64}(\u2192 0.5)"
-
-    # A DefExpr that cannot be evaluated right now must still display, since
-    # referring to not-yet-defined variables is the point of deferring.
-    dctx = DefExpr(c -> c.om_om1^2)
-    @test repr(dctx) == "$(typeof(dctx))(\u2192 #undef)"
-    @test endswith(repr(DefExpr(()->error("boom"))), "(\u2192 #undef)")
-    # Once the variable is reachable, the value shows up.
-    push!(GLOBAL_CONTEXTS, Context(om_om1 = 3.0))
-    @test repr(dctx) == "$(typeof(dctx))(\u2192 9.0)"
-    empty!(GLOBAL_CONTEXTS)
-
-    # The display stays on one line so a DefExpr nests inside other shows.
-    for d in (ds, dctx, -ds + 2, DefExpr(()->[1.0 2.0; 3.0 4.0]),
-              DefExpr(()->error("boom")), DefExpr(()->"hi"))
-      @test !occursin("\n", repr(d))
+    # Legible lambdas (adapted from the LegibleLambdas.jl tests)
+    ll = @λ(x -> x + 1)
+    @test ll isa Function
+    @test repr(ll) == "(x -> x + 1)"
+    @test repr("text/plain", ll) == "(x -> x + 1)"
+    @test ll(2) == 3
+    ll2 = @λ((x, y) -> x^2 + y^2)
+    @test repr(ll2) == "((x, y) -> x ^ 2 + y ^ 2)"
+    @test ll2(-15.0, 10.0) == 325.0
+    @test repr(@lambda(η -> η^2 + 1)) == "(η -> η ^ 2 + 1)"
+    # Captured local variables are shown by value
+    lldiff(fn, ϵ=1e-10) = @λ(x -> (fn(x + ϵ) - fn(x)) / ϵ)
+    @test repr(lldiff(sin, 0.01)) == "(x -> ((sin)(x + 0.01) - (sin)(x)) / 0.01)"
+    @test lldiff(sin, 0.01)(0.0) ≈ (sin(0.01) - sin(0.0)) / 0.01
+    # A lone argument with a default keeps its parentheses
+    @test repr(@λ((x=1) -> x^2 + 1)) == "((x = 1) -> x ^ 2 + 1)"
+    @test repr(@λ((x, y=1) -> x^2 + y)) == "((x, y = 1) -> x ^ 2 + y)"
+    @test repr(@λ((x::Int) -> x)) == "((x::Int) -> x)"
+    # Keyword arguments print after `;` (LegibleLambdas.jl issue #5) and are forwarded
+    llkw = @λ((x; y=1) -> x + y)
+    @test repr(llkw) == "((x; y = 1) -> x + y)"
+    @test llkw(1) == 2
+    @test llkw(1; y=3) == 4
+    @test repr(@λ((x, z; y=1, w=2) -> x + y)) == "((x, z; y = 1, w = 2) -> x + y)"
+    @test repr(@λ((; y=1) -> y)) == "((; y = 1) -> y)"
+    # A variable reassigned after capture can still change, so it is shown by name
+    function llboxed()
+      k = 1
+      lam = @λ(() -> k + 1)
+      k = 2
+      return lam
     end
+    @test repr(llboxed()) == "(() -> k + 1)"
+    @test llboxed()() == 3
+    # A keyword name in a call is not a captured variable
+    llround(digits) = @λ(x -> round(x; digits=digits))
+    @test repr(llround(2)) == "(x -> round(x; digits = 2))"
+    @test_throws ArgumentError macroexpand(Beamlines, :(@λ x + 1))
 
-    # Parameter groups holding DefExprs become readable as a result.
-    qshow = Quadrupole(Kn1L=DefExpr(()->dshow), L=0.5)
+    # A DefExpr built from a legible lambda shows its source. It does not show a value,
+    # since the value depends on the Context it is evaluated in.
+    empty!(GLOBAL_CONTEXTS)
+    dl = DefExpr(@λ c -> c.a + c.b)
+    @test repr(dl) == "DefExpr{Any}(c -> c.a + c.b)"
+    @test dl(Context(a = 1, b = 2)) == 3
+    @test repr(-dl) == "DefExpr{Any}(c -> -((c.a + c.b)))"
+    @test repr(2dl + 1) == "DefExpr{Any}(c -> 2 * (c.a + c.b) + 1)"
+    @test (2dl + 1)(Context(a = 1, b = 2)) == 7
+    # Operands with differently named Context arguments are combined under one name
+    el = DefExpr(@λ x -> x.k)
+    @test repr(sin(dl) / el) == "DefExpr{Any}(c -> sin(c.a + c.b) / c.k)"
+    @test (sin(dl) / el)(Context(a = 1.0, b = 2.0, k = 4.0)) == sin(3.0) / 4.0
+    # ...unless the rename would capture another variable of the same name
+    function llcollide()
+      c = 1.0
+      e = DefExpr(@λ x -> x.b + c)
+      c = 2.0
+      return e
+    end
+    @test repr(dl + llcollide()) == "DefExpr{Any}(c -> (c.a + c.b) + DefExpr{Any}(x -> x.b + c))"
+    # Zero-argument lambdas and captured variables
+    kk = 1.0
+    dk = DefExpr(@λ () -> kk + 1)
+    @test repr(dk) == "$(typeof(dk))(() -> 1.0 + 1)"
+    @test repr(dk * dl) == "DefExpr{Any}(c -> (1.0 + 1) * (c.a + c.b))"
+    # Constants and conversions
+    @test repr(DefExpr{Float64}(0.5)) == "DefExpr{Float64}(0.5)"
+    @test repr(DefExpr{Float64}(dl)) == "DefExpr{Float64}(c -> c.a + c.b)"
+    @test DefExpr{Float64}(dl)(Context(a = 1, b = 2)) === 3.0
+    # Without @λ the source is unknown
+    du = DefExpr(() -> 1.0)
+    @test repr(du) == "DefExpr{Float64}(…)"
+    @test repr(du + dl) == "DefExpr{Any}(c -> DefExpr{Float64}(…) + (c.a + c.b))"
+    # GTPSA functions record their source and forward the Context
+    @test repr(GTPSA.erf(dl)) == "DefExpr{Any}(c -> erf(c.a + c.b))"
+    @test GTPSA.erf(dl)(Context(a = 0.25, b = 0.25)) == GTPSA.erf(0.5)
+
+    # Parameter groups holding DefExprs show the source, whatever the Context
+    qshow = Quadrupole(Kn1L=DefExpr(@λ c -> c.k1), L=0.5)
     qstr = repr("text/plain", qshow.BMultipoleParams)
-    @test occursin("Kn1L", qstr) && occursin("\u2192 0.7", qstr)
+    @test occursin("Kn1L", qstr) && occursin("DefExpr{Any}(c -> c.k1)", qstr)
     @test !occursin("Ptr{Nothing}", qstr)
+    blshow = Beamline([qshow], context=Context(k1 = 0.36))
+    @test repr("text/plain", qshow.BMultipoleParams) == qstr
+    @test blshow[qshow][1].Kn1L ≈ 0.36
 end

@@ -77,10 +77,27 @@ julia> c1 = Context(a = 1, b = 2);
 julia> d(c1)
 3
 ```
+
+A deferred expression built from a legible lambda (made with `@λ`) displays as its
+source, and so do the expressions built from it with operators. The display never shows
+a value, since the value a deferred expression evaluates to depends on the `Context`:
+```jldoctest
+julia> d = DefExpr(@λ c -> c.a + c.b)
+DefExpr{Any}(c -> c.a + c.b)
+
+julia> 2d + 1
+DefExpr{Any}(c -> 2 * (c.a + c.b) + 1)
+
+julia> DefExpr(() -> 1.0) # no @λ, so the source is unknown
+DefExpr{Float64}(…)
+```
 """
 struct DefExpr{T}
   f::FunctionWrapper{T,Tuple{Context}}
-  DefExpr{T}(f::FunctionWrapper{T,Tuple{Context}}) where {T} = new{T}(f)
+  # Source used for display: a lambda expression with captured local variables substituted,
+  # or `nothing` if the DefExpr was not built from a legible lambda.
+  ex::Union{Expr,Nothing}
+  DefExpr{T}(f::FunctionWrapper{T,Tuple{Context}}, ex=nothing) where {T} = new{T}(f, ex)
 end
 
 # In Julia we don't need to do any conversion, just static asserts
@@ -97,87 +114,122 @@ defconvert(::Type{T}, f) where {T} = f::T
 # `(c=NULL_CONTEXT)->f()` and silently discard the Context supplied at call
 # time. Genuine 0-argument lambdas (`()->a`) are not applicable with a Context,
 # so they still take the second branch.
-function DefExpr{T}(f) where {T}
+function DefExpr{T}(f, ex=nothing) where {T}
   if applicable(f, NULL_CONTEXT)
-    return DefExpr{T}(FunctionWrapper{T,Tuple{Context}}(f))
+    return DefExpr{T}(FunctionWrapper{T,Tuple{Context}}(f), ex)
   elseif applicable(f)
-    return DefExpr{T}(FunctionWrapper{T,Tuple{Context}}((c=NULL_CONTEXT)->f()))
+    return DefExpr{T}(FunctionWrapper{T,Tuple{Context}}((c=NULL_CONTEXT)->f()), ex)
   else
     error("Invalid input argument for DefExpr: function must have no arguments or accept a `Beamlines.Context`")
   end
 end
 
+# A LegibleLambda forwards any arguments, so `applicable` cannot see which ones the
+# underlying lambda accepts. Unwrap it, keeping its source for display.
+DefExpr{T}(f::LegibleLambda) where {T} = DefExpr{T}(f.λ, legible_expr(f))
+
 # Conversion of types to DefExpr
-DefExpr{T}(a::Number) where {T} = DefExpr{T}((c=NULL_CONTEXT)->convert(T, a))
-DefExpr{T}(a::DefExpr) where {T} = DefExpr{T}((c=NULL_CONTEXT)->convert(T, a(c)))
+DefExpr{T}(a::Number) where {T} = DefExpr{T}((c=NULL_CONTEXT)->convert(T, a), Expr(:->, Expr(:tuple), a))
+DefExpr{T}(a::DefExpr) where {T} = DefExpr{T}((c=NULL_CONTEXT)->convert(T, a(c)), a.ex)
 
 # Make these apply via convert
 Base.convert(::Type{D}, a) where {D<:DefExpr} = D(a)
 
 # Now simple constructor for convenience
-function DefExpr(f)
+function defexpr_return_type(f)
   if applicable(f, NULL_CONTEXT)
-    T = Base.promote_op(f, Context)
+    return Base.promote_op(f, Context)
   elseif applicable(f)
-    T = Base.promote_op(f)
+    return Base.promote_op(f)
   else
-    T = Any
+    return Any
   end
-  return DefExpr{T}(f)
 end
 
-# A DefExpr wraps a FunctionWrapper, whose default display is a wall of raw pointers
-# that says nothing about the expression. What is actually interesting about a deferred
-# expression is what it evaluates to right now, so show that instead. Evaluating during
-# display is consistent with the rest of the package, where simply getting a parameter
-# devals it; deferred expressions are expected to be cheap and free of side effects.
+DefExpr(f, ex=nothing) = DefExpr{defexpr_return_type(f)}(f, ex)
+DefExpr(f::LegibleLambda) = DefExpr{defexpr_return_type(f.λ)}(f)
+
 function Base.show(io::IO, d::DefExpr{T}) where {T}
-  str = try
-    str = repr(d(), context=IOContext(io, :compact => true, :limit => true))
-    # Collapse to a single line so a DefExpr nests cleanly inside the display of
-    # whatever holds it (a Context listing, a parameter group, a log message).
-    nl = findfirst('\n', str)
-    isnothing(nl) ? str : rstrip(str[1:prevind(str, nl)]) * "\u2026"
-  catch
-    # A deferred expression is allowed to reference variables that are not defined
-    # yet -- that is the point of deferring it -- so display must not fail when one
-    # cannot be evaluated.
-    "#undef"
+  print(io, "DefExpr{", T, "}(")
+  ex = d.ex
+  if isnothing(ex)
+    print(io, "…")
+  elseif ex.args[1] == Expr(:tuple) && !(ex.args[2] isa Union{Expr,Symbol})
+    show(io, ex.args[2])  # a constant
+  else
+    print(io, lambda_string(ex))
   end
-  print(io, "DefExpr{", T, "}(\u2192 ", str, ")")
+  print(io, ")")
+end
+
+# Name of the Context argument in the argument list of a lambda expression, or `nothing`.
+defexpr_argname(args) = nothing
+defexpr_argname(args::Symbol) = args
+function defexpr_argname(args::Expr)
+  if args.head === :tuple
+    return length(args.args) == 1 ? defexpr_argname(args.args[1]) : nothing
+  elseif args.head === :(::)  # `c::Context`, or the unnamed `::Context`
+    return length(args.args) == 2 ? defexpr_argname(args.args[1]) : nothing
+  elseif args.head in (:(=), :kw)  # `c = NULL_CONTEXT`
+    return defexpr_argname(args.args[1])
+  end
+  return nothing
+end
+
+# Source of the DefExpr computing `op(operands...)`, where each operand is a DefExpr or a
+# plain value. The operand bodies are combined under a single Context argument, renaming
+# as needed: `(c -> c.a) + (x -> x.b)` gives `c -> c.a + c.b`.
+function defexpr_call_expr(op::Symbol, operands...)
+  name = nothing
+  for x in operands
+    if isnothing(name) && x isa DefExpr && !isnothing(x.ex)
+      name = defexpr_argname(x.ex.args[1])
+    end
+  end
+  bodies = map(operands) do x
+    # A plain value, or a DefExpr with unknown source, is shown as itself.
+    (x isa DefExpr && !isnothing(x.ex)) || return x
+    args, body = x.ex.args
+    xname = defexpr_argname(args)
+    (isnothing(xname) || xname === name) && return body
+    # Renaming would capture another variable of the same name; show the operand whole.
+    mentions_symbol(body, name) && return x
+    return substitute_symbols(body, Dict(xname => name))
+  end
+  return Expr(:->, isnothing(name) ? Expr(:tuple) : name, Expr(:call, op, bodies...))
 end
 
 deval(d::DefExpr, c::Context=NULL_CONTEXT) = d(c)
 deval(d, c=NULL_CONTEXT) = d
 
 Base.:+(da::DefExpr) = da
-Base.:-(da::DefExpr) = DefExpr((c=NULL_CONTEXT)->-da(c))
-Base.:+(da::DefExpr, b)   = DefExpr((c=NULL_CONTEXT)-> da(c) + b   )
-Base.:+(a,   db::DefExpr) = DefExpr((c=NULL_CONTEXT)-> a    + db(c))
-Base.:+(da::DefExpr, db::DefExpr) = DefExpr((c=NULL_CONTEXT)-> da(c) + db(c))
+Base.:-(da::DefExpr) = DefExpr((c=NULL_CONTEXT)->-da(c), defexpr_call_expr(:-, da))
+Base.:+(da::DefExpr, b)   = DefExpr((c=NULL_CONTEXT)-> da(c) + b   , defexpr_call_expr(:+, da, b))
+Base.:+(a,   db::DefExpr) = DefExpr((c=NULL_CONTEXT)-> a    + db(c), defexpr_call_expr(:+, a, db))
+Base.:+(da::DefExpr, db::DefExpr) = DefExpr((c=NULL_CONTEXT)-> da(c) + db(c), defexpr_call_expr(:+, da, db))
 
-Base.:-(da::DefExpr, b)   = DefExpr((c=NULL_CONTEXT)-> da(c) - b   )
-Base.:-(a,   db::DefExpr) = DefExpr((c=NULL_CONTEXT)-> a    - db(c))
-Base.:-(da::DefExpr, db::DefExpr) = DefExpr((c=NULL_CONTEXT)-> da(c) - db(c))
+Base.:-(da::DefExpr, b)   = DefExpr((c=NULL_CONTEXT)-> da(c) - b   , defexpr_call_expr(:-, da, b))
+Base.:-(a,   db::DefExpr) = DefExpr((c=NULL_CONTEXT)-> a    - db(c), defexpr_call_expr(:-, a, db))
+Base.:-(da::DefExpr, db::DefExpr) = DefExpr((c=NULL_CONTEXT)-> da(c) - db(c), defexpr_call_expr(:-, da, db))
 
-Base.:*(da::DefExpr, b)   = DefExpr((c=NULL_CONTEXT)-> da(c) * b   )
-Base.:*(a,   db::DefExpr) = DefExpr((c=NULL_CONTEXT)-> a    * db(c))
-Base.:*(da::DefExpr, db::DefExpr) = DefExpr((c=NULL_CONTEXT)-> da(c) * db(c))
+Base.:*(da::DefExpr, b)   = DefExpr((c=NULL_CONTEXT)-> da(c) * b   , defexpr_call_expr(:*, da, b))
+Base.:*(a,   db::DefExpr) = DefExpr((c=NULL_CONTEXT)-> a    * db(c), defexpr_call_expr(:*, a, db))
+Base.:*(da::DefExpr, db::DefExpr) = DefExpr((c=NULL_CONTEXT)-> da(c) * db(c), defexpr_call_expr(:*, da, db))
 
-Base.:/(da::DefExpr, b)   = DefExpr((c=NULL_CONTEXT)-> da(c) / b   )
-Base.:/(a,   db::DefExpr) = DefExpr((c=NULL_CONTEXT)-> a    / db(c))
-Base.:/(da::DefExpr, db::DefExpr) = DefExpr((c=NULL_CONTEXT)-> da(c) / db(c))
+Base.:/(da::DefExpr, b)   = DefExpr((c=NULL_CONTEXT)-> da(c) / b   , defexpr_call_expr(:/, da, b))
+Base.:/(a,   db::DefExpr) = DefExpr((c=NULL_CONTEXT)-> a    / db(c), defexpr_call_expr(:/, a, db))
+Base.:/(da::DefExpr, db::DefExpr) = DefExpr((c=NULL_CONTEXT)-> da(c) / db(c), defexpr_call_expr(:/, da, db))
 
-Base.:^(da::DefExpr, b)   = DefExpr((c=NULL_CONTEXT)-> da(c) ^ b   )
-Base.:^(a,   db::DefExpr) = DefExpr((c=NULL_CONTEXT)-> a    ^ db(c))
-Base.:^(da::DefExpr, db::DefExpr) = DefExpr((c=NULL_CONTEXT)-> da(c) ^ db(c))
+Base.:^(da::DefExpr, b)   = DefExpr((c=NULL_CONTEXT)-> da(c) ^ b   , defexpr_call_expr(:^, da, b))
+Base.:^(a,   db::DefExpr) = DefExpr((c=NULL_CONTEXT)-> a    ^ db(c), defexpr_call_expr(:^, a, db))
+Base.:^(da::DefExpr, db::DefExpr) = DefExpr((c=NULL_CONTEXT)-> da(c) ^ db(c), defexpr_call_expr(:^, da, db))
 
 for t = (:sqrt, :exp, :log, :sin, :cos, :tan, :cot, :sinh, :cosh, :tanh, :inv,
-  :coth, :asin, :acos, :atan, :acot, :asinh, :acosh, :atanh, :acoth, :sinc, :csc, 
+  :coth, :asin, :acos, :atan, :acot, :asinh, :acosh, :atanh, :acoth, :sinc, :csc,
   :csch, :acsc, :acsch, :sec, :sech, :asec, :asech, :conj, :log10, :isnan, :sign,
   :abs, :zero, :one)
 @eval begin
-Base.$t(d::DefExpr) = DefExpr((c=NULL_CONTEXT)-> ($t)(d(c)))
+Base.$t(d::DefExpr) = DefExpr((c=NULL_CONTEXT)-> ($t)(d(c)), defexpr_call_expr($(QuoteNode(t)), d))
 end
 end
 
