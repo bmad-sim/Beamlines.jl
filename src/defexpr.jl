@@ -91,12 +91,27 @@ DefExpr{Any}(c -> 2 * (c.a + c.b) + 1)
 julia> DefExpr(() -> 1.0) # no @λ, so the source is unknown
 DefExpr{Float64}(…)
 ```
+
+The source text of a deferred expression written in another language, e.g. from Python,
+can be given as a second argument. It is shown as is:
+```jldoctest
+julia> DefExpr(c -> c.k1, "lambda c: c.k1")
+DefExpr{Any}(lambda c: c.k1)
+```
 """
+# Source text of a deferred expression written in another language, e.g. `lambda c: c.k1`
+# for one built from Python. It is shown as is and not combined with other sources.
+struct SourceText
+  text::String
+end
+
+Base.show(io::IO, s::SourceText) = print(io, s.text)
+
 struct DefExpr{T}
   f::FunctionWrapper{T,Tuple{Context}}
   # Source used for display: a lambda expression with captured local variables substituted,
-  # or `nothing` if the DefExpr was not built from a legible lambda.
-  ex::Union{Expr,Nothing}
+  # the source text of an expression written in another language, or `nothing` if unknown.
+  ex::Union{Expr,SourceText,Nothing}
   DefExpr{T}(f::FunctionWrapper{T,Tuple{Context}}, ex=nothing) where {T} = new{T}(f, ex)
 end
 
@@ -115,6 +130,7 @@ defconvert(::Type{T}, f) where {T} = f::T
 # time. Genuine 0-argument lambdas (`()->a`) are not applicable with a Context,
 # so they still take the second branch.
 function DefExpr{T}(f, ex=nothing) where {T}
+  ex isa AbstractString && (ex = SourceText(ex))
   if applicable(f, NULL_CONTEXT)
     return DefExpr{T}(FunctionWrapper{T,Tuple{Context}}(f), ex)
   elseif applicable(f)
@@ -154,6 +170,8 @@ function Base.show(io::IO, d::DefExpr{T}) where {T}
   ex = d.ex
   if isnothing(ex)
     print(io, "…")
+  elseif ex isa SourceText
+    print(io, ex)
   elseif ex.args[1] == Expr(:tuple) && !(ex.args[2] isa Union{Expr,Symbol})
     show(io, ex.args[2])  # a constant
   else
@@ -182,13 +200,13 @@ end
 function defexpr_call_expr(op::Symbol, operands...)
   name = nothing
   for x in operands
-    if isnothing(name) && x isa DefExpr && !isnothing(x.ex)
+    if isnothing(name) && x isa DefExpr && x.ex isa Expr
       name = defexpr_argname(x.ex.args[1])
     end
   end
   bodies = map(operands) do x
-    # A plain value, or a DefExpr with unknown source, is shown as itself.
-    (x isa DefExpr && !isnothing(x.ex)) || return x
+    # A plain value, or a DefExpr whose source is unknown or not Julia, is shown as itself.
+    (x isa DefExpr && x.ex isa Expr) || return x
     args, body = x.ex.args
     xname = defexpr_argname(args)
     (isnothing(xname) || xname === name) && return body

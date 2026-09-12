@@ -1821,6 +1821,15 @@ using ForwardDiff, GTPSA, ReverseDiff
     du = DefExpr(() -> 1.0)
     @test repr(du) == "DefExpr{Float64}(…)"
     @test repr(du + dl) == "DefExpr{Any}(c -> DefExpr{Float64}(…) + (c.a + c.b))"
+    # Source text from another language (e.g. Python) is shown as is, and whole when combined
+    dp = DefExpr{Float64}(c -> c.k1, "lambda c: c.k1")
+    @test repr(dp) == "DefExpr{Float64}(lambda c: c.k1)"
+    @test dp(Context(k1 = 0.36)) == 0.36
+    @test repr(dp + 10) == "$(typeof(dp + 10))(() -> DefExpr{Float64}(lambda c: c.k1) + 10)"
+    @test (dp + 10)(Context(k1 = 0.5)) == 10.5
+    @test repr(dl * dp) == "DefExpr{Any}(c -> (c.a + c.b) * DefExpr{Float64}(lambda c: c.k1))"
+    @test (dl * dp)(Context(a = 1, b = 2, k1 = 0.5)) == 1.5
+    @test repr(DefExpr{Float64}(dp)) == "DefExpr{Float64}(lambda c: c.k1)"
     # GTPSA functions record their source and forward the Context
     @test repr(GTPSA.erf(dl)) == "DefExpr{Any}(c -> erf(c.a + c.b))"
     @test GTPSA.erf(dl)(Context(a = 0.25, b = 0.25)) == GTPSA.erf(0.5)
