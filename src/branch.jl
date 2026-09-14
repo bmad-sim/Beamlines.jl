@@ -13,6 +13,8 @@ one after the other.
 """
 const Branch = _Branch{Beamline}
 
+#---------------------------------------------------------------------------------------------------
+
 """
     Lattice
 
@@ -23,8 +25,11 @@ Structure containing a vector of `Branch`es.
 """
 const Lattice = _Lattice{Branch}
 
-# NULL_LATTICE must be defined before NULL_BRANCH: the `_Branch` constructor 
-# references it. Both are constructed from empty vectors, so neither loop body runs.
+#---------------------------------------------------------------------------------------------------
+
+# NULL_LATTICE must be defined before NULL_BRANCH: the `_Branch` constructor references it. 
+# Both are constructed from empty vectors.
+
 const NULL_LATTICE = Lattice(Branch[])
 const NULL_BRANCH = Branch(Beamline[])
 
@@ -34,7 +39,7 @@ Base.show(io::IO, ::Type{Lattice}) = print(io, "Lattice")
 #---------------------------------------------------------------------------------------------------
 
 function Base.show(io::IO, branch::Branch)
-  println(io, "Branch:")
+  println(io, "Branch: $(branch.name)")
   lines_used = 1
   name = :Inferred
   try 
@@ -189,7 +194,7 @@ function Base.getproperty(b::Branch, key::Symbol)
 end
 
 function trygetproperty(b::Branch, key::Symbol)
-  if key in (:beamlines, :lattice, :lattice_index)
+  if key in (:beamlines, :lattice, :lattice_index, :name)
     field = getfield(b, key)
     if key in (:lattice, :lattice_index) && (field == -1 || field === NULL_LATTICE)
       return GetError("Unable to get $key: Branch is not in a Lattice")
@@ -202,7 +207,9 @@ function trygetproperty(b::Branch, key::Symbol)
 end
 
 function Base.setproperty!(b::Branch, key::Symbol, value)
-  if key in (:beamlines, :lattice, :lattice_index)
+  if key == :name
+    setfield!(b, key, value)
+  elseif key in (:beamlines, :lattice, :lattice_index)
     error("Unable to set property $key: this field is protected")
   else
     error("Unable to set property $key of Branch: Branch does not have this property")
@@ -246,18 +253,20 @@ end
 #---------------------------------------------------------------------------------------------------
 
 function Base.show(io::IO, lat::Lattice)
-  println(io, "Lattice Branches:")
+  println(io, "Lattice: $(lat.name)")
 
   N_br = length(lat.branches)
   branch_table = Matrix{Any}(nothing, 1+N_br, 4)
   branch_table[1,:] = ["Index", "Name", "# Eles", "Length"]
   for (ix, branch) in enumerate(lat.branches)
     nele = length(branch)
-    ele_table[ix+1,:] = [ix, branch.name, nele, branch[nele].s_downstream]
+    branch_table[ix+1,:] = [ix, branch.name, nele, branch[nele].s_downstream]
   end
 
-  println(io)
-  pretty_table(io, ele_table;
+  offset = 6
+
+  println(io, "Branches:")
+  pretty_table(io, branch_table;
     limit_printing=get(io, :limit, false),
     alignment = :l,
     show_column_labels = false,
