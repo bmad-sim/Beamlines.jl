@@ -108,6 +108,7 @@ include("keymaps.jl")
 include("element-name-handling.jl")
 include("search.jl")
 include("element-doc.jl")
+include("io.jl")
 
 # BitsBeamline is no longer supported
 # Support may continue in the future with 
