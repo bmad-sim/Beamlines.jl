@@ -1,3 +1,7 @@
+"""
+`writebl` is internal, still being developed, and may change at any time. 
+General users should NOT use it yet.
+"""
 function writebl(fname::AbstractString, bl::Beamline)
   open(fname, "w") do io
     writebl(io, bl)
