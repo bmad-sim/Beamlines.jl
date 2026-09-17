@@ -153,7 +153,10 @@ mutable struct Beamline <: _AbstractBeamline
 
     bl = new(ReadOnlyVector(Vector{LineElement}(undef, length(line))), NULL_BRANCH, -1, context)
 
-    for i in eachindex(bl.line)
+    # Internal construction must bypass the public `getproperty` interface so
+    # the element and index types remain inferable.
+    bl_line = getfield(bl, :line)
+    for i in eachindex(bl_line)
       if i != 1 && haskey(getfield(line[i], :pdict), InitialBeamlineParams)
         error("
           Cannot construct Beamline: element $i contains an InitialBeamlineParams 
@@ -163,12 +166,12 @@ mutable struct Beamline <: _AbstractBeamline
           Beamlines for each InitialBeamlineParams.
         ")
       end
-      bl.line.parent[i] = LineElement(ParamDict(InheritParams=>InheritParams(line[i])))
-      getfield(bl.line[i], :pdict)[BeamlineParams] = BeamlineParams(bl, i)
+      bl_line.parent[i] = LineElement(ParamDict(InheritParams=>InheritParams(line[i])))
+      getfield(bl_line[i], :pdict)[BeamlineParams] = BeamlineParams(bl, i)
     end
 
     if (c == 1 || !isnullspecies(species_ref)) # set occurring at Beamline ctor
-      pdict1 = getfield(first(bl.line), :pdict)
+      pdict1 = getfield(first(bl_line), :pdict)
       ibp = InitialBeamlineParams()
       pdict1[InitialBeamlineParams] = ibp # then override the parent
       # Initialize with values from parent if parent has it
@@ -187,11 +190,11 @@ mutable struct Beamline <: _AbstractBeamline
       idx = findfirst(t->!isnothing(t), kwargs)
       sym = (:p_over_q_ref, :E_ref, :pc_ref, :dp_over_q_ref, :dE_ref, :dpc_ref)[idx]
       ref = (p_over_q_ref, E_ref, pc_ref, dp_over_q_ref, dE_ref, dpc_ref)[idx]
-      setproperty!(first(bl.line), sym, ref)
+      setproperty!(first(bl_line), sym, ref)
     end
 
     if !isnullspecies(species_ref)
-      setproperty!(first(bl.line), :species_ref, species_ref)
+      setproperty!(first(bl_line), :species_ref, species_ref)
     end
     
     return bl
