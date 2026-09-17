@@ -145,6 +145,31 @@ function Base.isapprox(a::FourPotentialParams, b::FourPotentialParams)
   end
 end
 
+"""
+    FieldSourceParams(; field_source=nothing, additional_field=nothing)
+
+Electromagnetic field sources associated with an element. Tracking methods that
+consume this group use `field_source` to replace the element-derived field, or
+`additional_field` to add a field source to it. Set at most one of these fields.
+With both fields `nothing`, the element-derived field is used.
+
+Field sources are concrete callable objects. Their evaluation and normalization
+conventions are defined by the tracking package. Other tracking methods ignore
+this group.
+"""
+@kwdef mutable struct FieldSourceParams{F,A} <: AbstractParams
+  field_source::F = nothing
+  additional_field::A = nothing
+end
+
+PROPS(::Type{FieldSourceParams}) = OrderedDict{String,String}(
+  "field_source" => "Field source replacing the element-derived field; default nothing.",
+  "additional_field" => "Field source added to the element-derived field; default nothing.",
+)
+
+Base.isapprox(a::FieldSourceParams, b::FieldSourceParams) =
+  a.field_source == b.field_source && a.additional_field == b.additional_field
+
 @kwdef mutable struct MetaParams <: AbstractParams
   alias::String = ""
   label::String = ""
