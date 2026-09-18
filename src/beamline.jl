@@ -17,17 +17,10 @@ mutable struct _Lattice{B<:_AbstractBranch}
       setfield!(br, :lattice, lattice)
       setfield!(br, :lattice_index, i)
       br.name == "" ? br.name = "B$i" : br.name
-      context = merge(branches[i].context, context) 
+      context = merge(branches[i].context, context)
     end
 
-    setfield!(lattice, :context, context)
-    for br in lattice.branches
-      setfield!(br, :context, context)
-      for bl in br.beamlines
-        setfield!(bl, :context, context)
-      end
-    end
-
+    _set_context!(lattice, context)
     return lattice
   end
 end
@@ -60,16 +53,33 @@ mutable struct _Branch{T<:_AbstractBeamline} <: _AbstractBranch
       end
       setfield!(bl, :branch, branch)
       setfield!(bl, :branch_index, i)
-      context = merge(beamlines[i].context, context) 
+      context = merge(beamlines[i].context, context)
     end
 
-    setfield!(branch, :context, context)
-    for bl in branch.beamlines
-      setfield!(bl, :context, context)
-    end
-
+    _set_context!(branch, context)
     return branch
   end
+end
+
+#---------------------------------------------------------------------------------------------------
+
+# A Lattice, its Branches, and their Beamlines all share a single Context.
+# `_set_context!` sets that shared Context for a Branch or Lattice and everything in it.
+
+function _set_context!(branch::_Branch, context::Context)
+  setfield!(branch, :context, context)
+  for bl in getfield(branch, :beamlines)
+    setfield!(bl, :context, context)
+  end
+  return context
+end
+
+function _set_context!(lattice::_Lattice, context::Context)
+  setfield!(lattice, :context, context)
+  for br in getfield(lattice, :branches)
+    _set_context!(br, context)
+  end
+  return context
 end
 
 #---------------------------------------------------------------------------------------------------
@@ -144,8 +154,9 @@ fodo = Beamline([qf, d, qd, d])
 ```
 
 ## Keyword arguments
-- `context`: A `Context` struct containing variables that can be stored in the beamline 
-    for convenience
+- `context`: A `Context` struct containing variables that can be stored in the beamline
+    for convenience. If the `Beamline` is put in a `Branch`, this is merged into the
+    `Context` shared by the whole `Branch` -- see `Branch`.
 - `species_ref`: Reference species of the beamline. 
 - `E_ref`: Total reference energy [eV]
 - `pc_ref`: Reference momentum [eV/c]
@@ -264,7 +275,7 @@ end
 
 PROPS(::Type{Beamline}) = OrderedDict{String,String}(
   "line"         => "A read-only array of `LineElements` in the beamline, in order",
-  "context"     => "`Context` struct containing control variables associated with the beamline",
+  "context"     => "`Context` struct containing control variables associated with the beamline. If in a `Branch`, this is shared by the whole `Branch` (and `Lattice`, if any), and setting it sets it for all of them",
   "branch"       => "`Branch` that the beamline is placed in, if any",
   "branch_index" => "Index of the beamline in the `Branch`, if in a `Branch`",
 )
@@ -410,7 +421,11 @@ function Base.setproperty!(b::Beamline, key::Symbol, value)
   if key in (:line, :branch, :branch_index)
     error("Unable to set property $key: this field is protected")
   elseif key == :context
-    setfield!(b, key, value)
+    if getfield(b, :branch_index) == -1
+      setfield!(b, key, value)
+    else  # The Context is shared by the whole Branch (and Lattice, if any)
+      setproperty!(getfield(b, :branch), key, value)
+    end
   elseif key in (:E_ref, :pc_ref, :p_over_q_ref, :dE_ref, :dpc_ref, :dp_over_q_ref, :species_ref)
     if length(b.line) < 1
       error("Unable to set $key of Beamline with no elements")
@@ -505,13 +520,13 @@ function Base.getproperty(bp::BeamlineParams, key::Symbol)
 
     # s is the sum of the lengths of all preceding elements
     bl = bp.beamline
-    s0 = 0
-    try 
-      nx = bl.branch_index
-      for bsub in bl.branch.beamlines[1:nx-1]
+    s0 = zero(bl.line[bp.beamline_index].L)  # So s has the same type as L when s is zero
+    nx = getfield(bl, :branch_index)
+    if nx != -1  # Beamline is in a Branch so add the lengths of the preceding Beamlines
+      for bsub in getfield(bl, :branch).beamlines[1:nx-1]
+        isempty(bsub.line) && continue  # Reducing over an empty collection is not allowed.
         s0 += deval(sum(ele.L for ele in bsub.line), getfield(bsub, :context))
       end
-    catch
     end
 
     if n == 0  # Reducing over an empty collection is not allowed so this is a special case.

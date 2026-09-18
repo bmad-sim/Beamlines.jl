@@ -7,9 +7,13 @@ Structure containing a vector of `Beamline`s, where currently each follows in-or
 one after the other. 
 
 ## Properties
+- `name`: Name of the `Branch`
 - `beamlines`: Vector of the beamlines in the `Branch`
 - `lattice`: `Lattice` that the branch is placed in, if any
 - `lattice_index`: Index of the branch in the `Lattice`, if in a `Lattice`
+- `context`: `Context` shared by the `Branch` and all of its `Beamline`s, and by the whole
+    `Lattice` if the `Branch` is in one. Setting the `context` of any of them sets it for
+    all of them.
 """
 const Branch = _Branch{Beamline}
 
@@ -21,7 +25,10 @@ const Branch = _Branch{Beamline}
 Structure containing a vector of `Branch`es. 
 
 ## Properties
+- `name`: Name of the `Lattice`
 - `branches`: Vector of the branches in the `Lattice`
+- `context`: `Context` shared by the `Lattice`, all of its `Branch`es, and all of their
+    `Beamline`s. Setting the `context` of any of them sets it for all of them.
 """
 const Lattice = _Lattice{Branch}
 
@@ -41,18 +48,19 @@ Base.show(io::IO, ::Type{Lattice}) = print(io, "Lattice")
 function Base.show(io::IO, branch::Branch)
   println(io, "Branch: $(branch.name)")
   lines_used = 1
+  # The reference species and energy shown are those at the start of the Branch.
   name = :Inferred
-  try 
-    species_ref = branch.species_ref
+  try
+    species_ref = first(branch.beamlines).species_ref
     name = nameof(species_ref)
   catch
   end
   println(io, " species_ref", " = ", name)
   lines_used += 1
-  ref = :Inferred 
+  ref = :Inferred
   ref_meaning = refmeaning_to_sym(getfield(InitialBeamlineParams(), :ref_meaning)) # Default
   try
-    ibp = first(branch.line).InitialBeamlineParams
+    ibp = first(first(branch.beamlines).line).InitialBeamlineParams
     ref_meaning = refmeaning_to_sym(ibp.ref_meaning)
     ref = ibp.ref 
   catch
@@ -108,9 +116,11 @@ end
 #---------------------------------------------------------------------------------------------------
 
 """
-    Branch(beamlines)
+    Branch(beamlines; name = "", context = Context())
 
-Constructs a `Branch` given the vector of beamlines `beamlines`.
+Constructs a `Branch` given the vector of beamlines `beamlines`. The contexts of the
+`Beamline`s and `context` are merged into a single `Context` shared by the `Branch` and
+all of its `Beamline`s. Variables in `context` take precedence over those in the `Beamline`s.
 
 ## Example
 ```julia
@@ -160,7 +170,7 @@ function Branch(
   idxs = findall(t->haskey(getfield(t, :pdict), InitialBeamlineParams), elements)
   # If none, then only single Beamline
   if length(idxs) == 0
-    return Branch([Beamline(elements; species_ref=species_ref0, kwarg_sym=>kwarg_val)])
+    return Branch([Beamline(elements; species_ref=species_ref0, kwarg_sym=>kwarg_val, context = context)], context = context)
   end
 
   n_beamlines = length(idxs)
@@ -184,7 +194,7 @@ end
 
 #---------------------------------------------------------------------------------------------------
 
-Base.propertynames(::Branch) = (:beamlines, :lattice, :lattice_index, :context)
+Base.propertynames(::Branch) = (:name, :beamlines, :lattice, :lattice_index, :context)
 
 function Base.getproperty(b::Branch, key::Symbol)
   prop = trygetproperty(b, key)
@@ -210,6 +220,12 @@ end
 function Base.setproperty!(b::Branch, key::Symbol, value)
   if key == :name
     setfield!(b, key, value)
+  elseif key == :context
+    if getfield(b, :lattice_index) == -1
+      _set_context!(b, value)
+    else  # The Context is shared by the whole Lattice
+      _set_context!(getfield(b, :lattice), value)
+    end
   elseif key in (:beamlines, :lattice, :lattice_index)
     error("Unable to set property $key: this field is protected")
   else
@@ -220,9 +236,13 @@ end
 #---------------------------------------------------------------------------------------------------
 
 """
-    Lattice(branches)
+    Lattice(branches; name = "", context = Context())
 
-Constructs a `Lattice` given the vector of branches `branches`.
+Constructs a `Lattice` given the vector of branches `branches`. Branches without a name
+are named `"B<i>"`, where `<i>` is the index of the branch. The contexts of the `Branch`es
+and `context` are merged into a single `Context` shared by the `Lattice`, all of its
+`Branch`es, and all of their `Beamline`s. Variables in `context` take precedence over those
+in the `Branch`es.
 
 ## Example
 ```julia
@@ -234,9 +254,9 @@ lattice = Lattice([Branch([bl1]), Branch([bl2])])
 
 ---
 
-    Lattice(beamlines)
+    Lattice(beamlines; name = "", context = Context())
 
-Constructs a `Lattice` containing a single `Branch` made up of the vector of 
+Constructs a `Lattice` containing a single `Branch` made up of the vector of
 `Beamline`s `beamlines`.
 
 ## Example
@@ -253,6 +273,20 @@ end
 
 #---------------------------------------------------------------------------------------------------
 
+function Base.setproperty!(lat::Lattice, key::Symbol, value)
+  if key == :name
+    setfield!(lat, key, value)
+  elseif key == :context
+    _set_context!(lat, value)
+  elseif key == :branches
+    error("Unable to set property $key: this field is protected")
+  else
+    error("Unable to set property $key of Lattice: Lattice does not have this property")
+  end
+end
+
+#---------------------------------------------------------------------------------------------------
+
 function Base.show(io::IO, lat::Lattice)
   println(io, "Lattice: $(lat.name)")
 
@@ -261,7 +295,8 @@ function Base.show(io::IO, lat::Lattice)
   branch_table[1,:] = ["Index", "Name", "# Eles", "Length"]
   for (ix, branch) in enumerate(lat.branches)
     nele = length(branch)
-    branch_table[ix+1,:] = [ix, branch.name, nele, branch[nele].s_downstream]
+    len = nele == 0 ? 0 : branch[nele].s_downstream
+    branch_table[ix+1,:] = [ix, branch.name, nele, len]
   end
 
   offset = 6

@@ -29,26 +29,17 @@ Base.length(bl::Beamline) = length(bl.line)
 #---------------------------------------------------------------------------------------------------
 
 function Base.getindex(branch::Branch, ix::Integer)
-  n = 0
   ix0 = ix
 
-  for bl in branch.beamlines
-    if ix > length(bl.line)
-      ix = ix - length(bl.line)
-      n = n + length(bl.line)
-      continue
+  if ix >= 1
+    for bl in branch.beamlines
+      n = length(bl.line)
+      ix <= n && return bl.line[ix]
+      ix -= n
     end
-
-    return bl.line[ix]
   end
 
-  error("Bounds error: branch has $n elements so index $ix0 is out of range.")
+  throw(BoundsError(branch, ix0))
 end
 
-function Base.length(branch::Branch) 
-  try
-    return sum([length(x.line) for x in branch.beamlines])
-  catch
-    return 0
-  end
-end
+Base.length(branch::Branch) = sum(length, branch.beamlines; init=0)
