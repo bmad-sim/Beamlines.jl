@@ -24,6 +24,9 @@ export AbstractParams,
        BMultipole,
        EMultipole,
        DefExpr,
+       @λ,
+       @lambda,
+       LegibleLambda,
        Drift,
        Solenoid,
        Quadrupole,
@@ -90,6 +93,7 @@ using FunctionWrappers: FunctionWrapper
 
 include("utils.jl")
 include("context.jl")
+include("legible_lambdas.jl")
 include("defexpr.jl")
 include("element.jl")
 include("beamline.jl")
