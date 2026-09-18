@@ -65,19 +65,25 @@ function Base.setindex!(h::ParamDict, v::AbstractParams, key::Type{<:AbstractPar
   # ==================================================================
 end
 
+@generated function _setproperties_unrolled!(ele, kwargs::NamedTuple{names}) where {names}
+  assignments = Expr[]
+  if :L in names
+    push!(assignments, :(setproperty!(ele, :L, getfield(kwargs, :L))))
+  end
+  for name in names
+    name == :L && continue
+    push!(assignments, :(setproperty!(ele, $(QuoteNode(name)), getfield(kwargs, $(QuoteNode(name))))))
+  end
+  return Expr(:block, assignments..., :(ele))
+end
+
 struct LineElement
   pdict::ParamDict
   function LineElement(pdict=ParamDict(UniversalParams => UniversalParams()); kwargs...)
     ele = new(pdict)
-    if :L in keys(kwargs) # this is for Python compatibility which reorders the arguments.
-      setproperty!(ele, :L, kwargs[:L])
-    end
-    for (k, v) in kwargs
-      if k == :L
-        continue
-      end
-      setproperty!(ele, k, v)
-    end
+    # Specialize each assignment on its keyword and value type. `L` must be
+    # assigned first for Python callers, which may reorder keyword arguments.
+    _setproperties_unrolled!(ele, getfield(kwargs, :data))
 
     return ele
   end
