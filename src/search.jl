@@ -24,3 +24,22 @@ end
 
 Base.getindex(bl::Beamline, i::Integer) = bl.line[i]
 Base.getindex(bl::Beamline, f::Function) = filter(f, bl.line)
+Base.length(bl::Beamline) = length(bl.line)
+
+#---------------------------------------------------------------------------------------------------
+
+function Base.getindex(branch::Branch, ix::Integer)
+  ix0 = ix
+
+  if ix >= 1
+    for bl in branch.beamlines
+      n = length(bl.line)
+      ix <= n && return bl.line[ix]
+      ix -= n
+    end
+  end
+
+  throw(BoundsError(branch, ix0))
+end
+
+Base.length(branch::Branch) = sum(length, branch.beamlines; init=0)

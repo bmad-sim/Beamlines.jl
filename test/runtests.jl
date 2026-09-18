@@ -1699,6 +1699,24 @@ using ForwardDiff, GTPSA, ReverseDiff
     c1.d = im
     @test_throws InexactError ct1.d
 
+    # Context merge tests
+    cm1 = Context(e = 1, f = 2)
+    cm2 = Context(g = 3, h = 4)
+    cm3 = merge(cm1, cm2)
+    @test cm3 isa Context{Any}
+    @test sort(collect(keys(getfield(cm3, :d)))) == [:e, :f, :g, :h]
+    @test (cm3.e, cm3.f, cm3.g, cm3.h) == (1, 2, 3, 4)
+    @test cm3 !== cm1 && cm3 !== cm2
+    cm3.e = 10
+    @test cm1.e == 1 # merge copies, so inputs are not aliased
+    @test !haskey(getfield(cm3, :d), :a) # GLOBAL_CONTEXTS variables are not pulled in
+    @test getfield(merge(cm1), :d) == getfield(cm1, :d)
+    @test merge(cm1, Context(f = 5), Context(f = 6)).f == 6 # last one wins
+    cmt = merge(Context{Int}(e = 1), Context{Float64}(f = 2.0))
+    @test cmt isa Context{Union{Float64,Int}}
+    @test cmt.e === 1
+    @test cmt.f === 2.0
+
     # Beamline context test
     qf = Quadrupole(Kn1=DefExpr(c->c.a), L=DefExpr(c -> c.b))
     @test qf.Kn1 == 3
@@ -1747,4 +1765,185 @@ using ForwardDiff, GTPSA, ReverseDiff
     qq = Quadrupole(Kn1=-DefExpr(c -> c.k1), L=0.5)
     blq = Beamline([qq], context=Context(k1 = 0.36))
     @test blq[qq][1].Kn1 ≈ -0.36
+
+    @testset "Branch and Lattice" begin
+        empty!(GLOBAL_CONTEXTS)
+        ctxkeys(c) = sort(collect(keys(getfield(c, :d))))
+
+        # Type display
+        @test repr(Branch) == "Branch"
+        @test repr(Lattice) == "Lattice"
+
+        # length and indexing across the Beamlines of a Branch
+        d1 = Drift(L=1.0); d2 = Drift(L=2.0); d3 = Drift(L=3.0); d4 = Drift(L=4.0)
+        bl1 = Beamline([d1, d2]; E_ref=1e9, species_ref=Species("electron"))
+        bl2 = Beamline([d3, d4])
+        br = Branch([bl1, bl2])
+        @test length(bl1) == 2
+        @test length(br) == 4
+        @test length(Branch(Beamline[])) == 0
+        @test br[1] === bl1.line[1]
+        @test br[2] === bl1.line[2]
+        @test br[3] === bl2.line[1]
+        @test br[4] === bl2.line[2]
+        @test_throws BoundsError br[5]
+        @test_throws BoundsError br[0]
+        @test_throws BoundsError br[-1]
+        @test_throws BoundsError Branch(Beamline[])[1]
+
+        # s and s_downstream accumulate over the preceding Beamlines in the Branch
+        @test [br[i].s for i in 1:4] == [0, 1, 3, 6]
+        @test [br[i].s_downstream for i in 1:4] == [1, 3, 6, 10]
+        # s is a zero of the same type as L at the start of a Beamline
+        @test br[1].s isa Float64
+        @test Beamline([Drift(L=1f0)]).line[1].s isa Float32
+
+        # s of preceding Beamlines is evaluated with the (shared) context
+        dl = Drift(L=DefExpr(c -> c.len))
+        blc1 = Beamline([dl]; E_ref=1e9, species_ref=Species("electron"), context=Context(len=2.0))
+        blc2 = Beamline([Drift(L=1.0)])
+        brc = Branch([blc1, blc2])
+        @test blc2.line[1].s == 2.0
+        brc.context.len = 3.0
+        @test blc2.line[1].s == 3.0
+        @test blc2.line[1].s_downstream == 4.0
+
+        # Branch properties
+        @test br.name == ""
+        @test Branch([Beamline([Drift()])]; name="named").name == "named"
+        br.name = "X"
+        @test br.name == "X"
+        @test propertynames(br) == (:name, :beamlines, :lattice, :lattice_index, :context)
+        @test_throws ErrorException br.lattice       # not yet in a Lattice
+        @test_throws ErrorException br.lattice_index
+        @test_throws ErrorException br.foo
+        @test_throws ErrorException br.lattice = Beamlines.NULL_LATTICE
+        @test_throws ErrorException br.lattice_index = 1
+        @test_throws ErrorException br.foo = 1
+
+        # Lattice from Branches
+        br2 = Branch([Beamline([Drift(L=5.0)])])
+        lat = Lattice([br, br2]; name="LAT")
+        @test lat.name == "LAT"
+        @test length(lat.branches) == 2
+        @test lat.branches[1] === br
+        @test lat.branches[2] === br2
+        @test br.lattice === lat
+        @test br2.lattice === lat
+        @test br.lattice_index == 1
+        @test br2.lattice_index == 2
+        @test br.name == "X"   # Explicit names are kept
+        @test br2.name == "B2" # Unnamed branches get a default name
+        @test_throws ErrorException Lattice([br2]) # Already in a Lattice
+        br3 = Branch([Beamline([Drift()])])
+        @test_throws ErrorException Lattice([br3, br3])
+        lat.name = "LAT2"
+        @test lat.name == "LAT2"
+        lat.name = "LAT"
+        @test_throws ErrorException lat.branches = lat.branches
+        @test_throws ErrorException lat.foo = 1
+
+        # Lattice from Beamlines puts them all in a single Branch
+        blA = Beamline([Drift(L=1.0)])
+        blB = Beamline([Drift(L=2.0)])
+        latB = Lattice([blA, blB]; name="LB", context=Context(z=9))
+        @test latB.name == "LB"
+        @test length(latB.branches) == 1
+        @test latB.branches[1].beamlines[1] === blA
+        @test latB.branches[1].beamlines[2] === blB
+        @test latB.branches[1].name == "B1"
+        @test blB.context.z == 9
+
+        # Context merging. Precedence: Lattice > Branch > Beamline, and after construction
+        # the Lattice, its Branches, and their Beamlines all share one Context.
+        q = Quadrupole(L=1.0, Kn1=DefExpr(c -> c.k))
+        blq = Beamline([q], context=Context(k=0.1, x=1))
+        brq = Branch([blq], context=Context(k=0.2, y=2))
+        @test ctxkeys(brq.context) == [:k, :x, :y]
+        @test brq.context.k == 0.2
+        @test blq.context === brq.context
+        @test blq.line[1].Kn1 == 0.2
+        latq = Lattice([brq], context=Context(k=0.3, w=3))
+        @test ctxkeys(latq.context) == [:k, :w, :x, :y]
+        @test latq.context.k == 0.3
+        @test brq.context === latq.context
+        @test blq.context === latq.context
+        @test blq.line[1].Kn1 == 0.3
+        latq.context.k = 0.4
+        @test blq.line[1].Kn1 == 0.4
+
+        # Setting the context at any level sets the one shared by the whole tree
+        blq2 = Beamline([Drift()])
+        brq2 = Branch([Beamline([Drift()]), blq2])
+        brq3 = Branch([Beamline([Drift()])])
+        latq3 = Lattice([Branch([Beamline([Quadrupole(L=1.0, Kn1=DefExpr(c -> c.k))])]), brq3])
+        blq3 = latq3.branches[1].beamlines[1]
+        allctx(lat) = [lat.context; [b.context for b in lat.branches];
+                       [bl.context for b in lat.branches for bl in b.beamlines]]
+        c1 = Context(k=0.5)
+        latq3.context = c1
+        @test all(c -> c === c1, allctx(latq3))
+        @test blq3.line[1].Kn1 == 0.5
+        c2 = Context(k=0.6)
+        brq3.context = c2                        # Branch in a Lattice
+        @test all(c -> c === c2, allctx(latq3))
+        @test blq3.line[1].Kn1 == 0.6
+        c3 = Context(k=0.7)
+        brq3.beamlines[1].context = c3           # Beamline in a Branch in a Lattice
+        @test all(c -> c === c3, allctx(latq3))
+        @test blq3.line[1].Kn1 == 0.7
+        # Branch not in a Lattice
+        c4 = Context(k=0.8)
+        blq2.context = c4
+        @test brq2.context === c4
+        @test all(bl -> bl.context === c4, brq2.beamlines)
+        c5 = Context(k=0.9)
+        brq2.context = c5
+        @test all(bl -> bl.context === c5, brq2.beamlines)
+        # Beamline not in a Branch only sets its own context
+        bls = Beamline([Drift()])
+        c6 = Context(k=1.0)
+        bls.context = c6
+        @test bls.context === c6
+
+        # Branch(elements; context) keeps the context, with or without InitialBeamlineParams
+        brE = Branch([Drift(L=1.0), Drift()]; context=Context(a=1, b=2))
+        @test ctxkeys(brE.context) == [:a, :b]
+        @test brE.beamlines[1].context === brE.context
+        brE2 = Branch([Marker(E_ref=1e9, species_ref=Species("electron")), Drift(),
+                       RFCavity(dE_ref=1e6), Drift()]; context=Context(a=1, b=2))
+        @test length(brE2.beamlines) == 2
+        @test ctxkeys(brE2.context) == [:a, :b]
+        latE = Lattice([Branch([Drift(), Drift()]; context=Context(a=1, b=2)),
+                        Branch([Drift(), Drift()])]; context=Context(c=3, d=4))
+        @test ctxkeys(latE.context) == [:a, :b, :c, :d]
+
+        # show
+        slat = sprint(show, lat)
+        @test occursin("Lattice: LAT", slat)
+        @test occursin(r"1\s+X\s+4\s+10\.0", slat)
+        @test occursin(r"2\s+B2\s+1\s+5\.0", slat)
+        sbr = sprint(show, br)
+        @test occursin("Branch: X", sbr)
+        @test occursin("lattice_index = 1", sbr)
+        @test occursin(r"4\s+Drift\s+4\.0\s+6\.0\s+10\.0", sbr)
+
+        # Reference species and energy shown are those at the start of the Branch
+        @test occursin("species_ref = electron", sbr)
+        @test occursin("E_ref = 1.0e9", sbr)
+        @test occursin("species_ref = Inferred", sprint(show, Branch(Beamline[])))
+
+        # Empty Beamlines in a Branch contribute zero length to s
+        brx = Branch([Beamline(LineElement[]), Beamline([Drift(L=1.0)]; E_ref=1e9,
+                      species_ref=Species("electron")), Beamline(LineElement[]),
+                      Beamline([Drift(L=2.0)])])
+        @test brx.beamlines[2].line[1].s == 0
+        @test brx.beamlines[4].line[1].s == 1.0
+        @test brx.beamlines[4].line[1].s_downstream == 3.0
+
+        # Showing a Lattice that contains an empty Branch
+        slat0 = sprint(show, Lattice([Branch(Beamline[]), brx]))
+        @test occursin(r"1\s+B1\s+0\s+0", slat0)
+        @test occursin(r"2\s+B2\s+2\s+3\.0", slat0)
+    end
 end

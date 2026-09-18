@@ -110,6 +110,36 @@ end
 
 Base.copy(c::Context{T}) where {T} = Context{T}(copy(getfield(c, :d)))
 
+"""
+    merge(c::Context, cs::Context...)
+
+Construct a new `Context` containing the variables of all of the given `Context`s. If a
+variable is defined in more than one of the `Context`s, the value from the last one is
+used. The type parameter of the returned `Context` is the `Union` of the type parameters
+of the inputs, so no values are converted. Only the variables stored in the given
+`Context`s are included; variables from `GLOBAL_CONTEXTS` are not.
+
+## Examples
+```jldoctest
+julia> c1 = Context(a = 1, b = 2);
+
+julia> c2 = Context(c = 3, d = 4);
+
+julia> c3 = merge(c1, c2);
+
+julia> c3.a + c3.d
+5
+
+julia> typeof(merge(Context{Int}(a = 1), Context{Float64}(b = 2.0)))
+Context{Union{Float64, Int64}}
+```
+"""
+function Base.merge(c::Context, cs::Context...)
+  ds = map(x -> getfield(x, :d), (c, cs...))
+  T = Union{map(valtype, ds)...}
+  return Context{T}(merge!(Dict{Symbol,T}(), ds...))
+end
+
 const NULL_CONTEXT = Context()
 const GLOBAL_CONTEXTS = Stack{Context}()
 

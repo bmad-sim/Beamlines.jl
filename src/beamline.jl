@@ -1,9 +1,51 @@
 abstract type _AbstractBeamline end # Only subtype is Beamline
+abstract type _AbstractBranch end   # Only subtype is Branch
 
-struct _Branch{T<:_AbstractBeamline}
-  beamlines::ReadOnlyVector{T,Vector{T}}
-  function _Branch{T}(beamlines::Vector{T}) where {T<:_AbstractBeamline}
-    branch = new(ReadOnlyVector(beamlines))
+#---------------------------------------------------------------------------------------------------
+
+mutable struct _Lattice{B<:_AbstractBranch}
+  name::String
+  branches::ReadOnlyVector{B,Vector{B}}
+  context::Context 
+  function _Lattice{B}(branches::Vector{B}; name::String = "", context=Context()) where {B<:_AbstractBranch}
+    lattice = new(name, ReadOnlyVector(branches), context)
+    for i in eachindex(branches)
+      br = branches[i]
+      if getfield(br, :lattice_index) != -1
+        error("Branch $i is already in another Lattice!")
+      end
+      setfield!(br, :lattice, lattice)
+      setfield!(br, :lattice_index, i)
+      br.name == "" ? br.name = "B$i" : br.name
+      context = merge(branches[i].context, context)
+    end
+
+    _set_context!(lattice, context)
+    return lattice
+  end
+end
+
+#---------------------------------------------------------------------------------------------------
+
+"""
+    mutable struct _Branch{T<:_AbstractBeamline} <: _AbstractBranch
+
+`_Branch` exists to break a mutual type recursion since
+`Beamline` has a reference to a `Branch`, and `Branch` needs a vector of `Beamline`s. 
+Julia has no forward declarations, so to get around this, `_Branch` is used.
+
+Why not just use `Branch{T}` and skip defining `_Branch`?
+This could be done but in this case `Branch` would become a `UnionAll` rather than a concrete type
+leading to type instability.
+"""
+mutable struct _Branch{T<:_AbstractBeamline} <: _AbstractBranch
+  name::String
+  const beamlines::ReadOnlyVector{T,Vector{T}}
+  lattice::_Lattice{_Branch{T}} # This should be HARD to change, not allowed easily
+  lattice_index::Int            # This should be HARD to change, not allowed easily
+  context::Context 
+  function _Branch{T}(beamlines::Vector{T}; name::String = "", context=Context()) where {T<:_AbstractBeamline}
+    branch = new(name, ReadOnlyVector(beamlines), NULL_LATTICE, -1, context)
     for i in eachindex(beamlines)
       bl = beamlines[i]
       if getfield(bl, :branch_index) != -1
@@ -11,10 +53,36 @@ struct _Branch{T<:_AbstractBeamline}
       end
       setfield!(bl, :branch, branch)
       setfield!(bl, :branch_index, i)
+      context = merge(beamlines[i].context, context)
     end
+
+    _set_context!(branch, context)
     return branch
   end
 end
+
+#---------------------------------------------------------------------------------------------------
+
+# A Lattice, its Branches, and their Beamlines all share a single Context.
+# `_set_context!` sets that shared Context for a Branch or Lattice and everything in it.
+
+function _set_context!(branch::_Branch, context::Context)
+  setfield!(branch, :context, context)
+  for bl in getfield(branch, :beamlines)
+    setfield!(bl, :context, context)
+  end
+  return context
+end
+
+function _set_context!(lattice::_Lattice, context::Context)
+  setfield!(lattice, :context, context)
+  for br in getfield(lattice, :branches)
+    _set_context!(br, context)
+  end
+  return context
+end
+
+#---------------------------------------------------------------------------------------------------
 
 @enumx RefMeaning p_over_q_ref E_ref pc_ref dp_over_q_ref dE_ref dpc_ref
 
@@ -50,80 +118,85 @@ end
   end
 end
 
+#---------------------------------------------------------------------------------------------------
+
+"""
+    Beamline(line; kwargs...)
+
+Constructs a `Beamline` out of the `LineElement`s in the vector `line`. The `LineElement`s 
+in the `Beamline` will be automatically constructed as children of those `LineElement`s in 
+`line`, inheriting all of their properties. 
+
+The reference energy of the beamline may be optionally specified using one of the keyword 
+arguments: `E_ref`, `pc_ref`, `p_over_q_ref`, `dE_ref`, `dpc_ref`, or `dp_over_q_ref`.
+Whichever of these is specified will be the independent variable. The species of 
+the beamline may be optionally specified using the `species_ref` keyword argument.
+Specifying either of these keyword arguments will permanently override both the reference 
+species and energy defined in the first `LineElement` -- see the warning below.
+
+## Examples
+```julia
+qf = Quadrupole(Kn1=0.36, L=0.5)
+d = Drift(L=1)
+qd = Quadrupole(Kn1=-0.36, L=0.5)
+
+fodo = Beamline([qf, d, qd, d], species_ref=Species("electron"), E_ref=18e9)
+```
+
+Alternatively, one can specify the reference species/energy in the first element:
+
+```julia
+qf = Quadrupole(Kn1=0.36, L=0.5, species_ref=Species("electron"), E_ref=18e9)
+d = Drift(L=1)
+qd = Quadrupole(Kn1=-0.36, L=0.5)
+
+fodo = Beamline([qf, d, qd, d])
+```
+
+## Keyword arguments
+- `context`: A `Context` struct containing variables that can be stored in the beamline
+    for convenience. If the `Beamline` is put in a `Branch`, this is merged into the
+    `Context` shared by the whole `Branch` -- see `Branch`.
+- `species_ref`: Reference species of the beamline. 
+- `E_ref`: Total reference energy [eV]
+- `pc_ref`: Reference momentum [eV/c]
+- `p_over_q_ref`: A *signed* reference magnetic rigidity [T * m]
+- `dE_ref`: Change in total reference energy w.r.t. the directly-upstream beamline in 
+    units [eV]
+- `dpc_ref`: Change in reference momentum w.r.t. the directly-upstream beamline in 
+    units [eV/c]
+- `dp_over_q_ref`: Change in *signed* reference magnetic rigidty w.r.t. the directly 
+    upstream beamline [T * m]
+
+!!! warning
+    Keyword arguments specified to the `Beamline` constructor will permanently override any 
+    corresponding properties specified in the first `LineElement` of the beamline. E.g., 
+    ```julia
+    beg = Marker(species_ref=Species("electron"), E_ref=18e9)
+
+    a = Beamline([beg])
+    b = Beamline([beg], species_ref=Species("proton"), E_ref=1e9)
+
+    a.E_ref == beg.E_ref == 18e9 # true
+    b.E_ref == 1e9               # true
+    b.E_ref != beg.E_ref         # true
+
+    # If `beg` is reset:
+    beg.species_ref = Species("positron")
+
+    # `a` will still inherit it, but `b` will not:
+    a.species_ref == beg.species_ref   # true
+    b.species_ref == Species("proton") # true
+    b.species_ref != beg.species_ref   # true
+    ```
+"""
+Beamline(line; kwargs...)
+
 mutable struct Beamline <: _AbstractBeamline
   const line::ReadOnlyVector{LineElement, Vector{LineElement}}
   branch::_Branch{Beamline} # This should be HARD to change, not allowed easily
   branch_index::Int         # This should be HARD to change, not allowed easily
   context::Context 
-  @doc"""
-      Beamline(line; kwargs...)
-
-  Constructs a `Beamline` out of the `LineElement`s in the vector `line`. The `LineElement`s 
-  in the `Beamline` will be automatically constructed as children of those `LineElement`s in 
-  `line`, inheriting all of their properties. 
-  
-  The reference energy of the beamline may be optionally specified using one of the keyword 
-  arguments: `E_ref`, `pc_ref`, `p_over_q_ref`, `dE_ref`, `dpc_ref`, or `dp_over_q_ref`.
-  Whichever of these is specified will be the independent variable. The species of 
-  the beamline may be optionally specified using the `species_ref` keyword argument.
-  Specifying either of these keyword arguments will permanently override both the reference 
-  species and energy defined in the first `LineElement` -- see the warning below.
-
-  ## Examples
-  ```julia
-  qf = Quadrupole(Kn1=0.36, L=0.5)
-  d = Drift(L=1)
-  qd = Quadrupole(Kn1=-0.36, L=0.5)
-
-  fodo = Beamline([qf, d, qd, d], species_ref=Species("electron"), E_ref=18e9)
-  ```
-  
-  Alternatively, one can specify the reference species/energy in the first element:
-
-  ```julia
-  qf = Quadrupole(Kn1=0.36, L=0.5, species_ref=Species("electron"), E_ref=18e9)
-  d = Drift(L=1)
-  qd = Quadrupole(Kn1=-0.36, L=0.5)
-
-  fodo = Beamline([qf, d, qd, d])
-  ```
-
-  ## Keyword arguments
-  - `context`: A `Context` struct containing variables that can be stored in the beamline 
-      for convenience
-  - `species_ref`: Reference species of the beamline. 
-  - `E_ref`: Total reference energy [eV]
-  - `pc_ref`: Reference momentum [eV/c]
-  - `p_over_q_ref`: A *signed* reference magnetic rigidity [T * m]
-  - `dE_ref`: Change in total reference energy w.r.t. the directly-upstream beamline in 
-      units [eV]
-  - `dpc_ref`: Change in reference momentum w.r.t. the directly-upstream beamline in 
-      units [eV/c]
-  - `dp_over_q_ref`: Change in *signed* reference magnetic rigidty w.r.t. the directly 
-      upstream beamline [T * m]
-
-  !!! warning
-      Keyword arguments specified to the `Beamline` constructor will permanently override any 
-      corresponding properties specified in the first `LineElement` of the beamline. E.g., 
-      ```julia
-      beg = Marker(species_ref=Species("electron"), E_ref=18e9)
-
-      a = Beamline([beg])
-      b = Beamline([beg], species_ref=Species("proton"), E_ref=1e9)
-
-      a.E_ref == beg.E_ref == 18e9 # true
-      b.E_ref == 1e9               # true
-      b.E_ref != beg.E_ref         # true
-
-      # If `beg` is reset:
-      beg.species_ref = Species("positron")
-
-      # `a` will still inherit it, but `b` will not:
-      a.species_ref == beg.species_ref   # true
-      b.species_ref == Species("proton") # true
-      b.species_ref != beg.species_ref   # true
-      ```
-  """
   function Beamline(
     line;
     species_ref::Union{Species,DefExpr{Species}}=Species(),  
@@ -198,12 +271,16 @@ mutable struct Beamline <: _AbstractBeamline
   end
 end
 
+#---------------------------------------------------------------------------------------------------
+
 PROPS(::Type{Beamline}) = OrderedDict{String,String}(
   "line"         => "A read-only array of `LineElements` in the beamline, in order",
-  "context"     => "`Context` struct containing control variables associated with the beamline",
+  "context"     => "`Context` struct containing control variables associated with the beamline. If in a `Branch`, this is shared by the whole `Branch` (and `Lattice`, if any), and setting it sets it for all of them",
   "branch"       => "`Branch` that the beamline is placed in, if any",
   "branch_index" => "Index of the beamline in the `Branch`, if in a `Branch`",
 )
+
+#---------------------------------------------------------------------------------------------------
 
 """
     Beamline
@@ -218,8 +295,9 @@ first `LineElement` of the `Beamline`.
 
 ## Properties
 $(PROPSDOC(Beamline))
-"""
-Beamline
+""" Beamline
+
+#---------------------------------------------------------------------------------------------------
 
 """
     empty!(::Beamline)
@@ -238,6 +316,7 @@ function Base.empty!(bl::Beamline)
 end
 
 #show(io::IO, ::MIME"text/plain", bl::Beamline) = show(io, bl)
+
 function Base.show(io::IO, bl::Beamline)
   println(io, "Beamline:")
   lines_used = 1
@@ -272,7 +351,7 @@ function Base.show(io::IO, bl::Beamline)
   # Index, Name, Kind, s
   ele_table = Matrix{Any}(nothing, 1+N_ele, 5)
   ele_table[1,:] = ["Index", "Name", "Kind", "s [m]", "L [m]"]
-  lines_used
+
   for i in 1:N_ele
     ele = bl.line[i]
     ele_table[i+1,:] = [ele.beamline_index, ele.name, ele.kind, param_repr(ele.s), param_repr(ele.L)]
@@ -301,91 +380,7 @@ function Base.show(io::IO, bl::Beamline)
   return
 end
 
-"""
-    Branch
-
-Structure containing a vector of `Beamline`s, where currently each follows in-order, 
-one after the other. 
-
-## Properties
-- `beamlines`: Vector of the beamlines in the `Branch`
-"""
-const Branch = _Branch{Beamline}
-const NULL_BRANCH = Branch(Beamline[])
-
-"""
-    Branch(beamlines)
-
-Constructs a `Branch` given the vector of beamlines `beamlines`.
-
-## Example
-```julia
-ele = LineElement()
-bl1 = Beamline([ele], E_ref=2e9, species_ref=Species("electron"))
-bl2 = Beamline([ele], dE_ref=1e9)
-
-branch = Branch([bl1, bl2])
-```
-
----
-
-    Branch(elements; kwargs...)
-
-Constructs a `Branch` given the vector of `LineElement`s `elements`. This will 
-automatically partition the given vector into separate `Beamline`s, which each 
-have a uniform reference species and reference energy.
-
-## Example
-```julia
-beginning = Marker(E_ref=10e9, species_ref=Species("electron"))
-rf0 = RFCavity(dE_ref=1e9)
-next = LineElement()
-
-branch = Branch([beginning, rf0, next]) # Partitioned into 2 `Beamline`s
-```
-"""
-function Branch(
-  elements::AbstractArray{<:LineElement};
-  species_ref0::Species=Species(),
-  E_ref0=nothing,
-  p_over_q_ref0=nothing,
-  pc_ref0=nothing,
-)
-  kwargs = (p_over_q_ref0, E_ref0, pc_ref0)
-  kwarg_syms = (:p_over_q_ref, :E_ref, :pc_ref)
-  c = count(t->!isnothing(t), kwargs)
-  if c > 1
-    error("Only one of E_ref0, pc_ref0, p_over_q_ref0 can be specified")
-  end
-  kwarg_idx = findfirst(t->!isnothing(t), kwargs)
-  kwarg_val = isnothing(kwarg_idx) ? nothing : kwargs[kwarg_idx]
-  kwarg_sym = isnothing(kwarg_idx) ? :p_over_q_ref : kwarg_syms[kwarg_idx] 
-  
-  # Determine all indices with InitialBeamlineParams
-  idxs = findall(t->haskey(getfield(t, :pdict), InitialBeamlineParams), elements)
-  # If none, then only single Beamline
-  if length(idxs) == 0
-    return Branch([Beamline(elements; species_ref=species_ref0, kwarg_sym=>kwarg_val)])
-  end
-
-  n_beamlines = length(idxs)
-  beamlines = Vector{Beamline}(undef, n_beamlines)
-  for i in 1:n_beamlines
-    idx0 = idxs[i]
-    if i == n_beamlines
-      idxf = length(elements)
-    else
-      idxf = idxs[i+1]-1
-    end
-
-    if i == 1
-      beamlines[i] = Beamline(elements[idx0:idxf]; species_ref=species_ref0, kwarg_sym=>kwarg_val)
-    else
-      beamlines[i] = Beamline(elements[idx0:idxf])
-    end
-  end
-  return Branch(beamlines)
-end
+#---------------------------------------------------------------------------------------------------
 
 Base.propertynames(::Beamline) = (:line, :branch, :branch_index, :context, :p_over_q_ref, :E_ref, :pc_ref, :dp_over_q_ref, :dE_ref, :dpc_ref, :species_ref)
 
@@ -426,7 +421,11 @@ function Base.setproperty!(b::Beamline, key::Symbol, value)
   if key in (:line, :branch, :branch_index)
     error("Unable to set property $key: this field is protected")
   elseif key == :context
-    setfield!(b, key, value)
+    if getfield(b, :branch_index) == -1
+      setfield!(b, key, value)
+    else  # The Context is shared by the whole Branch (and Lattice, if any)
+      setproperty!(getfield(b, :branch), key, value)
+    end
   elseif key in (:E_ref, :pc_ref, :p_over_q_ref, :dE_ref, :dpc_ref, :dp_over_q_ref, :species_ref)
     if length(b.line) < 1
       error("Unable to set $key of Beamline with no elements")
@@ -461,6 +460,7 @@ $(PROPSDOC(BeamlineParams))
 """
 BeamlineParams
 
+#---------------------------------------------------------------------------------------------------
 
 function Base.show(io::IO, bp::BeamlineParams)
   println(io, typeof(bp))
@@ -500,6 +500,8 @@ function Base.setproperty!(bp::BeamlineParams, key::Symbol, value)
   end
 end
 
+#---------------------------------------------------------------------------------------------------
+
 function Base.getproperty(bp::BeamlineParams, key::Symbol)
   if key in (:p_over_q_ref, :E_ref, :pc_ref, :species_ref, :branch, :branch_index, :ref)
     return deval(getproperty(bp.beamline, key), getfield(bp.beamline, :context))
@@ -512,15 +514,26 @@ function Base.getproperty(bp::BeamlineParams, key::Symbol)
   elseif key in (:s, :s_downstream)
     if key == :s
       n = bp.beamline_index - 1
-      if n == 0
-        return 0
-      end
     else
       n = bp.beamline_index
     end
+
     # s is the sum of the lengths of all preceding elements
-    line = bp.beamline.line
-    return deval(sum(line[i].L for i in 1:n), getfield(bp.beamline, :context))
+    bl = bp.beamline
+    s0 = zero(bl.line[bp.beamline_index].L)  # So s has the same type as L when s is zero
+    nx = getfield(bl, :branch_index)
+    if nx != -1  # Beamline is in a Branch so add the lengths of the preceding Beamlines
+      for bsub in getfield(bl, :branch).beamlines[1:nx-1]
+        isempty(bsub.line) && continue  # Reducing over an empty collection is not allowed.
+        s0 += deval(sum(ele.L for ele in bsub.line), getfield(bsub, :context))
+      end
+    end
+
+    if n == 0  # Reducing over an empty collection is not allowed so this is a special case.
+      return s0
+    else
+      return s0 + deval(sum(bl.line[i].L for i in 1:n), getfield(bl, :context))
+    end
   else
     return getfield(bp, key)
   end
@@ -542,6 +555,8 @@ PROPS(::Type{InitialBeamlineParams}) = OrderedDict{String,String}(
   "dpc_ref"       => "Change in reference momentum w.r.t. the directly-upstream beamline [eV/c]",
   "dp_over_q_ref" => "Change in *signed* reference magnetic rigidty w.r.t. the directly-upstream beamline [T * m]",
 )
+
+#---------------------------------------------------------------------------------------------------
 
 """
     InitialBeamlineParams
@@ -584,6 +599,8 @@ function Base.show(io::IO, ibp::InitialBeamlineParams)
   return
 end
 
+#---------------------------------------------------------------------------------------------------
+
 function Base.setproperty!(ibp::InitialBeamlineParams, key::Symbol, value)
   if key in (:E_ref, :p_over_q_ref, :pc_ref, :dE_ref, :dp_over_q_ref, :dpc_ref)
     setfield!(ibp, :ref_meaning, sym_to_refmeaning(key))
@@ -594,6 +611,8 @@ function Base.setproperty!(ibp::InitialBeamlineParams, key::Symbol, value)
   return value
 end
 
+#---------------------------------------------------------------------------------------------------
+
 function Base.getproperty(ibp::InitialBeamlineParams, key::Symbol)
   prop = trygetproperty(ibp, key)
   if prop isa GetError
@@ -601,6 +620,8 @@ function Base.getproperty(ibp::InitialBeamlineParams, key::Symbol)
   end
   return prop
 end
+
+#---------------------------------------------------------------------------------------------------
 
 function trygetproperty(ibp::InitialBeamlineParams, key::Symbol)
   if key in (:ref, :species_ref, :ref_meaning)
@@ -641,6 +662,8 @@ function trygetproperty(ibp::InitialBeamlineParams, key::Symbol)
     end
   end
 end
+
+#---------------------------------------------------------------------------------------------------
 
 function scalarize(a::InitialBeamlineParams)
   return InitialBeamlineParams(
