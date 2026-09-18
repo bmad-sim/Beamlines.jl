@@ -43,13 +43,24 @@ julia> d()
 `Beamline`s also store a context, which is passed to all `DefExpr`s when getting parameters 
 from `LineElement`s that are in a beamline:
 ```jldoctest
-julia> c1 = Context(Kn1=0.36);
+julia> c3 = Context(Kn1=0.36);
 
 julia> qf = Quadrupole(Kn1=DefExpr(c -> c.Kn1), L=0.5);
 
-julia> bl = Beamline([qf], context=c1);
+julia> bl = Beamline([qf], context=c3);
 
 julia> bl[qf][1].Kn1
+0.36
+```
+Notice that trying to access the value of `Kn1` directly from `qf` does not work since `c3`
+is not stored where it can be found:
+```
+julia> qf.Kn1
+ERROR: Variable Kn1 is not defined in the local Context nor in GLOBAL_CONTEXTS
+
+julia> push!(GLOBAL_CONTEXTS, c3)    # Make c3 available globally
+
+julia> qf.Kn1                        # Now this works
 0.36
 ```
 """
