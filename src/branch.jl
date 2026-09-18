@@ -144,6 +144,7 @@ function Branch(
   E_ref0=nothing,
   p_over_q_ref0=nothing,
   pc_ref0=nothing,
+  context = Context(),
 )
   kwargs = (p_over_q_ref0, E_ref0, pc_ref0)
   kwarg_syms = (:p_over_q_ref, :E_ref, :pc_ref)
@@ -173,17 +174,17 @@ function Branch(
     end
 
     if i == 1
-      beamlines[i] = Beamline(elements[idx0:idxf]; species_ref=species_ref0, kwarg_sym=>kwarg_val)
+      beamlines[i] = Beamline(elements[idx0:idxf]; species_ref=species_ref0, kwarg_sym=>kwarg_val, context = context)
     else
-      beamlines[i] = Beamline(elements[idx0:idxf])
+      beamlines[i] = Beamline(elements[idx0:idxf], context = context)
     end
   end
-  return Branch(beamlines)
+  return Branch(beamlines, context = context)
 end
 
 #---------------------------------------------------------------------------------------------------
 
-Base.propertynames(::Branch) = (:beamlines, :lattice, :lattice_index)
+Base.propertynames(::Branch) = (:beamlines, :lattice, :lattice_index, :context)
 
 function Base.getproperty(b::Branch, key::Symbol)
   prop = trygetproperty(b, key)
@@ -194,7 +195,7 @@ function Base.getproperty(b::Branch, key::Symbol)
 end
 
 function trygetproperty(b::Branch, key::Symbol)
-  if key in (:beamlines, :lattice, :lattice_index, :name)
+  if key in (:beamlines, :lattice, :lattice_index, :name, :context)
     field = getfield(b, key)
     if key in (:lattice, :lattice_index) && (field == -1 || field === NULL_LATTICE)
       return GetError("Unable to get $key: Branch is not in a Lattice")
@@ -246,8 +247,8 @@ bl2 = Beamline([Drift(L=2)])
 lattice = Lattice([bl1, bl2]) # Equivalent to Lattice([Branch([bl1, bl2])])
 ```
 """
-function Lattice(beamlines::Vector{Beamline})
-  return Lattice([Branch(beamlines)])
+function Lattice(beamlines::Vector{Beamline}; name = "", context = Context())
+  return Lattice([Branch(beamlines)], name = name, context = context)
 end
 
 #---------------------------------------------------------------------------------------------------

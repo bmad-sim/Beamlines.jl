@@ -1699,6 +1699,24 @@ using ForwardDiff, GTPSA, ReverseDiff
     c1.d = im
     @test_throws InexactError ct1.d
 
+    # Context merge tests
+    cm1 = Context(e = 1, f = 2)
+    cm2 = Context(g = 3, h = 4)
+    cm3 = merge(cm1, cm2)
+    @test cm3 isa Context{Any}
+    @test sort(collect(keys(getfield(cm3, :d)))) == [:e, :f, :g, :h]
+    @test (cm3.e, cm3.f, cm3.g, cm3.h) == (1, 2, 3, 4)
+    @test cm3 !== cm1 && cm3 !== cm2
+    cm3.e = 10
+    @test cm1.e == 1 # merge copies, so inputs are not aliased
+    @test !haskey(getfield(cm3, :d), :a) # GLOBAL_CONTEXTS variables are not pulled in
+    @test getfield(merge(cm1), :d) == getfield(cm1, :d)
+    @test merge(cm1, Context(f = 5), Context(f = 6)).f == 6 # last one wins
+    cmt = merge(Context{Int}(e = 1), Context{Float64}(f = 2.0))
+    @test cmt isa Context{Union{Float64,Int}}
+    @test cmt.e === 1
+    @test cmt.f === 2.0
+
     # Beamline context test
     qf = Quadrupole(Kn1=DefExpr(c->c.a), L=DefExpr(c -> c.b))
     @test qf.Kn1 == 3

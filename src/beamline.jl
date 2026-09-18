@@ -6,8 +6,9 @@ abstract type _AbstractBranch end   # Only subtype is Branch
 mutable struct _Lattice{B<:_AbstractBranch}
   name::String
   branches::ReadOnlyVector{B,Vector{B}}
-  function _Lattice{B}(branches::Vector{B}; name::String = "") where {B<:_AbstractBranch}
-    lattice = new(name, ReadOnlyVector(branches))
+  context::Context 
+  function _Lattice{B}(branches::Vector{B}; name::String = "", context=Context()) where {B<:_AbstractBranch}
+    lattice = new(name, ReadOnlyVector(branches), context)
     for i in eachindex(branches)
       br = branches[i]
       if getfield(br, :lattice_index) != -1
@@ -16,7 +17,17 @@ mutable struct _Lattice{B<:_AbstractBranch}
       setfield!(br, :lattice, lattice)
       setfield!(br, :lattice_index, i)
       br.name == "" ? br.name = "B$i" : br.name
+      context = merge(branches[i].context, context) 
     end
+
+    setfield!(lattice, :context, context)
+    for br in lattice.branches
+      setfield!(br, :context, context)
+      for bl in br.beamlines
+        setfield!(bl, :context, context)
+      end
+    end
+
     return lattice
   end
 end
@@ -39,8 +50,9 @@ mutable struct _Branch{T<:_AbstractBeamline} <: _AbstractBranch
   const beamlines::ReadOnlyVector{T,Vector{T}}
   lattice::_Lattice{_Branch{T}} # This should be HARD to change, not allowed easily
   lattice_index::Int            # This should be HARD to change, not allowed easily
-  function _Branch{T}(beamlines::Vector{T}; name::String = "") where {T<:_AbstractBeamline}
-    branch = new(name, ReadOnlyVector(beamlines), NULL_LATTICE, -1)
+  context::Context 
+  function _Branch{T}(beamlines::Vector{T}; name::String = "", context=Context()) where {T<:_AbstractBeamline}
+    branch = new(name, ReadOnlyVector(beamlines), NULL_LATTICE, -1, context)
     for i in eachindex(beamlines)
       bl = beamlines[i]
       if getfield(bl, :branch_index) != -1
@@ -48,7 +60,14 @@ mutable struct _Branch{T<:_AbstractBeamline} <: _AbstractBranch
       end
       setfield!(bl, :branch, branch)
       setfield!(bl, :branch_index, i)
+      context = merge(beamlines[i].context, context) 
     end
+
+    setfield!(branch, :context, context)
+    for bl in branch.beamlines
+      setfield!(bl, :context, context)
+    end
+
     return branch
   end
 end
