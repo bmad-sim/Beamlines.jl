@@ -21,6 +21,9 @@ function writebl(io::IO, bl::Beamline)
       end
       writeparam(io, pg)
     end
+    if !isempty(ele.do_not_use)
+      print(io, "do_not_use=", ele.do_not_use, ",")
+    end
     println(io, ")")
   end
   print(io, "])")

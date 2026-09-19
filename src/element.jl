@@ -1,6 +1,79 @@
 abstract type AbstractParams end
+
+"""
+    isactive(p) -> Bool
+    isactive(p, do_not_use) -> Bool
+
+Returns `true` if the parameter group `p` should be used in tracking. `isactive(nothing)`
+is always `false`. By default a parameter group is active, however some parameter groups
+define their own criteria, e.g. `RFParams` is only active if `voltage != 0`, and
+`ApertureParams` is only active if `aperture_active == true`.
+
+In the second form, `p` is additionally inactive if the name of its type (e.g.
+`:ApertureParams` for an `ApertureParams`) is in `do_not_use`, which is typically the
+`do_not_use` list of the `LineElement` containing `p`. See the documentation for
+`LineElement` for details.
+"""
 isactive(::AbstractParams) = true
 isactive(::Nothing) = false
+isactive(p::AbstractParams, do_not_use) = !(nameof(typeof(p)) in do_not_use) && isactive(p)
+isactive(::Nothing, do_not_use) = false
+# With the list as a type parameter (e.g. `Val((:ApertureParams,))`), the check is done at
+# compile time. This is used in tracking so that switched off parameter groups are compiled out
+@generated isactive(p::AbstractParams, ::Val{do_not_use}) where {do_not_use} =
+  nameof(p) in do_not_use ? :(false) : :(isactive(p))
+
+#---------------------------------------------------------------------------------------------------
+
+"""
+    DO_NOT_USE_SYMBOLS
+
+Set of the symbols allowed in the `do_not_use` list of a `LineElement`. Any other symbol
+placed in a `do_not_use` list throws an error, so that misspellings are caught. By default
+this contains the names of the parameter groups used in tracking.
+
+Custom symbols can be registered with `push!`. For example, to allow switching off a
+user-defined parameter group `MyParams <: AbstractParams`:
+
+```julia
+push!(Beamlines.DO_NOT_USE_SYMBOLS, :MyParams)
+```
+
+After this, `isactive(p::MyParams, do_not_use)` automatically returns `false` if
+`:MyParams` is in `do_not_use`. A registered symbol does not need to be the name of a
+parameter group: custom tracking code can check for any symbol using
+`:MySymbol in ele.do_not_use`.
+"""
+const DO_NOT_USE_SYMBOLS = Set{Symbol}([
+  :AlignmentParams,
+  :ApertureParams,
+  :BendParams,
+  :BMultipoleParams,
+  :EMultipoleParams,
+  :FourPotentialParams,
+  :MapParams,
+  :PatchParams,
+  :RFParams,
+])
+
+#---------------------------------------------------------------------------------------------------
+
+"""
+    check_do_not_use(do_not_use)
+
+Throws an error if any symbol in `do_not_use` is not in `DO_NOT_USE_SYMBOLS`. Otherwise
+returns `do_not_use`.
+"""
+function check_do_not_use(do_not_use)
+  for sym in do_not_use
+    if !(sym in DO_NOT_USE_SYMBOLS)
+      error("Invalid symbol $(repr(sym)) in `do_not_use`. Valid symbols are: " *
+            join(repr.(sort!(collect(DO_NOT_USE_SYMBOLS))), ", ") * ". A custom symbol " *
+            "can be added with `push!(Beamlines.DO_NOT_USE_SYMBOLS, :MySymbol)`.")
+    end
+  end
+  return do_not_use
+end
 
 @generated function deval(a::AbstractParams, c::Context=NULL_CONTEXT)
     apply = [
@@ -67,8 +140,9 @@ end
 
 struct LineElement
   pdict::ParamDict
+  do_not_use::Vector{Symbol} # Parameter groups (or custom symbols) to not use in tracking
   function LineElement(pdict=ParamDict(UniversalParams => UniversalParams()); kwargs...)
-    ele = new(pdict)
+    ele = new(pdict, Symbol[])
     if :L in keys(kwargs) # this is for Python compatibility which reorders the arguments.
       setproperty!(ele, :L, kwargs[:L])
     end
@@ -116,6 +190,13 @@ function Base.show(io::IO, ele::LineElement)
     end
   end
 
+  # Only print this element's own do_not_use list. For an element with InheritParams, the
+  # (inherited) list of the parent is shown with the parent.
+  do_not_use = getfield(ele, :do_not_use)
+  if !isempty(do_not_use)
+    print(io, "\n  do_not_use = ", do_not_use)
+  end
+
   pretty_table(io, permutedims(pgs);
     show_column_labels=false,
     line_breaks=true,
@@ -128,6 +209,31 @@ function Base.show(io::IO, ele::LineElement)
   )
 
   return
+end
+
+# An element with InheritParams (e.g. an element in a Beamline) reads and writes the
+# do_not_use list of its parent, so all instances of an element share the same list.
+function get_do_not_use(ele::LineElement)
+  pdict = getfield(ele, :pdict)
+  if haskey(pdict, InheritParams)
+    return get_do_not_use(get_parent(pdict))
+  else
+    return getfield(ele, :do_not_use)
+  end
+end
+
+function set_do_not_use!(ele::LineElement, value)
+  # Always construct a new vector so that e.g. `ele.do_not_use = ele.do_not_use` is safe
+  if value isa Union{Symbol,AbstractString}
+    new_do_not_use = [Symbol(value)]
+  else
+    new_do_not_use = unique!(Symbol[Symbol(sym) for sym in value])
+  end
+  check_do_not_use(new_do_not_use)
+  do_not_use = get_do_not_use(ele)
+  empty!(do_not_use)
+  append!(do_not_use, new_do_not_use)
+  return do_not_use
 end
 
 function flattened_pdict(ele::LineElement, p=ParamDict())
@@ -154,6 +260,7 @@ function Base.isapprox(a::LineElement, b::LineElement)
   L_l = length(l) - (haskey(l, BeamlineParams) ? 1 : 0) - (haskey(l, MetaParams) ? 1 : 0)
   L_r = length(r) - (haskey(r, BeamlineParams) ? 1 : 0) - (haskey(r, MetaParams) ? 1 : 0)
   L_l != L_r && return false
+  issetequal(get_do_not_use(a), get_do_not_use(b)) || return false
   anymissing = false
   for pair in l
       if pair[1] == BeamlineParams || pair[1] == MetaParams
@@ -324,6 +431,8 @@ function _getproperty(ele::LineElement, key::Symbol, context::Context)
   if key == :pdict 
     error("Reading/writing directly to an element's parameter dictionary is not allowed. To get/set a parameter group use the syntax `<ele>.<parameter group name> = <parameter group>`. E.g. `ele.BMultipoleParams = BMultipoleParams()`")
     #ret = getfield(ele, :pdict)
+  elseif key == :do_not_use
+    return get_do_not_use(ele)
   elseif haskey(PARAMS_MAP, key)
     if is_protected(pdict, key)
       error("Cannot get $(PARAMS_MAP[key]): parameter group is protected by ProtectParams. This can be unsafely-overridden using `unsafe_getparams`")
@@ -370,7 +479,9 @@ end
 function Base.setproperty!(ele::LineElement, key::Symbol, value)
   pdict = getfield(ele, :pdict)
   context = haskey(pdict, BeamlineParams) ? ((pdict[BeamlineParams]::BeamlineParams).beamline.context) : (NULL_CONTEXT)
-  if haskey(PARAMS_MAP, key) # Setting whole parameter struct
+  if key == :do_not_use
+    return set_do_not_use!(ele, value)
+  elseif haskey(PARAMS_MAP, key) # Setting whole parameter struct
     if is_protected(pdict, key)
       error("Cannot set $(PARAMS_MAP[key]): parameter group is protected by ProtectParams. This can be unsafely-overridden using `unsafe_getparams`")
     elseif haskey(pdict, InheritParams) && !haskey(pdict, PARAMS_MAP[key])
@@ -439,6 +550,7 @@ function deepcopy_no_beamline(ele::LineElement)
       setproperty!(newele, pg, deepcopy(elepg))
     end
   end
+  append!(getfield(newele, :do_not_use), get_do_not_use(ele))
   return newele
 end
 
@@ -451,6 +563,6 @@ function _lineelement_properties()
   virt = union(keys(VIRTUAL_GETTER_MAP),keys(VIRTUAL_SETTER_MAP))
   prop = keys(PROPERTIES_MAP)
   param = keys(PARAMS_MAP)
-  syms = [:pdict, Symbol.(param)..., virt..., prop...]
+  syms = [:pdict, :do_not_use, Symbol.(param)..., virt..., prop...]
   return syms
 end
