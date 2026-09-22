@@ -146,29 +146,65 @@ function Base.isapprox(a::FourPotentialParams, b::FourPotentialParams)
 end
 
 """
-    FieldSourceParams(; field_source=nothing, additional_field=nothing)
+    FieldFunctionParams(; field_function=nothing, field_function_params=nothing,
+                          field_function_normalized=false)
 
-Electromagnetic field sources associated with an element. Tracking methods that
-consume this group use `field_source` to replace the element-derived field, or
-`additional_field` to add a field source to it. Set at most one of these fields.
-With both fields `nothing`, the element-derived field is used.
+An additional electromagnetic field defined by `field_function(x, y, s, t, p)`.
+The parameters `p` are always passed as the fifth argument, including when they
+are `nothing`. The callable returns the electric and magnetic field value in the
+format required by the tracking package (for BeamTracking, an `EMField`).
 
-Field sources are concrete callable objects. Their evaluation and normalization
-conventions are defined by the tracking package. Other tracking methods ignore
-this group.
+Tracking methods that support this group add its field to the contributions from
+other supported parameter groups, including `BMultipoleParams`. It never replaces
+those contributions. For a complete field map, omit the other field contributions.
+A `nothing` function contributes no field. Other tracking methods ignore this group.
+
+With `field_function_normalized=false`, the function returns physical electric
+and magnetic fields. With `true`, both fields are divided by reference magnetic
+rigidity; the tracking package handles conversion when combining contributions.
+Deferred expressions and scalarization act recursively on the parameters, leaving
+the callable unchanged.
 """
-@kwdef mutable struct FieldSourceParams{F,A} <: AbstractParams
-  field_source::F = nothing
-  additional_field::A = nothing
+@kwdef mutable struct FieldFunctionParams{F,P} <: AbstractParams
+  field_function::F = nothing
+  field_function_params::P = nothing
+  field_function_normalized::Bool = false
 end
 
-PROPS(::Type{FieldSourceParams}) = OrderedDict{String,String}(
-  "field_source" => "Field source replacing the element-derived field; default nothing.",
-  "additional_field" => "Field source added to the element-derived field; default nothing.",
+# Keep recursive parameter preparation local to this group; arbitrary callable
+# objects must remain untouched, even when they contain numerical fields.
+_field_function_deval(p, c) = deval(p, c)
+_field_function_deval(p::Union{Tuple,NamedTuple,StaticArray}, c) =
+  map(v -> _field_function_deval(v, c), p)
+_field_function_scalarize(p) = scalarize(p)
+_field_function_scalarize(p::Union{Tuple,NamedTuple,StaticArray}) =
+  map(_field_function_scalarize, p)
+
+function deval(p::FieldFunctionParams, c::Context=NULL_CONTEXT)
+  return FieldFunctionParams(p.field_function,
+    _field_function_deval(p.field_function_params, c), p.field_function_normalized)
+end
+
+function scalarize(p::FieldFunctionParams)
+  return FieldFunctionParams(p.field_function,
+    _field_function_scalarize(p.field_function_params), p.field_function_normalized)
+end
+
+PROPS(::Type{FieldFunctionParams}) = OrderedDict{String,String}(
+  "field_function" => "Additional electromagnetic field function (x, y, s, t, p); default nothing.",
+  "field_function_params" => "Parameters passed as the fifth argument of field_function; default nothing.",
+  "field_function_normalized" => "Whether the returned electric and magnetic fields are divided by reference magnetic rigidity; default false.",
 )
 
-Base.isapprox(a::FieldSourceParams, b::FieldSourceParams) =
-  a.field_source == b.field_source && a.additional_field == b.additional_field
+_field_function_isapprox(a, b) = a == b || (applicable(isapprox, a, b) && isapprox(a, b))
+_field_function_isapprox(a::Tuple, b::Tuple) =
+  length(a) == length(b) && all(map(_field_function_isapprox, a, b))
+_field_function_isapprox(a::NamedTuple, b::NamedTuple) =
+  keys(a) == keys(b) && _field_function_isapprox(values(a), values(b))
+Base.isapprox(a::FieldFunctionParams, b::FieldFunctionParams) =
+  a.field_function == b.field_function &&
+  a.field_function_normalized == b.field_function_normalized &&
+  _field_function_isapprox(a.field_function_params, b.field_function_params)
 
 @kwdef mutable struct MetaParams <: AbstractParams
   alias::String = ""

@@ -1748,3 +1748,61 @@ using ForwardDiff, GTPSA, ReverseDiff
     blq = Beamline([qq], context=Context(k1 = 0.36))
     @test blq[qq][1].Kn1 ≈ -0.36
 end
+
+
+@testset "FieldFunctionParams" begin
+  field_function = (x, y, s, t, p) -> (x, y, s, t, p)
+  whole = Quadrupole(FieldFunctionParams=FieldFunctionParams(; field_function))
+  individual = Quadrupole(; field_function)
+  @test whole.FieldFunctionParams isa FieldFunctionParams
+  @test whole.field_function === field_function
+  @test whole ≈ individual
+  @test isnothing(whole.field_function_params)
+  @test !whole.field_function_normalized
+  @test isnothing(Quadrupole().FieldFunctionParams)
+  @test isnothing(Quadrupole().field_function)
+  @test :FieldFunctionParams in propertynames(whole)
+  @test :field_function in propertynames(whole)
+  @test :field_function_params in propertynames(whole)
+  @test :field_function_normalized in propertynames(whole)
+
+  individual.FieldFunctionParams = FieldFunctionParams(field_function_params=(strength=2.0,))
+  @test individual.field_function_params == (strength=2.0,)
+  @test isnothing(individual.field_function)
+  @test !(individual ≈ whole)
+  individual.field_function = field_function
+  individual.field_function_normalized = true
+  @test individual.field_function === field_function
+  @test individual.field_function_normalized
+  individual.FieldFunctionParams = nothing
+  @test isnothing(individual.FieldFunctionParams)
+
+  copied = deepcopy_no_beamline(whole)
+  @test copied ≈ whole
+  @test copied.FieldFunctionParams !== whole.FieldFunctionParams
+  child = Beamline([whole])[whole][1]
+  @test child.field_function === field_function
+  child.field_function_params = (3.0,)
+  @test child.field_function_params == (3.0,)
+  @test whole.field_function_params == (3.0,)
+
+  context = Context(strength=2.0)
+  deferred = DefExpr{Float64}(c -> c.strength)
+  nested = (strength=deferred, nested=(deferred, Beamlines.SVector(deferred, deferred)))
+  params = FieldFunctionParams(field_function, nested, true)
+  evaluated = Beamlines.deval(params, context)
+  @test evaluated.field_function === field_function
+  @test evaluated.field_function_normalized
+  @test evaluated.field_function_params == (strength=2.0, nested=(2.0, Beamlines.SVector(2.0, 2.0)))
+  @test params.field_function_params.strength isa DefExpr
+  @test evaluated.field_function_params.nested[2] isa Beamlines.StaticArray
+  dual = ForwardDiff.Dual(2.0, 1.0)
+  params_ad = FieldFunctionParams(field_function, (a=dual, b=(dual, Beamlines.SVector(dual, dual))), false)
+  scalars = scalarize(params_ad)
+  @test scalars.field_function === field_function
+  @test scalars.field_function_params.a === 2.0
+  @test scalars.field_function_params.b[1] === 2.0
+  @test scalars.field_function_params.b[2] isa Beamlines.SVector{2,Float64}
+  @test FieldFunctionParams(field_function, (a=2.0,), false) ≈ FieldFunctionParams(field_function, (a=2.0+eps(),), false)
+  @test !(FieldFunctionParams(field_function, (a=2.0,), false) ≈ FieldFunctionParams(field_function, (b=2.0,), false))
+end
