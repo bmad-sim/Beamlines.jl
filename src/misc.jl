@@ -149,19 +149,14 @@ end
     FieldFunctionParams(; field_function=nothing, field_function_params=nothing,
                           field_function_normalized=false)
 
-An additional electromagnetic field defined by `field_function(x, y, s, t, p)`.
+An electromagnetic field defined by `field_function(x, y, s, t, p)`.
 The parameters `p` are always passed as the fifth argument, including when they
 are `nothing`. The callable returns the electric and magnetic field value in the
-format required by the tracking package (for BeamTracking, an `EMField`).
-
-Tracking methods that support this group add its field to the contributions from
-other supported parameter groups, including `BMultipoleParams`. It never replaces
-those contributions. For a complete field map, omit the other field contributions.
-A `nothing` function contributes no field. Other tracking methods ignore this group.
+format required by the tracking package.
 
 With `field_function_normalized=false`, the function returns physical electric
 and magnetic fields. With `true`, both fields are divided by reference magnetic
-rigidity; the tracking package handles conversion when combining contributions.
+rigidity.
 Deferred expressions and scalarization act recursively on the parameters, leaving
 the callable unchanged.
 """
