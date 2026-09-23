@@ -45,7 +45,7 @@ mutable struct _Branch{T<:_AbstractBeamline} <: _AbstractBranch
   lattice_index::Int            # This should be HARD to change, not allowed easily
   context::Context 
   function _Branch{T}(beamlines::Vector{T}; name::String = "", context=Context()) where {T<:_AbstractBeamline}
-    branch = new(name, ReadOnlyVector(beamlines), NULL_LATTICE, -1, context)
+    branch = new(name, ReadOnlyVector(copy.(beamlines)), NULL_LATTICE, -1, context)
     for i in eachindex(beamlines)
       bl = beamlines[i]
       if getfield(bl, :branch_index) != -1
@@ -53,7 +53,8 @@ mutable struct _Branch{T<:_AbstractBeamline} <: _AbstractBranch
       end
       setfield!(bl, :branch, branch)
       setfield!(bl, :branch_index, i)
-      context = merge(beamlines[i].context, context)
+      context = merge(bl.context, context)
+      bl.context = Context()
     end
 
     _set_context!(branch, context)
@@ -379,6 +380,16 @@ function Base.show(io::IO, bl::Beamline)
   )
   return
 end
+
+#---------------------------------------------------------------------------------------------------
+
+"""
+    Base.copy(bl::Beamline)
+
+Shallow copy of beamline
+
+"""
+Base.copy(bl::Beamline) = Beamline(ntuple(i -> getfield(bl, i), fieldcount(Beamline))...)
 
 #---------------------------------------------------------------------------------------------------
 

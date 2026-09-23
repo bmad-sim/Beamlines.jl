@@ -116,6 +116,16 @@ end
 #---------------------------------------------------------------------------------------------------
 
 """
+    Base.copy(branch::Branch)
+
+Shallow copy of beamline
+
+"""
+Base.copy(branch::Branch) = Branch(ntuple(i -> getfield(branch, i), fieldcount(Branch))...)
+
+#---------------------------------------------------------------------------------------------------
+
+"""
     Branch(beamlines; name = "", context = Context())
 
 Constructs a `Branch` given the vector of beamlines `beamlines`. The contexts of the

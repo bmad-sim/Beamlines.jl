@@ -43,3 +43,9 @@ function Base.getindex(branch::Branch, ix::Integer)
 end
 
 Base.length(branch::Branch) = sum(length, branch.beamlines; init=0)
+
+#---------------------------------------------------------------------------------------------------
+
+Base.getindex(lat::Lattice, i::Integer) = lat.branches[i]
+Base.getindex(lat::Lattice, f::Function) = filter(f, lat.branches)
+Base.length(lat::Lattice) = length(lat.branches)
