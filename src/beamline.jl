@@ -121,6 +121,14 @@ end
 
 #---------------------------------------------------------------------------------------------------
 
+mutable struct Beamline <: _AbstractBeamline
+  const line::ReadOnlyVector{LineElement, Vector{LineElement}}
+  branch::_Branch{Beamline} # This should be HARD to change, not allowed easily
+  branch_index::Int         # This should be HARD to change, not allowed easily
+  context::Context 
+
+#---------------------------------------------------------------------------------------------------
+
 """
     Beamline(line; kwargs...)
 
@@ -191,14 +199,8 @@ fodo = Beamline([qf, d, qd, d])
     b.species_ref != beg.species_ref   # true
     ```
 """
-Beamline(line; kwargs...)
-
-mutable struct Beamline <: _AbstractBeamline
-  const line::ReadOnlyVector{LineElement, Vector{LineElement}}
-  branch::_Branch{Beamline} # This should be HARD to change, not allowed easily
-  branch_index::Int         # This should be HARD to change, not allowed easily
-  context::Context 
   function Beamline(
+#---------------------------------------------------------------------------------------------------
     line;
     species_ref::Union{Species,DefExpr{Species}}=Species(),  
     p_over_q_ref=nothing, 
