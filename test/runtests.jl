@@ -1767,9 +1767,17 @@ using ForwardDiff, GTPSA, ReverseDiff
     @test getfield(merge(cm1), :d) == getfield(cm1, :d)
     @test merge(cm1, Context(f = 5), Context(f = 6)).f == 6 # last one wins
     cmt = merge(Context{Int}(e = 1), Context{Float64}(f = 2.0))
-    @test cmt isa Context{Union{Float64,Int}}
-    @test cmt.e === 1
+    @test cmt isa Context{Float64} # Type parameters are promoted
+    @test cmt.e === 1.0
     @test cmt.f === 2.0
+    @test merge(Context{Float32}(e = 1f0), Context{Float64}(f = 2.0)) isa Context{Float64}
+    @test merge(Context{Float32}(e = 1f0), Context{Float32}(f = 2f0)) isa Context{Float32}
+    cma = merge(Context{Float64}(e = 1.0), Context(f = "s"))
+    @test cma isa Context{Any}
+    @test cma.e === 1.0 && cma.f == "s"
+    cmr = merge(Context{Real}(e = 1), Context{Float64}(f = 2.0))
+    @test cmr isa Context{Real}
+    @test cmr.e === 1
 
     # Beamline context test
     qf = Quadrupole(Kn1=DefExpr(c->c.a), L=DefExpr(c -> c.b))
