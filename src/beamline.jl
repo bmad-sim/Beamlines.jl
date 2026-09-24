@@ -18,10 +18,9 @@ mutable struct _Lattice{B<:_AbstractBranch}
       setfield!(br, :lattice, lattice)
       setfield!(br, :lattice_index, i)
       if br.name == ""; br.name = "b$i"; end
-      _set_context!(br, NULL_CONTEXT)
     end
 
-    setfield!(lattice, :context, context)
+    _set_context!(lattice, context)
     return lattice
   end
 end
@@ -62,15 +61,39 @@ mutable struct _Branch{T<:_AbstractBeamline} <: _AbstractBranch
       context = merge(getfield(bl, :context), context)
       setfield!(bl, :branch, branch)
       setfield!(bl, :branch_index, i)
-      setfield!(bl, :context, NULL_CONTEXT)
       for j in eachindex(bl.line)
         getfield(bl.line[j], :pdict)[BeamlineParams] = BeamlineParams(bl, j)
       end
     end
 
-    setfield!(branch, :context, context)
+    _set_context!(branch, context)
     return branch
   end
+end
+
+#---------------------------------------------------------------------------------------------------
+
+"""
+    _set_context!(branch::_Branch, context::Context)
+    _set_context!(lattice::_Lattice, context::Context)
+
+A `Lattice`, its `Branch`es, and their `Beamline`s all share a single `Context` object.
+`_set_context!` sets that shared `Context` for a `Branch` or `Lattice` and everything in it.
+"""
+function _set_context!(branch::_Branch, context::Context)
+  setfield!(branch, :context, context)
+  for bl in getfield(branch, :beamlines)
+    setfield!(bl, :context, context)
+  end
+  return context
+end
+
+function _set_context!(lattice::_Lattice, context::Context)
+  setfield!(lattice, :context, context)
+  for br in getfield(lattice, :branches)
+    _set_context!(br, context)
+  end
+  return context
 end
 
 #---------------------------------------------------------------------------------------------------
@@ -411,20 +434,7 @@ end
 
 function trygetproperty(b::Beamline, key::Symbol)
   # Fast gets first, hopefully constant prop
-  if key == :context
-    if getfield(b, :branch_index) == -1
-      return getfield(b, :context)
-    else
-      br = getfield(b, :branch)
-      if getfield(br, :lattice_index) == -1
-        return getfield(br, :context)
-      else
-        lat = getfield(br, :lattice)
-        return getfield(lat, :context)
-      end
-    end
-
-  elseif key in (:line, :branch, :branch_index)
+  if key in (:line, :branch, :branch_index, :context)
     field = getfield(b, key)
     if key in (:branch, :branch_index) && (field == -1 || field === NULL_BRANCH)
       return GetError("Unable to get $key: Beamline is not in a Branch")

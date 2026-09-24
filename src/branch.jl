@@ -129,21 +129,6 @@ Base.copy(branch::Branch) = Branch(Beamline[Beamline(collect(bl.line)) for bl in
 #---------------------------------------------------------------------------------------------------
 
 """
-    _set_context!(branch::_Branch, context::Context)
-
-Set the context for a branch and sets the contexts in the beamlines of the branch to `NULL_CONTEXT`. 
-"""
-function _set_context!(branch::_Branch, context::Context)
-  setfield!(branch, :context, context)
-  for bl in getfield(branch, :beamlines)
-    setfield!(bl, :context, NULL_CONTEXT)
-  end
-  return
-end
-
-#---------------------------------------------------------------------------------------------------
-
-"""
     Branch(beamlines; name = "", context = Context())
 
 Constructs a `Branch` given the vector of beamlines `beamlines`. The `Branch` holds shallow
@@ -228,21 +213,11 @@ end
 Base.propertynames(::Branch) = (:name, :beamlines, :lattice, :lattice_index, :context)
 
 function Base.getproperty(branch::Branch, key::Symbol)
-  if key == :context
-    if getfield(branch, :lattice_index) == -1
-      return getfield(branch, :context)
-    else
-      lat = getfield(branch, :lattice)
-      return getfield(lat, :context)
-    end
-
-  else
-    prop = trygetproperty(branch, key)
-    if prop isa GetError
-      error(prop.msg)
-    end
-    return prop
+  prop = trygetproperty(branch, key)
+  if prop isa GetError
+    error(prop.msg)
   end
+  return prop
 end
 
 function trygetproperty(b::Branch, key::Symbol)
@@ -264,12 +239,8 @@ function Base.setproperty!(b::Branch, key::Symbol, value)
   elseif key == :context
     if getfield(b, :lattice_index) == -1
       _set_context!(b, value)
-    else 
-      lat = getfield(b, :lattice)
-      setfield!(lat, :context, value)
-      for br in lat.branches
-        _set_context!(br, value)
-      end
+    else  # The Context is shared by the whole Lattice
+      _set_context!(getfield(b, :lattice), value)
     end
   elseif key in (:beamlines, :lattice, :lattice_index)
     error("Unable to set property $key: this field is protected")
@@ -322,7 +293,7 @@ function Base.setproperty!(lat::Lattice, key::Symbol, value)
   if key == :name
     setfield!(lat, key, value)
   elseif key == :context
-    setfield!(lat, :context, value) # Branches and Beamlines in the Lattice use this Context
+    _set_context!(lat, value)
   elseif key == :branches
     error("Unable to set property $key: this field is protected")
   else
