@@ -146,60 +146,60 @@ function Base.isapprox(a::FourPotentialParams, b::FourPotentialParams)
 end
 
 """
-    FieldFunctionParams(; field_function=nothing, field_function_params=nothing,
-                          field_function_normalized=false)
+    EMFieldParams(; em_field=nothing, em_field_params=nothing,
+                    em_field_normalized=false)
 
-An electromagnetic field defined by `field_function(x, y, s, t, p)`.
+An electromagnetic field defined by `em_field(x, y, s, t, p)`.
 The parameters `p` are always passed as the fifth argument, including when they
 are `nothing`. The callable returns the electric and magnetic field value in the
 format required by the tracking package.
 
-With `field_function_normalized=false`, the function returns physical electric
+With `em_field_normalized=false`, the function returns physical electric
 and magnetic fields. With `true`, both fields are divided by reference magnetic
 rigidity.
 Deferred expressions and scalarization act recursively on the parameters, leaving
 the callable unchanged.
 """
-@kwdef mutable struct FieldFunctionParams{F,P} <: AbstractParams
-  field_function::F = nothing
-  field_function_params::P = nothing
-  field_function_normalized::Bool = false
+@kwdef mutable struct EMFieldParams{F,P} <: AbstractParams
+  em_field::F = nothing
+  em_field_params::P = nothing
+  em_field_normalized::Bool = false
 end
 
 # Keep recursive parameter preparation local to this group; arbitrary callable
 # objects must remain untouched, even when they contain numerical fields.
-_field_function_deval(p, c) = deval(p, c)
-_field_function_deval(p::Union{Tuple,NamedTuple,StaticArray}, c) =
-  map(v -> _field_function_deval(v, c), p)
-_field_function_scalarize(p) = scalarize(p)
-_field_function_scalarize(p::Union{Tuple,NamedTuple,StaticArray}) =
-  map(_field_function_scalarize, p)
+_em_field_deval(p, c) = deval(p, c)
+_em_field_deval(p::Union{Tuple,NamedTuple,StaticArray}, c) =
+  map(v -> _em_field_deval(v, c), p)
+_em_field_scalarize(p) = scalarize(p)
+_em_field_scalarize(p::Union{Tuple,NamedTuple,StaticArray}) =
+  map(_em_field_scalarize, p)
 
-function deval(p::FieldFunctionParams, c::Context=NULL_CONTEXT)
-  return FieldFunctionParams(p.field_function,
-    _field_function_deval(p.field_function_params, c), p.field_function_normalized)
+function deval(p::EMFieldParams, c::Context=NULL_CONTEXT)
+  return EMFieldParams(p.em_field,
+    _em_field_deval(p.em_field_params, c), p.em_field_normalized)
 end
 
-function scalarize(p::FieldFunctionParams)
-  return FieldFunctionParams(p.field_function,
-    _field_function_scalarize(p.field_function_params), p.field_function_normalized)
+function scalarize(p::EMFieldParams)
+  return EMFieldParams(p.em_field,
+    _em_field_scalarize(p.em_field_params), p.em_field_normalized)
 end
 
-PROPS(::Type{FieldFunctionParams}) = OrderedDict{String,String}(
-  "field_function" => "Additional electromagnetic field function (x, y, s, t, p); default nothing.",
-  "field_function_params" => "Parameters passed as the fifth argument of field_function; default nothing.",
-  "field_function_normalized" => "Whether the returned electric and magnetic fields are divided by reference magnetic rigidity; default false.",
+PROPS(::Type{EMFieldParams}) = OrderedDict{String,String}(
+  "em_field" => "Additional electromagnetic field function (x, y, s, t, p); default nothing.",
+  "em_field_params" => "Parameters passed as the fifth argument of em_field; default nothing.",
+  "em_field_normalized" => "Whether the returned electric and magnetic fields are divided by reference magnetic rigidity; default false.",
 )
 
-_field_function_isapprox(a, b) = a == b || (applicable(isapprox, a, b) && isapprox(a, b))
-_field_function_isapprox(a::Tuple, b::Tuple) =
-  length(a) == length(b) && all(map(_field_function_isapprox, a, b))
-_field_function_isapprox(a::NamedTuple, b::NamedTuple) =
-  keys(a) == keys(b) && _field_function_isapprox(values(a), values(b))
-Base.isapprox(a::FieldFunctionParams, b::FieldFunctionParams) =
-  a.field_function == b.field_function &&
-  a.field_function_normalized == b.field_function_normalized &&
-  _field_function_isapprox(a.field_function_params, b.field_function_params)
+_em_field_isapprox(a, b) = a == b || (applicable(isapprox, a, b) && isapprox(a, b))
+_em_field_isapprox(a::Tuple, b::Tuple) =
+  length(a) == length(b) && all(map(_em_field_isapprox, a, b))
+_em_field_isapprox(a::NamedTuple, b::NamedTuple) =
+  keys(a) == keys(b) && _em_field_isapprox(values(a), values(b))
+Base.isapprox(a::EMFieldParams, b::EMFieldParams) =
+  a.em_field == b.em_field &&
+  a.em_field_normalized == b.em_field_normalized &&
+  _em_field_isapprox(a.em_field_params, b.em_field_params)
 
 @kwdef mutable struct MetaParams <: AbstractParams
   alias::String = ""

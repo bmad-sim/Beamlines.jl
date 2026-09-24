@@ -100,9 +100,9 @@ const PROPERTIES_MAP = Dict{Symbol,Type{<:AbstractParams}}(
   :transport_map => MapParams,
   :transport_map_params => MapParams,
 
-  :field_function => FieldFunctionParams,
-  :field_function_params => FieldFunctionParams,
-  :field_function_normalized => FieldFunctionParams,
+  :em_field => EMFieldParams,
+  :em_field_params => EMFieldParams,
+  :em_field_normalized => EMFieldParams,
 
   :four_potential => FourPotentialParams,
   :four_potential_params => FourPotentialParams,
@@ -125,7 +125,7 @@ const PARAMS_MAP = Dict{Symbol,Type{<:AbstractParams}}(
   :ApertureParams => ApertureParams,
   :MapParams => MapParams,
   :FourPotentialParams => FourPotentialParams,
-  :FieldFunctionParams => FieldFunctionParams,
+  :EMFieldParams => EMFieldParams,
   :MetaParams => MetaParams,
   :InitialBeamlineParams => InitialBeamlineParams
 )
