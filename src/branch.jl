@@ -134,7 +134,10 @@ Base.copy(branch::Branch) = Branch(Beamline[Beamline(collect(bl.line)) for bl in
 Constructs a `Branch` given the vector of beamlines `beamlines`. The `Branch` holds shallow
 copies (see `copy(::Beamline)`) of the `Beamline`s: each copy shares the `line` of the 
 corresponding `Beamline` in `beamlines`, and the `LineElement`s of that line are set to point 
-to the copy. A `line` can only be in one `Branch`. The contexts of the `Beamline`s and 
+to the copy. A `line` can only be in one `Branch`, so a `Beamline` whose `line` is already in 
+a `Branch` cannot be used. A `Beamline` may appear more than once in `beamlines`: after the 
+first, each occurrence gets a new `line` whose `LineElement`s are children of those in the 
+`line` of the `Beamline`. The contexts of the `Beamline`s and 
 `context` are merged into a single `Context` shared by the `Branch` and all of its `Beamline`s. 
 Variables in `context` take precedence over those in the `Beamline`s.
 
@@ -159,8 +162,10 @@ Constructs a `Branch` given the vector `elements`, which may contain `LineElemen
   `LineElement` that sets a reference species or energy (has an `InitialBeamlineParams`), so 
   each `Beamline` has a uniform reference species and energy.
 - A `Beamline` is put in the `Branch` as is (see `Branch(beamlines)`), so it shares its `line`
-  with the `Beamline` in the `Branch`. Since a `line` can only be in one `Branch`, a `Beamline` 
-  can only appear once and must not already have its `line` in a `Branch`.
+  with the `Beamline` in the `Branch`. Since a `line` can only be in one `Branch`, the `Beamline`
+  must not already have its `line` in a `Branch`. A `Beamline` may appear more than once: after 
+  the first, each occurrence gets a new `line` whose `LineElement`s are children of those in 
+  the `line` of the `Beamline`.
 - For a `Branch`, each of its `Beamline`s is included as a new `Beamline` whose `LineElement`s
   are children of those in the `Branch` (as with `copy(::Branch)`). The same `Branch` may appear
   more than once.

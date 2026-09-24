@@ -52,15 +52,22 @@ mutable struct _Branch{T<:_AbstractBeamline} <: _AbstractBranch
       if _line_in_branch(beamlines[i])
         error("The line of Beamline $i is already in another Branch!")
       end
-      j = findfirst(k -> getfield(beamlines[k], :line) === getfield(beamlines[i], :line), 1:i-1)
-      if !isnothing(j)
-        error("Beamline $i has the same line as Beamline $j: a line can only be in a Branch once!")
+    end
+
+    # The Branch holds copies of the Beamlines. The first time a line appears, the copy shares
+    # that line and the elements of the line are pointed to the copy. If the same line appears 
+    # again, the copy gets a new line whose elements are children of the elements of that line.
+    copies = Vector{T}(undef, length(beamlines))
+    for i in eachindex(beamlines)
+      bl = beamlines[i]
+      if any(k -> getfield(beamlines[k], :line) === getfield(bl, :line), 1:i-1)
+        copies[i] = T(collect(bl.line); context = getfield(bl, :context))
+      else
+        copies[i] = copy(bl)
       end
     end
 
-    # The Branch holds copies of the Beamlines that share the `line` of the Beamlines passed in.
-    # The elements of each line are pointed to the copy that is in the Branch.
-    branch = new(name, ReadOnlyVector(T[copy(bl) for bl in beamlines]), NULL_LATTICE, -1, context)
+    branch = new(name, ReadOnlyVector(copies), NULL_LATTICE, -1, context)
     for (i, bl) in enumerate(getfield(branch, :beamlines))
       context = merge(getfield(bl, :context), context)
       setfield!(bl, :branch, branch)

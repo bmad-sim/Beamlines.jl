@@ -1502,8 +1502,21 @@ using ForwardDiff, GTPSA, ReverseDiff
     @test Branch([cell]).beamlines[1].line[1].L == 0.7
     @test_throws ErrorException Branch([Drift(), arc])        # arc's line is already in a Branch
     bla = Beamline([Drift()])
-    @test_throws ErrorException Branch([bla, Drift(), bla])   # A line can only be in once
-    @test_throws ErrorException Branch([bla, bla])
+    brr = Branch([bla, Drift(L=2.0), bla])                   # Repeated Beamline
+    @test length(brr) == 3
+    @test brr.beamlines[1].line === bla.line
+    @test brr.beamlines[3].line !== bla.line
+    @test bla.line[1].beamline === brr.beamlines[1]
+    @test brr[3].beamline === brr.beamlines[3]
+    @test brr[3].parent === bla.line[1]
+    @test brr[3].s == 2.0
+    @test_throws ErrorException Branch([bla])                 # bla's line is now in a Branch
+    blr = Beamline([Drift(L=1.0)]; context=Context(r=1))
+    brr2 = Branch([blr, blr])
+    @test length(brr2) == 2
+    @test brr2[2].s == 1.0
+    @test brr2.context.r == 1
+    @test all(bl -> bl.context === brr2.context, brr2.beamlines)
     @test_throws ErrorException Branch([Drift(), 1.0])
     @test_throws ErrorException Branch(Any[bla]; E_ref0=1e9)  # ref0 needs a leading LineElement
     @test_throws ErrorException Branch(LineElement[]; E_ref0=1e9)
