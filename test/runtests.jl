@@ -1396,7 +1396,8 @@ using ForwardDiff, GTPSA, ReverseDiff
     bl = Beamline([Marker()])
     branch = Branch([bl])
     @test getfield(bl, :branch_index) == -1 # Original is not put in the Branch
-    @test Branch([bl]).beamlines[1] !== branch.beamlines[1]
+    @test branch.beamlines[1].line === bl.line # Shares the line
+    @test_throws ErrorException Branch([bl])   # The line is already in a Branch
     @test_throws ErrorException Branch([branch.beamlines[1]])
 
     @test Branch([Beamline([Marker()]; dp_over_q_ref=10.)]).beamlines[1].p_over_q_ref == 10.
@@ -1838,7 +1839,7 @@ using ForwardDiff, GTPSA, ReverseDiff
         @test br.lattice_index == 1
         @test br2.lattice_index == 2
         @test br.name == "X"   # Explicit names are kept
-        @test br2.name == "B2" # Unnamed branches get a default name
+        @test br2.name == "b2" # Unnamed branches get a default name
         @test_throws ErrorException Lattice([br2]) # Already in a Lattice
         br3 = Branch([Beamline([Drift()])])
         @test_throws ErrorException Lattice([br3, br3])
@@ -1856,7 +1857,7 @@ using ForwardDiff, GTPSA, ReverseDiff
         @test length(latB.branches) == 1
         @test latB.branches[1].beamlines[1] !== blA # Copies
         @test latB.branches[1].beamlines[2] !== blB
-        @test latB.branches[1].name == "B1"
+        @test latB.branches[1].name == "b1"
         @test latB.branches[1].beamlines[2].context.z == 9
         @test :z ∉ ctxkeys(blB.context) # Original is untouched
 
@@ -1915,37 +1916,46 @@ using ForwardDiff, GTPSA, ReverseDiff
         bls.context = c6
         @test bls.context === c6
 
-        # copy(::Beamline) and Branch make independent copies
+        # copy(::Beamline) is a shallow copy sharing the line
         qc = Quadrupole(L=1.0, Kn1=0.1)
         blo = Beamline([qc, Drift(L=2.0)]; E_ref=1e9, species_ref=Species("electron"),
                        context=Context(k=1))
         blcp = copy(blo)
         @test blcp !== blo
+        @test blcp.line === blo.line
         @test getfield(blcp, :branch_index) == -1
-        @test blcp.line[1] !== blo.line[1]
-        @test blcp.line[1].beamline === blcp
-        @test blcp.line[2].beamline_index == 2
-        @test blcp.line[2].s == 1.0
+        @test blo.line[1].beamline === blo   # Elements still point to the original
         @test blcp.context !== blo.context
         @test blcp.context.k == 1
-        @test blcp.E_ref == 1e9
-        blcp.E_ref = 2e9                 # InitialBeamlineParams is not shared
-        @test blo.E_ref == 1e9
-        qc.Kn1 = 0.5                     # Parent is shared
-        @test blcp.line[1].Kn1 == 0.5
-        @test blo.line[1].Kn1 == 0.5
-        brA = Branch([blo]); brB = Branch([blo])
-        @test brA.beamlines[1] !== brB.beamlines[1]
-        @test brA.beamlines[1].line[1].beamline === brA.beamlines[1]
-        brA.context.k = 2
-        @test brB.context.k == 1
-        @test blo.context.k == 1
+
+        # A Beamline in a Branch shares the line of the Beamline used to create the Branch,
+        # but the other components differ
+        brA = Branch([blo], context=Context(k=2))
+        blA = brA.beamlines[1]
+        @test blA !== blo
+        @test blA.line === blo.line
+        @test blo.line[1].beamline === blA   # Elements now point to the Beamline in the Branch
+        @test blA.branch === brA
+        @test getfield(blo, :branch_index) == -1
+        @test blA.context === brA.context
+        @test blo.context.k == 1             # Original context is untouched
+        @test blo.line[1].s == 0.0 && blo.line[2].s == 1.0
+        blA.E_ref = 2e9                      # Shared line, so shared reference energy
+        @test blo.E_ref == 2e9
+        @test_throws ErrorException Branch([blo])  # The line is already in a Branch
+        @test_throws ErrorException Branch([blcp]) # Shallow copies share that line
+
+        # copy(::Branch) makes new lines whose elements are children of those in the Branch
         brAc = copy(brA)
         @test brAc !== brA
-        @test brAc.beamlines[1] !== brA.beamlines[1]
+        @test brAc.beamlines[1].line !== brA.beamlines[1].line
+        @test brAc.beamlines[1].line[1].beamline === brAc.beamlines[1]
         @test brAc.beamlines[1].branch === brAc
         @test brAc.context !== brA.context
         @test brAc.context.k == 2
+        @test brAc.beamlines[1].E_ref == 2e9
+        qc.Kn1 = 0.5                         # Parents are shared
+        @test brAc.beamlines[1].line[1].Kn1 == 0.5
 
         # Branch(elements; context) keeps the context, with or without InitialBeamlineParams
         brE = Branch([Drift(L=1.0), Drift()]; context=Context(a=1, b=2))
@@ -1963,7 +1973,7 @@ using ForwardDiff, GTPSA, ReverseDiff
         slat = sprint(show, lat)
         @test occursin("Lattice: LAT", slat)
         @test occursin(r"1\s+X\s+4\s+10\.0", slat)
-        @test occursin(r"2\s+B2\s+1\s+5\.0", slat)
+        @test occursin(r"2\s+b2\s+1\s+5\.0", slat)
         sbr = sprint(show, br)
         @test occursin("Branch: X", sbr)
         @test occursin("lattice_index = 1", sbr)
@@ -1984,7 +1994,7 @@ using ForwardDiff, GTPSA, ReverseDiff
 
         # Showing a Lattice that contains an empty Branch
         slat0 = sprint(show, Lattice([Branch(Beamline[]), brx]))
-        @test occursin(r"1\s+B1\s+0\s+0", slat0)
-        @test occursin(r"2\s+B2\s+2\s+3\.0", slat0)
+        @test occursin(r"1\s+b1\s+0\s+0", slat0)
+        @test occursin(r"2\s+b2\s+2\s+3\.0", slat0)
     end
 end

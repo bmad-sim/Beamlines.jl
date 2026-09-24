@@ -7,7 +7,7 @@ mutable struct _Lattice{B<:_AbstractBranch}
   name::String
   branches::ReadOnlyVector{B,Vector{B}}
   context::Context 
-  function _Lattice{B}(branches::Vector{B}; name::Union{Nothing,String} = nothing, context=Context()) where {B<:_AbstractBranch}
+  function _Lattice{B}(branches::Vector{B}; name::String = "", context=Context()) where {B<:_AbstractBranch}
     lattice = new(name, ReadOnlyVector(branches), context)
     for i in eachindex(branches)
       br = branches[i]
@@ -17,7 +17,7 @@ mutable struct _Lattice{B<:_AbstractBranch}
       context = merge(branches[i].context, context)
       setfield!(br, :lattice, lattice)
       setfield!(br, :lattice_index, i)
-      if isnothing(br.name); br.name = "b$i"; end
+      if br.name == ""; br.name = "b$i"; end
       _set_context!(br, NULL_CONTEXT)
     end
 
@@ -50,15 +50,22 @@ mutable struct _Branch{T<:_AbstractBeamline} <: _AbstractBranch
       if getfield(beamlines[i], :branch_index) != -1
         error("Beamline $i is already in another Branch!")
       end
+      if _line_in_branch(beamlines[i])
+        error("The line of Beamline $i is already in another Branch!")
+      end
     end
 
-    # The Branch holds copies so the Beamlines passed in are left untouched.
+    # The Branch holds copies of the Beamlines that share the `line` of the Beamlines passed in.
+    # The elements of each line are pointed to the copy that is in the Branch.
     branch = new(name, ReadOnlyVector(T[copy(bl) for bl in beamlines]), NULL_LATTICE, -1, context)
     for (i, bl) in enumerate(getfield(branch, :beamlines))
       context = merge(getfield(bl, :context), context)
       setfield!(bl, :branch, branch)
       setfield!(bl, :branch_index, i)
       setfield!(bl, :context, NULL_CONTEXT)
+      for j in eachindex(bl.line)
+        getfield(bl.line[j], :pdict)[BeamlineParams] = BeamlineParams(bl, j)
+      end
     end
 
     setfield!(branch, :context, context)
@@ -256,22 +263,10 @@ fodo = Beamline([qf, d, qd, d])
     return bl
   end
 
-  # Copy constructor used by `Base.copy`. Each `LineElement` is replaced by a new one holding
-  # copies of the parameter structs (so mutating the copy does not affect `src`) and a
-  # `BeamlineParams` pointing to the new `Beamline`. Parents (`InheritParams`) are shared.
+  # Copy constructor used by `Base.copy`. The copy shares `line` with `src`, is not in a Branch,
+  # and has a copy of the Context of `src`.
   function Beamline(src::Beamline)
-    bl = new(ReadOnlyVector(Vector{LineElement}(undef, length(src.line))), NULL_BRANCH, -1, 
-             copy(getfield(src, :context)))
-    for i in eachindex(bl.line)
-      pdict = ParamDict()
-      for (k, v) in getfield(src.line[i], :pdict)
-        k == BeamlineParams && continue
-        pdict[k] = k == InheritParams ? v : deepcopy(v)
-      end
-      pdict[BeamlineParams] = BeamlineParams(bl, i)
-      bl.line.parent[i] = LineElement(pdict)
-    end
-    return bl
+    return new(src.line, NULL_BRANCH, -1, copy(src.context))
   end
 end
 
@@ -389,11 +384,18 @@ end
 """
     Base.copy(bl::Beamline)
 
-Copy of `bl` that is not in any `Branch`. The copy gets new `LineElement`s with their own
-parameter structs, so changing the copy does not change `bl`. The elements of the copy share
-the same parents as those of `bl`. The `Context` is also copied.
+Shallow copy of `bl`. The copy shares the same `line` as `bl` (same `LineElement`s), is not 
+in any `Branch`, and has a copy of the `Context` of `bl`. The `BeamlineParams` of the 
+`LineElement`s are not changed, so they still point to `bl`.
 """
 Base.copy(bl::Beamline) = Beamline(bl)
+
+# True if the `LineElement`s of `bl` are in a `Beamline` that is in a `Branch`.
+function _line_in_branch(bl::Beamline)
+  isempty(bl.line) && return false
+  owner = getfield(getfield(first(bl.line), :pdict)[BeamlineParams]::BeamlineParams, :beamline)
+  return getfield(owner, :branch_index) != -1
+end
 
 #---------------------------------------------------------------------------------------------------
 

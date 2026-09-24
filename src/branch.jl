@@ -7,7 +7,8 @@ Structure containing a vector of `Beamline`s, where currently each follows in-or
 one after the other. 
 
 ## Properties
-- `name`: Name of the `Branch`
+- `name`: Name of the `Branch`. Default is `""` if not in a lattice and if in a lattice,
+  the default is `"bN"` where `N` is the index of the branch in `lattice.branches[]`
 - `beamlines`: Vector of the beamlines in the `Branch`
 - `lattice`: `Lattice` that the branch is placed in, if any
 - `lattice_index`: Index of the branch in the `Lattice`, if in a `Lattice`
@@ -25,7 +26,7 @@ const Branch = _Branch{Beamline}
 Structure containing a vector of `Branch`es. 
 
 ## Properties
-- `name`: Name of the `Lattice`
+- `name`: Name of the `Lattice`. Defaults to blank `""`.
 - `branches`: Vector of the branches in the `Lattice`
 - `context`: `Context` shared by the `Lattice`, all of its `Branch`es, and all of their
     `Beamline`s. Setting the `context` of any of them sets it for all of them.
@@ -118,10 +119,11 @@ end
 """
     Base.copy(branch::Branch)
 
-Copy of `branch` that is not in any `Lattice`. The `Beamline`s are copied as with 
-`copy(::Beamline)` and the `Context` is copied.
+Copy of `branch` that is not in any `Lattice`. Since a `line` can only be in one `Branch`,
+each `Beamline` of the copy has a new `line` whose `LineElement`s are children of those in 
+`branch`. The `Context` is copied.
 """
-Base.copy(branch::Branch) = Branch(Beamline[copy(bl) for bl in branch.beamlines]; 
+Base.copy(branch::Branch) = Branch(Beamline[Beamline(collect(bl.line)) for bl in branch.beamlines]; 
                                    name = branch.name, context = copy(branch.context))
 
 #---------------------------------------------------------------------------------------------------
@@ -144,9 +146,12 @@ end
 """
     Branch(beamlines; name = "", context = Context())
 
-Constructs a `Branch` given the vector of beamlines `beamlines`. The contexts of the
-`Beamline`s and `context` are merged into a single `Context` shared by the `Branch` and
-all of its `Beamline`s. Variables in `context` take precedence over those in the `Beamline`s.
+Constructs a `Branch` given the vector of beamlines `beamlines`. The `Branch` holds shallow
+copies (see `copy(::Beamline)`) of the `Beamline`s: each copy shares the `line` of the 
+corresponding `Beamline` in `beamlines`, and the `LineElement`s of that line are set to point 
+to the copy. A `line` can only be in one `Branch`. The contexts of the `Beamline`s and 
+`context` are merged into a single `Context` shared by the `Branch` and all of its `Beamline`s. 
+Variables in `context` take precedence over those in the `Beamline`s.
 
 ## Example
 ```julia
@@ -279,7 +284,7 @@ end
     Lattice(branches; name = "", context = Context())
 
 Constructs a `Lattice` given the vector of branches `branches`. Branches without a name
-are named `"B<i>"`, where `<i>` is the index of the branch. The contexts of the `Branch`es
+are named `"b<i>"`, where `<i>` is the index of the branch. The contexts of the `Branch`es
 and `context` are merged into a single `Context` shared by the `Lattice`, all of its
 `Branch`es, and all of their `Beamline`s. Variables in `context` take precedence over those
 in the `Branch`es.
@@ -317,7 +322,7 @@ function Base.setproperty!(lat::Lattice, key::Symbol, value)
   if key == :name
     setfield!(lat, key, value)
   elseif key == :context
-    _set_context!(lat, value)
+    setfield!(lat, :context, value) # Branches and Beamlines in the Lattice use this Context
   elseif key == :branches
     error("Unable to set property $key: this field is protected")
   else
