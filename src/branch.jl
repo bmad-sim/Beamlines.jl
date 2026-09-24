@@ -149,11 +149,25 @@ branch = Branch([bl1, bl2])
 
 ---
 
-    Branch(elements; kwargs...)
+    Branch(elements; species_ref0 = Species(), E_ref0 = nothing, pc_ref0 = nothing, 
+           p_over_q_ref0 = nothing, name = "", context = Context())
 
-Constructs a `Branch` given the vector of `LineElement`s `elements`. This will 
-automatically partition the given vector into separate `Beamline`s, which each 
-have a uniform reference species and reference energy.
+Constructs a `Branch` given the vector `elements`, which may contain `LineElement`s, 
+`Beamline`s, and `Branch`es, in any combination:
+
+- Consecutive `LineElement`s are made into `Beamline`s. A new `Beamline` is started at each 
+  `LineElement` that sets a reference species or energy (has an `InitialBeamlineParams`), so 
+  each `Beamline` has a uniform reference species and energy.
+- A `Beamline` is put in the `Branch` as is (see `Branch(beamlines)`), so it shares its `line`
+  with the `Beamline` in the `Branch`. Since a `line` can only be in one `Branch`, a `Beamline` 
+  can only appear once and must not already have its `line` in a `Branch`.
+- For a `Branch`, each of its `Beamline`s is included as a new `Beamline` whose `LineElement`s
+  are children of those in the `Branch` (as with `copy(::Branch)`). The same `Branch` may appear
+  more than once.
+
+The reference species and energy of the first `Beamline` can be set with `species_ref0` and 
+one of `E_ref0`, `pc_ref0`, or `p_over_q_ref0`. These are only allowed if `elements` starts 
+with a `LineElement`.
 
 ## Example
 ```julia
@@ -162,16 +176,23 @@ rf0 = RFCavity(dE_ref=1e9)
 next = LineElement()
 
 branch = Branch([beginning, rf0, next]) # Partitioned into 2 `Beamline`s
+
+arc = Beamline([Drift(L=1.0), SBend(L=2.0)])
+cell = Branch([Quadrupole(L=0.5), Drift(L=1.0)])
+branch2 = Branch([beginning, arc, cell, cell, Marker()]) # 5 `Beamline`s
 ```
 """
-function Branch(
-  elements::AbstractArray{<:LineElement};
+# Defined for `_Branch{T}` rather than `Branch` so the inner constructor 
+# `_Branch{T}(::Vector{T})` is more specific and `Branch(::Vector{Beamline})` is not ambiguous.
+function _Branch{T}(
+  elements::AbstractVector;
   species_ref0::Species=Species(),
   E_ref0=nothing,
   p_over_q_ref0=nothing,
   pc_ref0=nothing,
+  name::String = "",
   context = Context(),
-)
+) where {T<:_AbstractBeamline}
   kwargs = (p_over_q_ref0, E_ref0, pc_ref0)
   kwarg_syms = (:p_over_q_ref, :E_ref, :pc_ref)
   c = count(t->!isnothing(t), kwargs)
@@ -181,31 +202,44 @@ function Branch(
   kwarg_idx = findfirst(t->!isnothing(t), kwargs)
   kwarg_val = isnothing(kwarg_idx) ? nothing : kwargs[kwarg_idx]
   kwarg_sym = isnothing(kwarg_idx) ? :p_over_q_ref : kwarg_syms[kwarg_idx] 
-  
-  # Determine all indices with InitialBeamlineParams
-  idxs = findall(t->haskey(getfield(t, :pdict), InitialBeamlineParams), elements)
-  # If none, then only single Beamline
-  if length(idxs) == 0
-    return Branch([Beamline(elements; species_ref=species_ref0, kwarg_sym=>kwarg_val, context = context)], context = context)
+
+  if (c == 1 || !isnullspecies(species_ref0)) && (isempty(elements) || !(first(elements) isa LineElement))
+    error("species_ref0, E_ref0, pc_ref0, and p_over_q_ref0 can only be used if the first entry of elements is a LineElement")
   end
 
-  n_beamlines = length(idxs)
-  beamlines = Vector{Beamline}(undef, n_beamlines)
-  for i in 1:n_beamlines
-    idx0 = idxs[i]
-    if i == n_beamlines
-      idxf = length(elements)
-    else
-      idxf = idxs[i+1]-1
-    end
+  has_ibp(ele) = ele isa LineElement && haskey(getfield(ele, :pdict), InitialBeamlineParams)
 
-    if i == 1
-      beamlines[i] = Beamline(elements[idx0:idxf]; species_ref=species_ref0, kwarg_sym=>kwarg_val, context = context)
+  beamlines = Beamline[]
+  i = firstindex(elements)
+  while i <= lastindex(elements)
+    item = elements[i]
+    if item isa LineElement
+      # Run of LineElements up to the next entry that is not a LineElement or that starts a new Beamline
+      j = i
+      while j < lastindex(elements) && elements[j+1] isa LineElement && !has_ibp(elements[j+1])
+        j += 1
+      end
+      line = LineElement[elements[k] for k in i:j]
+      if isempty(beamlines)
+        push!(beamlines, Beamline(line; species_ref=species_ref0, kwarg_sym=>kwarg_val, context = context))
+      else
+        push!(beamlines, Beamline(line; context = context))
+      end
+      i = j + 1
+    elseif item isa Beamline
+      push!(beamlines, item)
+      i += 1
+    elseif item isa Branch
+      for bl in item.beamlines
+        push!(beamlines, Beamline(collect(bl.line); context = item.context))
+      end
+      i += 1
     else
-      beamlines[i] = Beamline(elements[idx0:idxf], context = context)
+      error("Unable to construct Branch: entry $i of elements is a $(typeof(item)). Entries must be LineElements, Beamlines, or Branches.")
     end
   end
-  return Branch(beamlines, context = context)
+
+  return Branch(beamlines; name = name, context = context)
 end
 
 #---------------------------------------------------------------------------------------------------

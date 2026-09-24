@@ -1472,6 +1472,43 @@ using ForwardDiff, GTPSA, ReverseDiff
     bl1 = Beamline([ele1])
     @test_throws ErrorException Branch([Marker()]; E_ref0=10e9, pc_ref0=3e9)
 
+    # Elements before the first InitialBeamlineParams are kept
+    brk = Branch([Drift(L=1.0), Marker(E_ref=1e9, species_ref=Species("electron")), Drift(L=2.0)])
+    @test length(brk) == 3
+    @test length(brk.beamlines) == 2
+    @test brk[3].s == 1.0
+
+    # Branch(elements) with a mix of LineElements, Beamlines, and Branches
+    mbeg = Marker(E_ref=10e9, species_ref=Species("electron"))
+    arc = Beamline([Drift(L=1.0), SBend(L=2.0)]; context=Context(a=1))
+    qcell = Quadrupole(L=0.5)
+    cell = Branch([qcell, Drift(L=1.0)]; context=Context(b=2))
+    brm = Branch(Any[mbeg, Drift(L=0.5), arc, cell, cell, Marker()]; name="mixed", context=Context(a=3))
+    @test brm.name == "mixed"
+    @test length(brm.beamlines) == 5
+    @test length(brm) == 9
+    @test brm.beamlines[2].line === arc.line            # Beamline shares its line
+    @test brm.beamlines[3].line !== cell.beamlines[1].line
+    @test brm.beamlines[3].line !== brm.beamlines[4].line
+    @test brm[5].L == 0.5 && brm[7].L == 0.5
+    @test brm[9].s == 6.5
+    @test brm[end] === brm[9]
+    @test all(bl -> bl.E_ref == 10e9, brm.beamlines)    # Reference energy is inferred
+    @test brm.context.a == 3 && brm.context.b == 2
+    @test all(bl -> bl.context === brm.context, brm.beamlines)
+    qcell.L = 0.7                                       # Branch entries are children
+    @test brm[5].L == 0.7 && brm[7].L == 0.7
+    @test cell.beamlines[1].line[1].beamline === cell.beamlines[1] # cell is untouched
+    @test Branch([cell]).beamlines[1].line[1].L == 0.7
+    @test_throws ErrorException Branch([Drift(), arc])        # arc's line is already in a Branch
+    bla = Beamline([Drift()])
+    @test_throws ErrorException Branch([bla, Drift(), bla])   # A line can only be in once
+    @test_throws ErrorException Branch([bla, bla])
+    @test_throws ErrorException Branch([Drift(), 1.0])
+    @test_throws ErrorException Branch(Any[bla]; E_ref0=1e9)  # ref0 needs a leading LineElement
+    @test_throws ErrorException Branch(LineElement[]; E_ref0=1e9)
+    @test length(Branch([cell, Beamline([Drift(L=3.0)])])) == 3
+
     # MapParams
     f = (v,q=nothing)->((1,2,3,4,5,6),(7,8,9,10))
     g = (v,q=nothing)->((11,12,13,14,15,16),(17,18,19,20))
@@ -1791,6 +1828,12 @@ using ForwardDiff, GTPSA, ReverseDiff
         @test br[2] === bl1.line[2]
         @test br[3] === bl2.line[1]
         @test br[4] === bl2.line[2]
+        @test br[end] === br[4]
+        @test br[end-1] === br[3]
+        @test br[begin] === br[1]
+        @test bl2[end] === bl2.line[2]
+        @test bl2[begin] === bl2.line[1]
+        @test_throws BoundsError Branch(Beamline[])[end]
         @test_throws BoundsError br[5]
         @test_throws BoundsError br[0]
         @test_throws BoundsError br[-1]
@@ -1834,6 +1877,9 @@ using ForwardDiff, GTPSA, ReverseDiff
         @test length(lat.branches) == 2
         @test lat.branches[1] === br
         @test lat.branches[2] === br2
+        @test length(lat) == 2
+        @test lat[1] === br && lat[begin] === br
+        @test lat[end] === br2
         @test br.lattice === lat
         @test br2.lattice === lat
         @test br.lattice_index == 1

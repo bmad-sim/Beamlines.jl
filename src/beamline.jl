@@ -52,6 +52,10 @@ mutable struct _Branch{T<:_AbstractBeamline} <: _AbstractBranch
       if _line_in_branch(beamlines[i])
         error("The line of Beamline $i is already in another Branch!")
       end
+      j = findfirst(k -> getfield(beamlines[k], :line) === getfield(beamlines[i], :line), 1:i-1)
+      if !isnothing(j)
+        error("Beamline $i has the same line as Beamline $j: a line can only be in a Branch once!")
+      end
     end
 
     # The Branch holds copies of the Beamlines that share the `line` of the Beamlines passed in.
