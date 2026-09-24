@@ -1987,7 +1987,9 @@ using ForwardDiff, GTPSA, ReverseDiff
         mE = Marker(E_ref=DefExpr(c -> c.E), species_ref=Species("electron"))
         brE0 = Branch([Beamline([mE, Drift(L=1.0)]), Beamline(LineElement[])], context=Context(E=5e9))
         blE = brE0.beamlines[1]
-        @test getfield(blE, :context) === brE0.context
+        @test getfield(blE, :context) === Beamlines.NULL_CONTEXT # Stored only in the Branch
+        @test getfield(brE0, :context) === brE0.context
+        @test blE.context === brE0.context
         @test blE.E_ref == 5e9
         @test blE.line[2].E_ref == 5e9
         @test blE.line[1].dE_ref == 5e9      # BeamlineParams getter, first element
@@ -1995,7 +1997,10 @@ using ForwardDiff, GTPSA, ReverseDiff
         @test brE0.beamlines[2].E_ref == 5e9 # Empty Beamline infers from the one before
         @test_throws ErrorException Beamline(LineElement[]).E_ref
         latE = Lattice([brE0], context=Context(E=6e9))
-        @test getfield(blE, :context) === latE.context
+        @test getfield(blE, :context) === Beamlines.NULL_CONTEXT  # Stored only in the Lattice
+        @test getfield(brE0, :context) === Beamlines.NULL_CONTEXT
+        @test getfield(latE, :context) === latE.context
+        @test blE.context === latE.context && brE0.context === latE.context
         @test blE.E_ref == 6e9
         @test brE0.beamlines[2].E_ref == 6e9
 

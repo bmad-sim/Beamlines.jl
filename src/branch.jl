@@ -260,7 +260,9 @@ function Base.getproperty(branch::Branch, key::Symbol)
 end
 
 function trygetproperty(b::Branch, key::Symbol)
-  if key in (:beamlines, :lattice, :lattice_index, :name, :context)
+  if key == :context
+    return _context(b)
+  elseif key in (:beamlines, :lattice, :lattice_index, :name)
     field = getfield(b, key)
     if key in (:lattice, :lattice_index) && (field == -1 || field === NULL_LATTICE)
       return GetError("Unable to get $key: Branch is not in a Lattice")

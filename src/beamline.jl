@@ -88,13 +88,16 @@ end
     _set_context!(branch::_Branch, context::Context)
     _set_context!(lattice::_Lattice, context::Context)
 
-A `Lattice`, its `Branch`es, and their `Beamline`s all share a single `Context` object.
-`_set_context!` sets that shared `Context` for a `Branch` or `Lattice` and everything in it.
+The `Context` of a `Lattice`, or of a `Branch` not in a `Lattice`, is stored only at that 
+highest level. The `Branch`es and `Beamline`s below it store `NULL_CONTEXT`, and their 
+`context` property returns the `Context` stored at the highest level (see `_context`).
+`_set_context!` stores `context` in `branch` or `lattice` and `NULL_CONTEXT` in everything 
+below it.
 """
 function _set_context!(branch::_Branch, context::Context)
   setfield!(branch, :context, context)
   for bl in getfield(branch, :beamlines)
-    setfield!(bl, :context, context)
+    setfield!(bl, :context, NULL_CONTEXT)
   end
   return context
 end
@@ -102,9 +105,24 @@ end
 function _set_context!(lattice::_Lattice, context::Context)
   setfield!(lattice, :context, context)
   for br in getfield(lattice, :branches)
-    _set_context!(br, context)
+    _set_context!(br, NULL_CONTEXT)
   end
   return context
+end
+
+"""
+    _context(branch::_Branch)
+    _context(bl::Beamline)
+
+Return the `Context` stored at the highest level: the `Lattice` if there is one, else the 
+`Branch` if there is one, else the `Beamline` itself.
+"""
+@inline function _context(branch::_Branch)
+  if getfield(branch, :lattice_index) == -1
+    return getfield(branch, :context)
+  else
+    return getfield(getfield(branch, :lattice), :context)
+  end
 end
 
 #---------------------------------------------------------------------------------------------------
@@ -443,9 +461,19 @@ function Base.getproperty(b::Beamline, key::Symbol)
   return prop
 end
 
+@inline function _context(bl::Beamline)
+  if getfield(bl, :branch_index) == -1
+    return getfield(bl, :context)
+  else
+    return _context(getfield(bl, :branch))
+  end
+end
+
 function trygetproperty(b::Beamline, key::Symbol)
   # Fast gets first, hopefully constant prop
-  if key in (:line, :branch, :branch_index, :context)
+  if key == :context
+    return _context(b)
+  elseif key in (:line, :branch, :branch_index)
     field = getfield(b, key)
     if key in (:branch, :branch_index) && (field == -1 || field === NULL_BRANCH)
       return GetError("Unable to get $key: Beamline is not in a Branch")
@@ -462,7 +490,7 @@ function trygetproperty(b::Beamline, key::Symbol)
         return trygetproperty(getfield(b, :branch).beamlines[branch_index-1], key)
       end
     else
-      return try_get_bl_params(first(b.line), key, getfield(b, :context))
+      return try_get_bl_params(first(b.line), key, _context(b))
     end
 
   else
@@ -557,12 +585,12 @@ end
 
 function Base.getproperty(bp::BeamlineParams, key::Symbol)
   if key in (:p_over_q_ref, :E_ref, :pc_ref, :species_ref, :branch, :branch_index, :ref)
-    return deval(getproperty(bp.beamline, key), getfield(bp.beamline, :context))
+    return deval(getproperty(bp.beamline, key), _context(bp.beamline))
   elseif key in (:dp_over_q_ref, :dE_ref, :dpc_ref)
     if bp.beamline_index != 1
       return 0
     else
-      return deval(getproperty(bp.beamline, key), getfield(bp.beamline, :context))
+      return deval(getproperty(bp.beamline, key), _context(bp.beamline))
     end
   elseif key in (:s, :s_downstream)
     if key == :s
@@ -578,14 +606,14 @@ function Base.getproperty(bp::BeamlineParams, key::Symbol)
     if nx != -1  # Beamline is in a Branch so add the lengths of the preceding Beamlines
       for bsub in getfield(bl, :branch).beamlines[1:nx-1]
         isempty(bsub.line) && continue  # Reducing over an empty collection is not allowed.
-        s0 += deval(sum(ele.L for ele in bsub.line), getfield(bsub, :context))
+        s0 += deval(sum(ele.L for ele in bsub.line), _context(bsub))
       end
     end
 
     if n == 0  # Reducing over an empty collection is not allowed so this is a special case.
       return s0
     else
-      return s0 + deval(sum(bl.line[i].L for i in 1:n), getfield(bl, :context))
+      return s0 + deval(sum(bl.line[i].L for i in 1:n), _context(bl))
     end
   else
     return getfield(bp, key)
