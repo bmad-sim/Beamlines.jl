@@ -7,7 +7,7 @@ mutable struct _Lattice{B<:_AbstractBranch}
   name::String
   branches::ReadOnlyVector{B,Vector{B}}
   context::Context 
-  function _Lattice{B}(branches::Vector{B}; name::String = "", context=Context()) where {B<:_AbstractBranch}
+  function _Lattice{B}(branches::Vector{B}; name::Union{Nothing,String} = nothing, context=Context()) where {B<:_AbstractBranch}
     lattice = new(name, ReadOnlyVector(branches), context)
     for i in eachindex(branches)
       br = branches[i]
@@ -17,7 +17,7 @@ mutable struct _Lattice{B<:_AbstractBranch}
       context = merge(branches[i].context, context)
       setfield!(br, :lattice, lattice)
       setfield!(br, :lattice_index, i)
-      br.name == "" ? br.name = "B$i" : br.name
+      if isnothing(br.name); br.name = "b$i"; end
       _set_context!(br, NULL_CONTEXT)
     end
 
