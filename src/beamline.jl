@@ -14,13 +14,14 @@ mutable struct _Lattice{B<:_AbstractBranch}
       if getfield(br, :lattice_index) != -1
         error("Branch $i is already in another Lattice!")
       end
+      context = merge(branches[i].context, context)
       setfield!(br, :lattice, lattice)
       setfield!(br, :lattice_index, i)
       br.name == "" ? br.name = "B$i" : br.name
-      context = merge(branches[i].context, context)
+      _set_context!(br, NULL_CONTEXT)
     end
 
-    _set_context!(lattice, context)
+    setfield!(lattice, :context, context)
     return lattice
   end
 end
@@ -45,42 +46,24 @@ mutable struct _Branch{T<:_AbstractBeamline} <: _AbstractBranch
   lattice_index::Int            # This should be HARD to change, not allowed easily
   context::Context 
   function _Branch{T}(beamlines::Vector{T}; name::String = "", context=Context()) where {T<:_AbstractBeamline}
-    branch = new(name, ReadOnlyVector(copy.(beamlines)), NULL_LATTICE, -1, context)
     for i in eachindex(beamlines)
-      bl = beamlines[i]
-      if getfield(bl, :branch_index) != -1
+      if getfield(beamlines[i], :branch_index) != -1
         error("Beamline $i is already in another Branch!")
       end
-      setfield!(bl, :branch, branch)
-      setfield!(bl, :branch_index, i)
-      context = merge(bl.context, context)
-      bl.context = Context()
     end
 
-    _set_context!(branch, context)
+    # The Branch holds copies so the Beamlines passed in are left untouched.
+    branch = new(name, ReadOnlyVector(T[copy(bl) for bl in beamlines]), NULL_LATTICE, -1, context)
+    for (i, bl) in enumerate(getfield(branch, :beamlines))
+      context = merge(getfield(bl, :context), context)
+      setfield!(bl, :branch, branch)
+      setfield!(bl, :branch_index, i)
+      setfield!(bl, :context, NULL_CONTEXT)
+    end
+
+    setfield!(branch, :context, context)
     return branch
   end
-end
-
-#---------------------------------------------------------------------------------------------------
-
-# A Lattice, its Branches, and their Beamlines all share a single Context.
-# `_set_context!` sets that shared Context for a Branch or Lattice and everything in it.
-
-function _set_context!(branch::_Branch, context::Context)
-  setfield!(branch, :context, context)
-  for bl in getfield(branch, :beamlines)
-    setfield!(bl, :context, context)
-  end
-  return context
-end
-
-function _set_context!(lattice::_Lattice, context::Context)
-  setfield!(lattice, :context, context)
-  for br in getfield(lattice, :branches)
-    _set_context!(br, context)
-  end
-  return context
 end
 
 #---------------------------------------------------------------------------------------------------
@@ -272,6 +255,24 @@ fodo = Beamline([qf, d, qd, d])
     
     return bl
   end
+
+  # Copy constructor used by `Base.copy`. Each `LineElement` is replaced by a new one holding
+  # copies of the parameter structs (so mutating the copy does not affect `src`) and a
+  # `BeamlineParams` pointing to the new `Beamline`. Parents (`InheritParams`) are shared.
+  function Beamline(src::Beamline)
+    bl = new(ReadOnlyVector(Vector{LineElement}(undef, length(src.line))), NULL_BRANCH, -1, 
+             copy(getfield(src, :context)))
+    for i in eachindex(bl.line)
+      pdict = ParamDict()
+      for (k, v) in getfield(src.line[i], :pdict)
+        k == BeamlineParams && continue
+        pdict[k] = k == InheritParams ? v : deepcopy(v)
+      end
+      pdict[BeamlineParams] = BeamlineParams(bl, i)
+      bl.line.parent[i] = LineElement(pdict)
+    end
+    return bl
+  end
 end
 
 #---------------------------------------------------------------------------------------------------
@@ -388,10 +389,11 @@ end
 """
     Base.copy(bl::Beamline)
 
-Shallow copy of beamline
-
+Copy of `bl` that is not in any `Branch`. The copy gets new `LineElement`s with their own
+parameter structs, so changing the copy does not change `bl`. The elements of the copy share
+the same parents as those of `bl`. The `Context` is also copied.
 """
-Base.copy(bl::Beamline) = Beamline(ntuple(i -> getfield(bl, i), fieldcount(Beamline))...)
+Base.copy(bl::Beamline) = Beamline(bl)
 
 #---------------------------------------------------------------------------------------------------
 
@@ -407,13 +409,27 @@ end
 
 function trygetproperty(b::Beamline, key::Symbol)
   # Fast gets first, hopefully constant prop
-  if key in (:line, :branch, :branch_index, :context)
+  if key == :context
+    if getfield(b, :branch_index) == -1
+      return getfield(b, :context)
+    else
+      br = getfield(b, :branch)
+      if getfield(br, :lattice_index) == -1
+        return getfield(br, :context)
+      else
+        lat = getfield(br, :lattice)
+        return getfield(lat, :context)
+      end
+    end
+
+  elseif key in (:line, :branch, :branch_index)
     field = getfield(b, key)
     if key in (:branch, :branch_index) && (field == -1 || field === NULL_BRANCH)
       return GetError("Unable to get $key: Beamline is not in a Branch")
     else
       return field
     end
+
   elseif key in (:E_ref, :pc_ref, :p_over_q_ref, :dE_ref, :dpc_ref, :dp_over_q_ref, :species_ref)
     if length(b.line) < 1
       branch_index = getfield(b, :branch_index)
@@ -425,6 +441,7 @@ function trygetproperty(b::Beamline, key::Symbol)
     else
       return try_get_bl_params(first(b.line), key, getfield(b, :context))
     end
+
   else
     error("Unable to get property $key from Beamline: Beamline does not have this property")
   end

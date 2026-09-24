@@ -1355,6 +1355,7 @@ using ForwardDiff, GTPSA, ReverseDiff
     @test_throws ErrorException bl2.dp_over_q_ref
     @test bl2.dE_ref == -3e9
     branch = Branch([bl1, bl2])
+    bl1, bl2 = branch.beamlines # The Branch holds copies of the Beamlines
     @test bl2.E_ref == 7e9
     @test bl2.species_ref == Species("proton")
     @test bl2.dE_ref == -3e9
@@ -1387,14 +1388,16 @@ using ForwardDiff, GTPSA, ReverseDiff
 
     @test_throws ErrorException Beamline([Marker()]; pc_ref=1, dp_over_q_ref=2)
     @test_throws ErrorException Beamline([Marker()]).branch
-    @test (bl = Beamline([Marker()]; E_ref=10); branch = Branch([bl]); bl.dE_ref) == 10
+    @test (bl = Beamline([Marker()]; E_ref=10); branch = Branch([bl]); branch.beamlines[1].dE_ref) == 10
     @test_throws ErrorException Beamline([Marker()]).branch_index = 1
     @test_throws ErrorException Beamline([Marker()]).branch = Beamlines.NULL_BRANCH
     @test_throws ErrorException Beamline([Marker()]).ref_meaning = Beamlines.RefMeaning.p_over_q_ref
     
     bl = Beamline([Marker()])
     branch = Branch([bl])
-    @test_throws ErrorException Branch([bl])
+    @test getfield(bl, :branch_index) == -1 # Original is not put in the Branch
+    @test Branch([bl]).beamlines[1] !== branch.beamlines[1]
+    @test_throws ErrorException Branch([branch.beamlines[1]])
 
     @test Branch([Beamline([Marker()]; dp_over_q_ref=10.)]).beamlines[1].p_over_q_ref == 10.
 
@@ -1779,6 +1782,7 @@ using ForwardDiff, GTPSA, ReverseDiff
         bl1 = Beamline([d1, d2]; E_ref=1e9, species_ref=Species("electron"))
         bl2 = Beamline([d3, d4])
         br = Branch([bl1, bl2])
+        bl1, bl2 = br.beamlines # The Branch holds copies of the Beamlines
         @test length(bl1) == 2
         @test length(br) == 4
         @test length(Branch(Beamline[])) == 0
@@ -1803,6 +1807,7 @@ using ForwardDiff, GTPSA, ReverseDiff
         blc1 = Beamline([dl]; E_ref=1e9, species_ref=Species("electron"), context=Context(len=2.0))
         blc2 = Beamline([Drift(L=1.0)])
         brc = Branch([blc1, blc2])
+        blc2 = brc.beamlines[2]
         @test blc2.line[1].s == 2.0
         brc.context.len = 3.0
         @test blc2.line[1].s == 3.0
@@ -1849,10 +1854,11 @@ using ForwardDiff, GTPSA, ReverseDiff
         latB = Lattice([blA, blB]; name="LB", context=Context(z=9))
         @test latB.name == "LB"
         @test length(latB.branches) == 1
-        @test latB.branches[1].beamlines[1] === blA
-        @test latB.branches[1].beamlines[2] === blB
+        @test latB.branches[1].beamlines[1] !== blA # Copies
+        @test latB.branches[1].beamlines[2] !== blB
         @test latB.branches[1].name == "B1"
-        @test blB.context.z == 9
+        @test latB.branches[1].beamlines[2].context.z == 9
+        @test :z ∉ ctxkeys(blB.context) # Original is untouched
 
         # Context merging. Precedence: Lattice > Branch > Beamline, and after construction
         # the Lattice, its Branches, and their Beamlines all share one Context.
@@ -1861,6 +1867,8 @@ using ForwardDiff, GTPSA, ReverseDiff
         brq = Branch([blq], context=Context(k=0.2, y=2))
         @test ctxkeys(brq.context) == [:k, :x, :y]
         @test brq.context.k == 0.2
+        @test blq.context.k == 0.1 # Original is untouched
+        blq = brq.beamlines[1]
         @test blq.context === brq.context
         @test blq.line[1].Kn1 == 0.2
         latq = Lattice([brq], context=Context(k=0.3, w=3))
@@ -1875,6 +1883,7 @@ using ForwardDiff, GTPSA, ReverseDiff
         # Setting the context at any level sets the one shared by the whole tree
         blq2 = Beamline([Drift()])
         brq2 = Branch([Beamline([Drift()]), blq2])
+        blq2 = brq2.beamlines[2]
         brq3 = Branch([Beamline([Drift()])])
         latq3 = Lattice([Branch([Beamline([Quadrupole(L=1.0, Kn1=DefExpr(c -> c.k))])]), brq3])
         blq3 = latq3.branches[1].beamlines[1]
@@ -1905,6 +1914,38 @@ using ForwardDiff, GTPSA, ReverseDiff
         c6 = Context(k=1.0)
         bls.context = c6
         @test bls.context === c6
+
+        # copy(::Beamline) and Branch make independent copies
+        qc = Quadrupole(L=1.0, Kn1=0.1)
+        blo = Beamline([qc, Drift(L=2.0)]; E_ref=1e9, species_ref=Species("electron"),
+                       context=Context(k=1))
+        blcp = copy(blo)
+        @test blcp !== blo
+        @test getfield(blcp, :branch_index) == -1
+        @test blcp.line[1] !== blo.line[1]
+        @test blcp.line[1].beamline === blcp
+        @test blcp.line[2].beamline_index == 2
+        @test blcp.line[2].s == 1.0
+        @test blcp.context !== blo.context
+        @test blcp.context.k == 1
+        @test blcp.E_ref == 1e9
+        blcp.E_ref = 2e9                 # InitialBeamlineParams is not shared
+        @test blo.E_ref == 1e9
+        qc.Kn1 = 0.5                     # Parent is shared
+        @test blcp.line[1].Kn1 == 0.5
+        @test blo.line[1].Kn1 == 0.5
+        brA = Branch([blo]); brB = Branch([blo])
+        @test brA.beamlines[1] !== brB.beamlines[1]
+        @test brA.beamlines[1].line[1].beamline === brA.beamlines[1]
+        brA.context.k = 2
+        @test brB.context.k == 1
+        @test blo.context.k == 1
+        brAc = copy(brA)
+        @test brAc !== brA
+        @test brAc.beamlines[1] !== brA.beamlines[1]
+        @test brAc.beamlines[1].branch === brAc
+        @test brAc.context !== brA.context
+        @test brAc.context.k == 2
 
         # Branch(elements; context) keeps the context, with or without InitialBeamlineParams
         brE = Branch([Drift(L=1.0), Drift()]; context=Context(a=1, b=2))

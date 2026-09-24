@@ -118,10 +118,26 @@ end
 """
     Base.copy(branch::Branch)
 
-Shallow copy of beamline
+Copy of `branch` that is not in any `Lattice`. The `Beamline`s are copied as with 
+`copy(::Beamline)` and the `Context` is copied.
+"""
+Base.copy(branch::Branch) = Branch(Beamline[copy(bl) for bl in branch.beamlines]; 
+                                   name = branch.name, context = copy(branch.context))
+
+#---------------------------------------------------------------------------------------------------
 
 """
-Base.copy(branch::Branch) = Branch(ntuple(i -> getfield(branch, i), fieldcount(Branch))...)
+    _set_context!(branch::_Branch, context::Context)
+
+Set the context for a branch and sets the contexts in the beamlines of the branch to `NULL_CONTEXT`. 
+"""
+function _set_context!(branch::_Branch, context::Context)
+  setfield!(branch, :context, context)
+  for bl in getfield(branch, :beamlines)
+    setfield!(bl, :context, NULL_CONTEXT)
+  end
+  return
+end
 
 #---------------------------------------------------------------------------------------------------
 
@@ -206,12 +222,22 @@ end
 
 Base.propertynames(::Branch) = (:name, :beamlines, :lattice, :lattice_index, :context)
 
-function Base.getproperty(b::Branch, key::Symbol)
-  prop = trygetproperty(b, key)
-  if prop isa GetError
-    error(prop.msg)
+function Base.getproperty(branch::Branch, key::Symbol)
+  if key == :context
+    if getfield(branch, :lattice_index) == -1
+      return getfield(branch, :context)
+    else
+      lat = getfield(branch, :lattice)
+      return getfield(lat, :context)
+    end
+
+  else
+    prop = trygetproperty(branch, key)
+    if prop isa GetError
+      error(prop.msg)
+    end
+    return prop
   end
-  return prop
 end
 
 function trygetproperty(b::Branch, key::Symbol)
@@ -233,8 +259,12 @@ function Base.setproperty!(b::Branch, key::Symbol, value)
   elseif key == :context
     if getfield(b, :lattice_index) == -1
       _set_context!(b, value)
-    else  # The Context is shared by the whole Lattice
-      _set_context!(getfield(b, :lattice), value)
+    else 
+      lat = getfield(b, :lattice)
+      setfield!(lat, :context, value)
+      for br in lat.branches
+        _set_context!(br, value)
+      end
     end
   elseif key in (:beamlines, :lattice, :lattice_index)
     error("Unable to set property $key: this field is protected")
