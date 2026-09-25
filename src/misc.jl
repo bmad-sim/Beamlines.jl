@@ -83,26 +83,7 @@ end
 end
 # === END CLAUDE ===
 
-"""
-    mutable struct FourPotentialParams{F<:Function, P} <: AbstractParams
 
-Defines the electromagnetic four-potential of an element via the `four_potential` function.
-
-## Fields
-
-- `four_potential(x, y, s, t, p=nothing)`  -- Function of type `F` that returns a two component
-  tuple `(C, D)` with both `C` and `D` being themselves tuples:\\
-  `\u2800 C = (ϕ, Ax, Ay, As)`\\
-  `\u2800 D = (∂ϕ/∂x,  ∂ϕ/∂y,  ∂ϕ/∂s, ∂ϕ/∂t,` \\
-  `\u2800      ∂Ax/∂x, ∂Ax/∂y, ∂Ax/∂s, ∂Ax/∂t,` \\
-  `\u2800      ∂Ay/∂x, ∂Ay/∂y, ∂Ay/∂s, ∂Ay/∂t,` \\
-  `\u2800      ∂As/∂x, ∂As/∂y, ∂As/∂s, ∂As/∂t)` \\
-
-- `four_potential_params`  -- Default is `nothing`. Parameters of type `P` passed to the four_potential function.
-- `four_potential_normalized`  -- Set to `true` means the potential/derivatives are
-  `p_over_q_ref * four_potential`; `false` means the potential/derivatives are
-  `four_potential`.
-"""
 @kwdef mutable struct FourPotentialParams{F<:Function, P} <: AbstractParams
   four_potential::F = (x, y, s, t, p=nothing) -> ((0, 0, 0, 0), (0, 0, 0, 0,
                                                                  0, 0, 0, 0,
@@ -111,6 +92,30 @@ Defines the electromagnetic four-potential of an element via the `four_potential
   four_potential_params::P = nothing
   four_potential_normalized::Bool = false
 end
+
+PROPS(::Type{FourPotentialParams}) = OrderedDict{String,String}(
+  "four_potential"            => """Function with arguments `(x, y, s, t, p=nothing)` that returns a two component
+  tuple `(C, D)` with both `C` and `D` being themselves tuples:\\
+  `\u2800 C = (ϕ, Ax, Ay, As)`\\
+  `\u2800 D = (∂ϕ/∂x,  ∂ϕ/∂y,  ∂ϕ/∂s, ∂ϕ/∂t,` \\
+  `\u2800      ∂Ax/∂x, ∂Ax/∂y, ∂Ax/∂s, ∂Ax/∂t,` \\
+  `\u2800      ∂Ay/∂x, ∂Ay/∂y, ∂Ay/∂s, ∂Ay/∂t,` \\
+  `\u2800      ∂As/∂x, ∂As/∂y, ∂As/∂s, ∂As/∂t)` \\""",
+  "four_potential_params"     => "Tuple of parameters passed to the `four_potential` function. Default is `nothing`",
+  "four_potential_normalized" => "If `true`, then potential/derivatives returned are normalized by `p_over_q_ref`; default is `false`."
+)
+
+"""
+    FourPotentialParams
+
+Defines the electromagnetic four-potential of an element as a function 
+`four_potential(x, y, s, t, p=nothing)` where `p` is a tuple of parameters that may be used 
+inside the function.
+
+## Properties:
+$(PROPSDOC(FourPotentialParams))
+"""
+FourPotentialParams
 
 @generated function deval(mp::FourPotentialParams{F,P}, c::Context=NULL_CONTEXT) where {F,P<:Tuple}
     N = length(P.parameters)
@@ -126,12 +131,6 @@ end
     return :(FourPotentialParams(mp.four_potential, tuple($(exprs...)), mp.four_potential_normalized))
 end
 
-PROPS(::Type{FourPotentialParams}) = OrderedDict{String,String}(
-  "four_potential"            => "TODO",
-  "four_potential_params"     => "TODO",
-  "four_potential_normalized" => "TODO",
-)
-
 function Base.isapprox(a::FourPotentialParams, b::FourPotentialParams)
   if xor(isnothing(a.four_potential_params), isnothing(b.four_potential_params))
     return false
@@ -145,64 +144,56 @@ function Base.isapprox(a::FourPotentialParams, b::FourPotentialParams)
   end
 end
 
-"""
-    EMFieldParams
-
-An electromagnetic field defined by `em_field(x, y, s, t, p)`.
-The parameters `p` are always passed as the fifth argument, including when they
-are `nothing`. The callable returns the electric and magnetic field value in the
-format required by the tracking package.
-
-With `em_field_normalized=false`, the function returns physical electric
-and magnetic fields. With `true`, both fields are divided by reference magnetic
-rigidity.
-Deferred expressions and scalarization act recursively on the parameters, leaving
-the callable unchanged.
-the callable unchanged.
-
-## Properties
-$(PROPSDOC(EMFieldParams))
-"""
 @kwdef mutable struct EMFieldParams{F,P} <: AbstractParams
-  em_field::F = nothing
+  em_field::F = (x, y, s, t, p=nothing) -> (0, 0, 0, 0, 0, 0)
   em_field_params::P = nothing
   em_field_normalized::Bool = false
 end
 
-# Keep recursive parameter preparation local to this group; arbitrary callable
-# objects must remain untouched, even when they contain numerical fields.
-_em_field_deval(p, c) = deval(p, c)
-_em_field_deval(p::Union{Tuple,NamedTuple,StaticArray}, c) =
-  map(v -> _em_field_deval(v, c), p)
-_em_field_scalarize(p) = scalarize(p)
-_em_field_scalarize(p::Union{Tuple,NamedTuple,StaticArray}) =
-  map(_em_field_scalarize, p)
-
-function deval(p::EMFieldParams, c::Context=NULL_CONTEXT)
-  return EMFieldParams(p.em_field,
-    _em_field_deval(p.em_field_params, c), p.em_field_normalized)
-end
-
-function scalarize(p::EMFieldParams)
-  return EMFieldParams(p.em_field,
-    _em_field_scalarize(p.em_field_params), p.em_field_normalized)
-end
-
 PROPS(::Type{EMFieldParams}) = OrderedDict{String,String}(
-  "em_field" => "Additional electromagnetic field function (x, y, s, t, p); default nothing.",
-  "em_field_params" => "Parameters passed as the fifth argument of em_field; default nothing.",
-  "em_field_normalized" => "Whether the returned electric and magnetic fields are divided by reference magnetic rigidity; default false.",
+  "em_field" => "Function with arguments (x, y, s, t, p) the returns a tuple of the EM field values (Ex, Ey, Ez, Bx, By, Bz) at the given point.",
+  "em_field_params" => "Tuple of parameters passed to the `em_field` function. Default is `nothing`",
+  "em_field_normalized" => "If `true`, then EM field values returned are normalized by `p_over_q_ref`; default is `false`.",
 )
 
-_em_field_isapprox(a, b) = a == b || (applicable(isapprox, a, b) && isapprox(a, b))
-_em_field_isapprox(a::Tuple, b::Tuple) =
-  length(a) == length(b) && all(map(_em_field_isapprox, a, b))
-_em_field_isapprox(a::NamedTuple, b::NamedTuple) =
-  keys(a) == keys(b) && _em_field_isapprox(values(a), values(b))
-Base.isapprox(a::EMFieldParams, b::EMFieldParams) =
-  a.em_field == b.em_field &&
-  a.em_field_normalized == b.em_field_normalized &&
-  _em_field_isapprox(a.em_field_params, b.em_field_params)
+"""
+    EMFieldParams
+
+Defines the electromagnetic field of an element as a function 
+`em_field(x, y, s, t, p=nothing)` where `p` is a tuple of parameters that may be used 
+inside the function.
+
+## Properties
+$(PROPSDOC(EMFieldParams))
+"""
+EMFieldParams
+
+@generated function deval(mp::EMFieldParams{F,P}, c::Context=NULL_CONTEXT) where {F,P<:Tuple}
+    N = length(P.parameters)
+    # Use getfield with literal integer arguments
+    exprs = [:(deval(Base.getfield(mp.em_field_params, $i), c)) for i in 1:N]
+    return :(EMFieldParams(mp.em_field, tuple($(exprs...)), mp.em_field_normalized))
+end
+
+@generated function scalarize(mp::EMFieldParams{F,P}) where {F,P<:Tuple}
+    N = length(P.parameters)
+    # Use getfield with literal integer arguments
+    exprs = [:(scalarize(Base.getfield(mp.em_field_params, $i))) for i in 1:N]
+    return :(EMFieldParams(mp.em_field, tuple($(exprs...)), mp.em_field_normalized))
+end
+
+function Base.isapprox(a::EMFieldParams, b::EMFieldParams)
+  if xor(isnothing(a.em_field_params), isnothing(b.em_field_params))
+    return false
+  elseif isnothing(a.em_field_params) && isnothing(b.em_field_params)
+    return (a.em_field == b.em_field && 
+           a.em_field_normalized == b.em_field_normalized)
+  else
+    return (a.em_field == b.em_field && 
+            a.em_field_normalized == b.em_field_normalized &&
+            all(a.em_field_params .≈ b.em_field_params))
+  end
+end
 
 @kwdef mutable struct MetaParams <: AbstractParams
   alias::String = ""
