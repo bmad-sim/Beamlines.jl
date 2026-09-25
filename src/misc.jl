@@ -146,7 +146,7 @@ function Base.isapprox(a::FourPotentialParams, b::FourPotentialParams)
 end
 
 """
-    EMFieldParams(; em_field=nothing, em_field_params=nothing,
+    EMFieldParams
                     em_field_normalized=false)
 
 An electromagnetic field defined by `em_field(x, y, s, t, p)`.
