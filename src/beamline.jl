@@ -32,7 +32,7 @@ end
 
 `_Branch` exists to break a mutual type recursion since
 `Beamline` has a reference to a `Branch`, and `Branch` needs a vector of `Beamline`s. 
-Julia has no forward declarations, so to get around this, `_Branch` is used.
+Julia < v1.14 has no forward declarations, so to get around this, `_Branch` is used.
 
 Why not just use `Branch{T}` and skip defining `_Branch`?
 This could be done but in this case `Branch` would become a `UnionAll` rather than a concrete type
