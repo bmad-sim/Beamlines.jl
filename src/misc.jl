@@ -147,7 +147,6 @@ end
 
 """
     EMFieldParams
-                    em_field_normalized=false)
 
 An electromagnetic field defined by `em_field(x, y, s, t, p)`.
 The parameters `p` are always passed as the fifth argument, including when they
