@@ -159,6 +159,10 @@ and magnetic fields. With `true`, both fields are divided by reference magnetic
 rigidity.
 Deferred expressions and scalarization act recursively on the parameters, leaving
 the callable unchanged.
+the callable unchanged.
+
+## Properties
+$(PROPSDOC(EMFieldParams))
 """
 @kwdef mutable struct EMFieldParams{F,P} <: AbstractParams
   em_field::F = nothing
