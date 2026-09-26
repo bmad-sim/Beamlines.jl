@@ -279,9 +279,9 @@ function Base.setproperty!(b::Branch, key::Symbol, value)
     setfield!(b, key, value)
   elseif key == :context
     if getfield(b, :lattice_index) == -1
-      _set_context!(b, value)
-    else  # The Context is shared by the whole Lattice
-      _set_context!(getfield(b, :lattice), value)
+      setfield!(b, :context, value)
+    else  # The Context is stored only in the Lattice
+      setfield!(getfield(b, :lattice), :context, value)
     end
   elseif key in (:beamlines, :lattice, :lattice_index)
     error("Unable to set property $key: this field is protected")
@@ -334,7 +334,7 @@ function Base.setproperty!(lat::Lattice, key::Symbol, value)
   if key == :name
     setfield!(lat, key, value)
   elseif key == :context
-    _set_context!(lat, value)
+    setfield!(lat, :context, value)
   elseif key == :branches
     error("Unable to set property $key: this field is protected")
   else

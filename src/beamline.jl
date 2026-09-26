@@ -14,10 +14,11 @@ mutable struct _Lattice{B<:_AbstractBranch}
       context = merge(branches[i].context, context)
       setfield!(br, :lattice, lattice)
       setfield!(br, :lattice_index, i)
+      setfield!(br, :context, NULL_CONTEXT) # The Context is stored only in the Lattice
       if br.name == ""; br.name = "b$i"; end
     end
 
-    _set_context!(lattice, context)
+    setfield!(lattice, :context, context)
     return lattice
   end
 end
@@ -60,6 +61,7 @@ mutable struct _Branch{T<:_AbstractBeamline} <: _AbstractBranch
       context = merge(oldbl.context, context)
       setfield!(newbl, :branch, branch)
       setfield!(newbl, :branch_index, i)
+      setfield!(newbl, :context, NULL_CONTEXT) # The Context is stored only in the Branch
       # Point the elements of the line to the Beamline in the Branch. Needed when the line is
       # shared with `oldbl`, since the elements would otherwise still point to `oldbl`.
       for j in eachindex(newbl.line)
@@ -67,7 +69,7 @@ mutable struct _Branch{T<:_AbstractBeamline} <: _AbstractBranch
       end
     end
 
-    _set_context!(branch, context)
+    setfield!(branch, :context, context)
     return branch
   end
 end
@@ -75,37 +77,16 @@ end
 #---------------------------------------------------------------------------------------------------
 
 """
-    _set_context!(branch::_Branch, context::Context)
-    _set_context!(lattice::_Lattice, context::Context)
-
-The `Context` of a `Lattice`, or of a `Branch` not in a `Lattice`, is stored only at that 
-highest level. The `Branch`es and `Beamline`s below it store `NULL_CONTEXT`, and their 
-`context` property returns the `Context` stored at the highest level (see `_context`).
-`_set_context!` stores `context` in `branch` or `lattice` and `NULL_CONTEXT` in everything 
-below it.
-"""
-function _set_context!(branch::_Branch, context::Context)
-  setfield!(branch, :context, context)
-  for bl in getfield(branch, :beamlines)
-    setfield!(bl, :context, NULL_CONTEXT)
-  end
-  return context
-end
-
-function _set_context!(lattice::_Lattice, context::Context)
-  setfield!(lattice, :context, context)
-  for br in getfield(lattice, :branches)
-    _set_context!(br, NULL_CONTEXT)
-  end
-  return context
-end
-
-"""
     _context(branch::_Branch)
     _context(bl::Beamline)
 
 Return the `Context` stored at the highest level: the `Lattice` if there is one, else the 
 `Branch` if there is one, else the `Beamline` itself.
+
+The `Context` of a `Lattice`, or of a `Branch` not in a `Lattice`, is stored only at that 
+highest level. The `Branch`es and `Beamline`s below it store `NULL_CONTEXT`, which is set 
+when they are put in the `Branch` or `Lattice`. Setting the `context` property at any level 
+sets the field of the highest level only.
 """
 @inline function _context(branch::_Branch)
   if getfield(branch, :lattice_index) == -1

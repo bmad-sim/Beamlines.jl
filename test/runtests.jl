@@ -2052,6 +2052,15 @@ using ForwardDiff, GTPSA, ReverseDiff
         @test blE.context === latE.context && brE0.context === latE.context
         @test blE.E_ref == 6e9
         @test brE0.beamlines[2].E_ref == 6e9
+        # Setting the context at any level sets only the Lattice field
+        for (obj, E) in ((blE, 7e9), (brE0, 8e9), (latE, 9e9))
+          cE = Context(E=E)
+          obj.context = cE
+          @test getfield(latE, :context) === cE
+          @test getfield(brE0, :context) === Beamlines.NULL_CONTEXT
+          @test all(bl -> getfield(bl, :context) === Beamlines.NULL_CONTEXT, brE0.beamlines)
+          @test blE.E_ref == E
+        end
 
         # copy(::Beamline) is a shallow copy sharing the line
         qc = Quadrupole(L=1.0, Kn1=0.1)
