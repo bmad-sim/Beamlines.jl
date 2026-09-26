@@ -26,7 +26,7 @@ end
 #---------------------------------------------------------------------------------------------------
 
 """
-    mutable struct _Branch{T<:_AbstractBeamline} <: _AbstractBranch
+    Internal: mutable struct _Branch{T<:_AbstractBeamline} <: _AbstractBranch
 
 `_Branch` exists to break a mutual type recursion since
 `Beamline` has a reference to a `Branch`, and `Branch` needs a vector of `Beamline`s. 
@@ -71,28 +71,6 @@ mutable struct _Branch{T<:_AbstractBeamline} <: _AbstractBranch
 
     setfield!(branch, :context, context)
     return branch
-  end
-end
-
-#---------------------------------------------------------------------------------------------------
-
-"""
-    _context(branch::_Branch)
-    _context(bl::Beamline)
-
-Return the `Context` stored at the highest level: the `Lattice` if there is one, else the 
-`Branch` if there is one, else the `Beamline` itself.
-
-The `Context` of a `Lattice`, or of a `Branch` not in a `Lattice`, is stored only at that 
-highest level. The `Branch`es and `Beamline`s below it store `NULL_CONTEXT`, which is set 
-when they are put in the `Branch` or `Lattice`. Setting the `context` property at any level 
-sets the field of the highest level only.
-"""
-@inline function _context(branch::_Branch)
-  if getfield(branch, :lattice_index) == -1
-    return getfield(branch, :context)
-  else
-    return getfield(getfield(branch, :lattice), :context)
   end
 end
 
@@ -425,6 +403,14 @@ function Base.getproperty(b::Beamline, key::Symbol)
   return prop
 end
 
+#---------------------------------------------------------------------------------------------------
+
+"""
+    _context(bl::Beamline)
+
+Return the `Context` of `bl`: the `Context` stored in the `Lattice` or `Branch` that `bl` 
+is in, if any, else the `Context` stored in `bl` itself. See `_context(::Branch)`.
+"""
 @inline function _context(bl::Beamline)
   if getfield(bl, :branch_index) == -1
     return getfield(bl, :context)

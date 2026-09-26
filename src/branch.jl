@@ -249,6 +249,27 @@ end
 
 #---------------------------------------------------------------------------------------------------
 
+"""
+    _context(branch::Branch)
+
+Return the `Context` of `branch`: the `Context` stored in the `Lattice` that `branch` is in, 
+if any, else the `Context` stored in `branch` itself.
+
+The `Context` of a `Lattice`, or of a `Branch` not in a `Lattice`, is stored only at that 
+highest level. The `Branch`es and `Beamline`s below it store `NULL_CONTEXT`, which is set 
+when they are put in the `Branch` or `Lattice`. Setting the `context` property at any level 
+sets the field of the highest level only.
+"""
+@inline function _context(branch::Branch)
+  if getfield(branch, :lattice_index) == -1
+    return getfield(branch, :context)
+  else
+    return getfield(getfield(branch, :lattice), :context)
+  end
+end
+
+#---------------------------------------------------------------------------------------------------
+
 Base.propertynames(::Branch) = (:name, :beamlines, :lattice, :lattice_index, :context)
 
 function Base.getproperty(branch::Branch, key::Symbol)
