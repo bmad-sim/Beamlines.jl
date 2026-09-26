@@ -1513,6 +1513,62 @@ using ForwardDiff, GTPSA, ReverseDiff
     @test brr2[2].s == 1.0
     @test brr2.context.r == 1
     @test all(bl -> bl.context === brr2.context, brr2.beamlines)
+
+    # Repeated Beamlines: reference energy accumulates over the repeats
+    rfr = RFCavity(L=1.0)
+    secr = Beamline([rfr, Drift(L=1.0)]; dE_ref=1e9)
+    injr = Beamline([Marker()]; E_ref=10e9, species_ref=Species("electron"))
+    brE = Branch([injr, secr, secr, secr])
+    @test length(brE) == 7
+    @test [bl.E_ref for bl in brE.beamlines] == [10e9, 11e9, 12e9, 13e9]
+    @test [bl.dE_ref for bl in brE.beamlines[2:end]] == [1e9, 1e9, 1e9]
+    @test [brE[i].E_ref for i in (2, 4, 6)] == [11e9, 12e9, 13e9]
+
+    # Repeated Beamlines: every occurrence has its own elements and positions
+    @test [brE[i].s for i in 1:7] == [0, 0, 1, 2, 3, 4, 5]
+    @test [(brE[i].beamline_index, brE[i].branch_index) for i in 1:7] ==
+          [(1, 1), (1, 2), (2, 2), (1, 3), (2, 3), (1, 4), (2, 4)]
+    @test all(i -> brE[i].beamline.branch === brE, 1:7)
+    @test length(unique(objectid, [brE[i] for i in 1:7])) == 7
+    @test length(unique(objectid, [bl.line for bl in brE.beamlines])) == 4
+
+    # Repeated Beamlines: setting a parameter through any occurrence sets it for all of them,
+    # including reference quantities, which are stored in the first element of `secr`
+    brE.beamlines[4].line[1].L = 2.0
+    @test rfr.L == 2.0
+    @test [brE[i].L for i in (2, 4, 6)] == [2.0, 2.0, 2.0]
+    brE.beamlines[3].dE_ref = 2e9
+    @test [bl.dE_ref for bl in brE.beamlines[2:end]] == [2e9, 2e9, 2e9]
+    @test [bl.E_ref for bl in brE.beamlines] == [10e9, 12e9, 14e9, 16e9]
+
+    # Repeated Beamlines in a Lattice use the Lattice context
+    qr = Quadrupole(L=1.0, Kn1=DefExpr(c -> c.k))
+    cellr = Beamline([qr, Drift(L=1.0)])
+    brL = Branch([cellr, cellr]; context=Context(k=0.1))
+    latr = Lattice([brL]; context=Context(k=0.2))
+    @test [brL[i].Kn1 for i in (1, 3)] == [0.2, 0.2]
+    latr.context = Context(k=0.3)
+    @test [brL[i].Kn1 for i in (1, 3)] == [0.3, 0.3]
+    @test all(bl -> bl.context === latr.context, brL.beamlines)
+
+    # copy(::Branch) of a Branch with repeated Beamlines
+    brLc = copy(brL)
+    @test [brLc[i].s for i in 1:4] == [0, 1, 2, 3]
+    @test brLc[1] !== brLc[3]
+    @test brLc[3].beamline === brLc.beamlines[2]
+
+    # Branch(elements) with a Beamline repeated three times and a LineElement between
+    c3r = Beamline([Drift(L=1.0)])
+    br3r = Branch(Any[c3r, c3r, Drift(L=5.0), c3r])
+    @test [br3r[i].s for i in 1:4] == [0, 1, 2, 7]
+    @test length(unique(objectid, [bl.line for bl in br3r.beamlines])) == 4
+
+    # Repeated empty Beamline infers its reference energy from the Beamline before it
+    ber = Beamline(LineElement[])
+    brer = Branch([Beamline([Marker()]; E_ref=1e9, species_ref=Species("electron")), ber, ber])
+    @test length(brer) == 1
+    @test [bl.E_ref for bl in brer.beamlines] == [1e9, 1e9, 1e9]
+
     @test_throws ErrorException Branch([Drift(), 1.0])
     @test_throws ErrorException Branch(Any[bla]; E_ref0=1e9)  # ref0 needs a leading LineElement
     @test_throws ErrorException Branch(LineElement[]; E_ref0=1e9)
