@@ -47,8 +47,7 @@ Base.show(io::IO, ::Type{Lattice}) = print(io, "Lattice")
 #---------------------------------------------------------------------------------------------------
 
 function Base.show(io::IO, branch::Branch)
-  println(io, "Branch: $(branch.name)")
-  lines_used = 1
+  lines_used = 1; println(io, "Branch:")
   # The reference species and energy shown are those at the start of the Branch.
   name = :Inferred
   try
@@ -78,7 +77,7 @@ function Base.show(io::IO, branch::Branch)
   N_ele = length(branch)
   # Index, Name, Kind, s
   ele_table = Matrix{Any}(nothing, 1+N_ele, 6)
-  ele_table[1,:] = ["Index", "Name", "Kind", "L [m]", "s [m]", "s_exit [m]"]
+  ele_table[1,:] = ["Index", "Name", "Kind", "L [m]", "s [m]", "s_downstream [m]"]
 
   i = 0
   for bl in branch.beamlines

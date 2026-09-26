@@ -341,12 +341,12 @@ function Base.show(io::IO, bl::Beamline)
 
   N_ele = length(bl.line)
   # Index, Name, Kind, s
-  ele_table = Matrix{Any}(nothing, 1+N_ele, 5)
-  ele_table[1,:] = ["Index", "Name", "Kind", "s [m]", "L [m]"]
+  ele_table = Matrix{Any}(nothing, 1+N_ele, 6)
+  ele_table[1,:] = ["Index", "Name", "Kind", "L [m]", "s [m]", "s_downstream [m]"]
 
   for i in 1:N_ele
     ele = bl.line[i]
-    ele_table[i+1,:] = [ele.beamline_index, ele.name, ele.kind, param_repr(ele.s), param_repr(ele.L)]
+    ele_table[i+1,:] = [ele.beamline_index, ele.name, ele.kind param_repr(ele.L), param_repr(ele.s), param_repr(ele.s+ele.L)]]
     lines_used += 1
     if get(io, :limit, false) && lines_used > displaysize(io)[1]-offset
       break
