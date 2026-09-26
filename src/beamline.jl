@@ -56,12 +56,14 @@ mutable struct _Branch{T<:_AbstractBeamline} <: _AbstractBranch
     end
 
     branch = new(name, ReadOnlyVector(copies), NULL_LATTICE, -1, context)
-    for (i, bl) in enumerate(getfield(branch, :beamlines))
-      context = merge(getfield(bl, :context), context)
-      setfield!(bl, :branch, branch)
-      setfield!(bl, :branch_index, i)
-      for j in eachindex(bl.line)
-        getfield(bl.line[j], :pdict)[BeamlineParams] = BeamlineParams(bl, j)
+    for (i, (newbl, oldbl)) in enumerate(zip(copies, beamlines))
+      context = merge(oldbl.context, context)
+      setfield!(newbl, :branch, branch)
+      setfield!(newbl, :branch_index, i)
+      # Point the elements of the line to the Beamline in the Branch. Needed when the line is
+      # shared with `oldbl`, since the elements would otherwise still point to `oldbl`.
+      for j in eachindex(newbl.line)
+        getfield(newbl.line[j], :pdict)[BeamlineParams] = BeamlineParams(newbl, j)
       end
     end
 
