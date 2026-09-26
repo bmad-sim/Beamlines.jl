@@ -2164,6 +2164,11 @@ using ForwardDiff, GTPSA, ReverseDiff
         @test brx.beamlines[2].line[1].s == 0
         @test brx.beamlines[4].line[1].s == 1.0
         @test brx.beamlines[4].line[1].s_downstream == 3.0
+        brx32 = Branch([Beamline([Drift(L=1f0)]), Beamline(LineElement[]), Beamline(LineElement[]),
+                        Beamline([Drift(L=2f0), Drift(L=3f0)])])
+        @test [brx32[i].s for i in 1:3] == [0, 1, 3]
+        @test all(i -> brx32[i].s isa Float32, 1:3)
+        @test brx32[3].s_downstream == 6
 
         # Showing a Lattice that contains an empty Branch
         slat0 = sprint(show, Lattice([Branch(Beamline[]), brx]))

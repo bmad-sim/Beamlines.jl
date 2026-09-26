@@ -543,22 +543,18 @@ function Base.getproperty(bp::BeamlineParams, key::Symbol)
       n = bp.beamline_index
     end
 
-    # s is the sum of the lengths of all preceding elements
+    # s is the sum of the lengths of the preceding elements in the Beamline plus, if the Beamline
+    # is in a Branch, s at the end of the nearest preceding non-empty Beamline.
     bl = bp.beamline
-    s0 = zero(bl.line[bp.beamline_index].L)  # So s has the same type as L when s is zero
-    nx = getfield(bl, :branch_index)
-    if nx != -1  # Beamline is in a Branch so add the lengths of the preceding Beamlines
-      for bsub in getfield(bl, :branch).beamlines[1:nx-1]
-        isempty(bsub.line) && continue  # Reducing over an empty collection is not allowed.
-        s0 += deval(sum(ele.L for ele in bsub.line), _context(bsub))
-      end
+    L0 = zero(bl.line[bp.beamline_index].L)  # So s has the same type as L
+    s_in_bl = deval(sum(bl.line[i].L for i in 1:n; init=L0), _context(bl))
+    branch_idx = getfield(bl, :branch_index)
+    if branch_idx > 1
+      beamlines = getfield(bl, :branch).beamlines
+      k = findlast(b -> !isempty(b.line), view(beamlines, 1:branch_idx-1))
+      isnothing(k) || return beamlines[k].line[end].s_downstream + s_in_bl
     end
-
-    if n == 0  # Reducing over an empty collection is not allowed so this is a special case.
-      return s0
-    else
-      return s0 + deval(sum(bl.line[i].L for i in 1:n), _context(bl))
-    end
+    return s_in_bl
   else
     return getfield(bp, key)
   end
