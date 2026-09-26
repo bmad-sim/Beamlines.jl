@@ -1548,10 +1548,12 @@ using ForwardDiff, GTPSA, ReverseDiff
     cellr = Beamline([qr, Drift(L=1.0)])
     brL = Branch([cellr, cellr]; context=Context(k=0.1))
     latr = Lattice([brL]; context=Context(k=0.2))
-    @test [brL[i].Kn1 for i in (1, 3)] == [0.2, 0.2]
+    brLl = latr.branches[1] # The Lattice holds a copy of the Branch
+    @test [brLl[i].Kn1 for i in (1, 3)] == [0.2, 0.2]
     latr.context = Context(k=0.3)
-    @test [brL[i].Kn1 for i in (1, 3)] == [0.3, 0.3]
-    @test all(bl -> bl.context === latr.context, brL.beamlines)
+    @test [brLl[i].Kn1 for i in (1, 3)] == [0.3, 0.3]
+    @test all(bl -> bl.context === latr.context, brLl.beamlines)
+    @test [brL[i].Kn1 for i in (1, 3)] == [0.1, 0.1] # Original is untouched
 
     # copy(::Branch) of a Branch with repeated Beamlines
     brLc = copy(brL)
@@ -1950,8 +1952,11 @@ using ForwardDiff, GTPSA, ReverseDiff
         lat = Lattice([br, br2]; name="LAT")
         @test lat.name == "LAT"
         @test length(lat.branches) == 2
-        @test lat.branches[1] === br
-        @test lat.branches[2] === br2
+        @test lat.branches[1] !== br  # The Lattice holds copies of the Branches
+        @test lat.branches[2] !== br2
+        @test_throws ErrorException br.lattice # Originals are not in the Lattice
+        @test br2.name == ""                   # and are not renamed
+        br, br2 = lat.branches
         @test length(lat) == 2
         @test lat[1] === br && lat[begin] === br
         @test lat[end] === br2
@@ -1961,6 +1966,20 @@ using ForwardDiff, GTPSA, ReverseDiff
         @test br2.lattice_index == 2
         @test br.name == "X"   # Explicit names are kept
         @test br2.name == "b2" # Unnamed branches get a default name
+        # A Branch may be used in more than one Lattice, and more than once in a Lattice
+        brS = Branch([Beamline([Drift(L=1.0)])]; name="IR", context=Context(k=1))
+        latS1 = Lattice([brS]; context=Context(a=1))
+        latS2 = Lattice([brS]; context=Context(a=2))
+        latS3 = Lattice([brS, brS])
+        @test latS1.branches[1] !== latS2.branches[1]
+        @test latS3.branches[1] !== latS3.branches[2]
+        @test [b.lattice_index for b in latS3.branches] == [1, 2]
+        @test all(b -> b.name == "IR", [latS1.branches[1], latS3.branches...])
+        @test latS3.branches[1][1] !== latS3.branches[2][1] # Distinct LineElements
+        @test latS1.context.a == 1 && latS2.context.a == 2 && latS1.context.k == 1
+        @test_throws ErrorException brS.lattice # The original is in no Lattice
+        @test ctxkeys(brS.context) == [:k]      # and keeps its own Context
+
         lat.name = "LAT2"
         @test lat.name == "LAT2"
         lat.name = "LAT"
@@ -1993,6 +2012,9 @@ using ForwardDiff, GTPSA, ReverseDiff
         latq = Lattice([brq], context=Context(k=0.3, w=3))
         @test ctxkeys(latq.context) == [:k, :w, :x, :y]
         @test latq.context.k == 0.3
+        @test brq.context.k == 0.2 # Original is untouched
+        brq = latq.branches[1]     # The Lattice holds a copy of the Branch
+        blq = brq.beamlines[1]
         @test brq.context === latq.context
         @test blq.context === latq.context
         @test blq.line[1].Kn1 == 0.3
@@ -2006,6 +2028,7 @@ using ForwardDiff, GTPSA, ReverseDiff
         brq3 = Branch([Beamline([Drift()])])
         latq3 = Lattice([Branch([Beamline([Quadrupole(L=1.0, Kn1=DefExpr(c -> c.k))])]), brq3])
         blq3 = latq3.branches[1].beamlines[1]
+        brq3 = latq3.branches[2] # The Lattice holds a copy of the Branch
         allctx(lat) = [lat.context; [b.context for b in lat.branches];
                        [bl.context for b in lat.branches for bl in b.beamlines]]
         c1 = Context(k=0.5)
@@ -2048,6 +2071,10 @@ using ForwardDiff, GTPSA, ReverseDiff
         @test brE0.beamlines[2].E_ref == 5e9 # Empty Beamline infers from the one before
         @test_throws ErrorException Beamline(LineElement[]).E_ref
         latE = Lattice([brE0], context=Context(E=6e9))
+        @test brE0.context.E == 5e9         # Original Branch is untouched
+        @test brE0.beamlines[1].E_ref == 5e9
+        brE0 = latE.branches[1]             # The Lattice holds a copy of the Branch
+        blE = brE0.beamlines[1]
         @test getfield(blE, :context) === Beamlines.NULL_CONTEXT  # Stored only in the Lattice
         @test getfield(brE0, :context) === Beamlines.NULL_CONTEXT
         @test getfield(latE, :context) === latE.context

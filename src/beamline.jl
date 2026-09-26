@@ -7,11 +7,18 @@ mutable struct _Lattice{B<:_AbstractBranch}
   name::String
   branches::ReadOnlyVector{B,Vector{B}}
   context::Context 
-  function _Lattice{B}(branches::Vector{B}; name::String = "", context=Context()) where {B<:_AbstractBranch}
+  function _Lattice{B}(branches::Vector{B}; name::String = "", context=Context(), 
+                       _adopt::Bool = false) where {B<:_AbstractBranch}
+    # The Lattice holds copies of the Branches (see `copy(::Branch)`), so the Branches passed 
+    # in are not modified and the same Branch may appear more than once. `_adopt` is internal: 
+    # it says the Branches were just constructed and are referenced nowhere else, so they are 
+    # used as-is. A copy has the same Context contents as the Branch it was made from, so the 
+    # Context merged below is the same either way.
+    branches = _adopt ? branches : B[copy(br) for br in branches]
+
     lattice = new(name, ReadOnlyVector(branches), context)
-    for i in eachindex(branches)
-      br = branches[i]
-      context = merge(branches[i].context, context)
+    for (i, br) in enumerate(branches)
+      context = merge(br.context, context)
       setfield!(br, :lattice, lattice)
       setfield!(br, :lattice_index, i)
       setfield!(br, :context, NULL_CONTEXT) # The Context is stored only in the Lattice
@@ -42,17 +49,21 @@ mutable struct _Branch{T<:_AbstractBeamline} <: _AbstractBranch
   lattice::_Lattice{_Branch{T}} # This should be HARD to change, not allowed easily
   lattice_index::Int            # This should be HARD to change, not allowed easily
   context::Context 
-  function _Branch{T}(beamlines::Vector{T}; name::String = "", context=Context()) where {T<:_AbstractBeamline}
+  function _Branch{T}(beamlines::Vector{T}; name::String = "", context=Context(), 
+                      _adopt::Bool = false) where {T<:_AbstractBeamline}
     # The Branch holds copies of the Beamlines (see `copy(::Beamline)`), so the Beamlines passed 
-    # in are not modified and the same Beamline may appear more than once.
-    copies = T[copy(bl) for bl in beamlines]
+    # in are not modified and the same Beamline may appear more than once. `_adopt` is internal: 
+    # it says the Beamlines were just constructed and are referenced nowhere else, so they are 
+    # used as-is. A copy has the same Context contents as the Beamline it was made from, so the 
+    # Context merged below is the same either way.
+    beamlines = _adopt ? beamlines : T[copy(bl) for bl in beamlines]
 
-    branch = new(name, ReadOnlyVector(copies), NULL_LATTICE, -1, context)
-    for (i, (newbl, oldbl)) in enumerate(zip(copies, beamlines))
-      context = merge(oldbl.context, context)
-      setfield!(newbl, :branch, branch)
-      setfield!(newbl, :branch_index, i)
-      setfield!(newbl, :context, NULL_CONTEXT) # The Context is stored only in the Branch
+    branch = new(name, ReadOnlyVector(beamlines), NULL_LATTICE, -1, context)
+    for (i, bl) in enumerate(beamlines)
+      context = merge(bl.context, context)
+      setfield!(bl, :branch, branch)
+      setfield!(bl, :branch_index, i)
+      setfield!(bl, :context, NULL_CONTEXT) # The Context is stored only in the Branch
     end
 
     setfield!(branch, :context, context)

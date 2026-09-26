@@ -27,7 +27,8 @@ Structure containing a vector of `Branch`es.
 
 ## Properties
 - `name`: Name of the `Lattice`. Defaults to blank `""`.
-- `branches`: Vector of the branches in the `Lattice`
+- `branches`: Vector of the branches in the `Lattice`. These are copies of the `Branch`es 
+    the `Lattice` was constructed with, which are left unmodified
 - `context`: `Context` shared by the `Lattice`, all of its `Branch`es, and all of their
     `Beamline`s. Setting the `context` of any of them sets it for all of them.
 """
@@ -223,17 +224,19 @@ function _Branch{T}(
       end
       i = j + 1
     elseif item isa Beamline
-      push!(beamlines, item)
+      push!(beamlines, copy(item))
       i += 1
     elseif item isa Branch
-      append!(beamlines, item.beamlines) # Copied by the Branch constructor
+      append!(beamlines, (copy(bl) for bl in item.beamlines))
       i += 1
     else
       error("Unable to construct Branch: entry $i of elements is a $(typeof(item)). Entries must be LineElements, Beamlines, or Branches.")
     end
   end
 
-  return Branch(beamlines; name = name, context = context)
+  # Every entry of `beamlines` was either constructed above or copied when it was added, so 
+  # none is referenced elsewhere and the Branch takes them as-is rather than copying again.
+  return Branch(beamlines; name = name, context = context, _adopt = true)
 end
 
 #---------------------------------------------------------------------------------------------------
@@ -305,9 +308,12 @@ end
 """
     Lattice(branches; name = "", context = Context())
 
-Constructs a `Lattice` given the vector of branches `branches`. Branches without a name
-are named `"b<i>"`, where `<i>` is the index of the branch. The contexts of the `Branch`es
-and `context` are merged into a single `Context` shared by the `Lattice`, all of its
+Constructs a `Lattice` given the vector of branches `branches`. The `Lattice` holds copies 
+(see `copy(::Branch)`) of the `Branch`es, whose `LineElement`s are children of those of the 
+corresponding `Branch` in `branches`. The `Branch`es in `branches` are not modified, so a 
+`Branch` may appear more than once and may also be used in other `Lattice`s. Branches without 
+a name are named `"b<i>"`, where `<i>` is the index of the branch. The contexts of the 
+`Branch`es and `context` are merged into a single `Context` shared by the `Lattice`, all of its
 `Branch`es, and all of their `Beamline`s. Variables in `context` take precedence over those
 in the `Branch`es.
 
@@ -324,7 +330,8 @@ lattice = Lattice([Branch([bl1]), Branch([bl2])])
     Lattice(beamlines; name = "", context = Context())
 
 Constructs a `Lattice` containing a single `Branch` made up of the vector of
-`Beamline`s `beamlines`.
+`Beamline`s `beamlines`. As with `Branch(beamlines)`, the `Branch` holds copies of the 
+`Beamline`s and `beamlines` is not modified.
 
 ## Example
 ```julia
@@ -335,7 +342,9 @@ lattice = Lattice([bl1, bl2]) # Equivalent to Lattice([Branch([bl1, bl2])])
 ```
 """
 function Lattice(beamlines::Vector{Beamline}; name = "", context = Context())
-  return Lattice([Branch(beamlines)], name = name, context = context)
+  # The Branch is constructed here and referenced nowhere else, so the Lattice takes it as-is 
+  # rather than copying it again: the Beamlines are already copied by the Branch constructor.
+  return Lattice([Branch(beamlines)], name = name, context = context, _adopt = true)
 end
 
 #---------------------------------------------------------------------------------------------------
