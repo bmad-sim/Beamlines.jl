@@ -2148,7 +2148,9 @@ using ForwardDiff, GTPSA, ReverseDiff
         @test occursin(r"1\s+X\s+4\s+10\.0", slat)
         @test occursin(r"2\s+b2\s+1\s+5\.0", slat)
         sbr = sprint(show, br)
-        @test occursin("Branch: X", sbr)
+        @test startswith(sbr, "Branch:\n")
+        @test occursin("name = X", sbr)
+        @test occursin("s_downstream [m]", sbr)
         @test occursin("lattice_index = 1", sbr)
         @test occursin(r"4\s+Drift\s+4\.0\s+6\.0\s+10\.0", sbr)
 

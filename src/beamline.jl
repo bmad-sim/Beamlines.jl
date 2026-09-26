@@ -346,7 +346,7 @@ function Base.show(io::IO, bl::Beamline)
 
   for i in 1:N_ele
     ele = bl.line[i]
-    ele_table[i+1,:] = [ele.beamline_index, ele.name, ele.kind param_repr(ele.L), param_repr(ele.s), param_repr(ele.s+ele.L)]]
+    ele_table[i+1,:] = [ele.beamline_index, ele.name, ele.kind, param_repr(ele.L), param_repr(ele.s), param_repr(ele.s+ele.L)]
     lines_used += 1
     if get(io, :limit, false) && lines_used > displaysize(io)[1]-offset
       break
