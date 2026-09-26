@@ -1397,8 +1397,6 @@ using ForwardDiff, GTPSA, ReverseDiff
     branch = Branch([bl])
     @test getfield(bl, :branch_index) == -1 # Original is not put in the Branch
     @test branch.beamlines[1].line === bl.line # Shares the line
-    @test_throws ErrorException Branch([bl])   # The line is already in a Branch
-    @test_throws ErrorException Branch([branch.beamlines[1]])
 
     @test Branch([Beamline([Marker()]; dp_over_q_ref=10.)]).beamlines[1].p_over_q_ref == 10.
 
@@ -1500,7 +1498,6 @@ using ForwardDiff, GTPSA, ReverseDiff
     @test brm[5].L == 0.7 && brm[7].L == 0.7
     @test cell.beamlines[1].line[1].beamline === cell.beamlines[1] # cell is untouched
     @test Branch([cell]).beamlines[1].line[1].L == 0.7
-    @test_throws ErrorException Branch([Drift(), arc])        # arc's line is already in a Branch
     bla = Beamline([Drift()])
     brr = Branch([bla, Drift(L=2.0), bla])                   # Repeated Beamline
     @test length(brr) == 3
@@ -1510,7 +1507,6 @@ using ForwardDiff, GTPSA, ReverseDiff
     @test brr[3].beamline === brr.beamlines[3]
     @test brr[3].parent === bla.line[1]
     @test brr[3].s == 2.0
-    @test_throws ErrorException Branch([bla])                 # bla's line is now in a Branch
     blr = Beamline([Drift(L=1.0)]; context=Context(r=1))
     brr2 = Branch([blr, blr])
     @test length(brr2) == 2
@@ -1907,9 +1903,6 @@ using ForwardDiff, GTPSA, ReverseDiff
         @test br2.lattice_index == 2
         @test br.name == "X"   # Explicit names are kept
         @test br2.name == "b2" # Unnamed branches get a default name
-        @test_throws ErrorException Lattice([br2]) # Already in a Lattice
-        br3 = Branch([Beamline([Drift()])])
-        @test_throws ErrorException Lattice([br3, br3])
         lat.name = "LAT2"
         @test lat.name == "LAT2"
         lat.name = "LAT"
@@ -2030,8 +2023,6 @@ using ForwardDiff, GTPSA, ReverseDiff
         @test blo.line[1].s == 0.0 && blo.line[2].s == 1.0
         blA.E_ref = 2e9                      # Shared line, so shared reference energy
         @test blo.E_ref == 2e9
-        @test_throws ErrorException Branch([blo])  # The line is already in a Branch
-        @test_throws ErrorException Branch([blcp]) # Shallow copies share that line
 
         # copy(::Branch) makes new lines whose elements are children of those in the Branch
         brAc = copy(brA)

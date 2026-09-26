@@ -49,7 +49,7 @@ mutable struct _Branch{T<:_AbstractBeamline} <: _AbstractBranch
     for i in eachindex(beamlines)
       bl = beamlines[i]
       if any(k -> getfield(beamlines[k], :line) === getfield(bl, :line), 1:i-1)
-        copies[i] = T(collect(bl.line); context = getfield(bl, :context))
+        copies[i] = T(collect(bl.line))
       else
         copies[i] = copy(bl)
       end
