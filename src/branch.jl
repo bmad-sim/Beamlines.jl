@@ -56,8 +56,8 @@ function Base.show(io::IO, branch::Branch)
     name = nameof(species_ref)
   catch
   end
-  println(io, " species_ref", " = ", name)
-  lines_used += 1
+  lines_used += 1; println(io, " species_ref", " = ", name)
+  lines_used += 1; println(io, " name", " = ", branch.name)
   ref = :Inferred
   ref_meaning = refmeaning_to_sym(getfield(InitialBeamlineParams(), :ref_meaning)) # Default
   try
@@ -66,13 +66,11 @@ function Base.show(io::IO, branch::Branch)
     ref = ibp.ref 
   catch
   end
-  println(io, " "*String(ref_meaning), " = ", param_repr(ref))
-  lines_used += 1
+  lines_used += 1; println(io, " "*String(ref_meaning), " = ", param_repr(ref))
 
   lattice_index = getfield(branch, :lattice_index)
   if lattice_index != -1
-    println(io, " lattice_index", " = ", lattice_index)
-    lines_used += 1
+    lines_used += 1; println(io, " lattice_index", " = ", lattice_index)
   end
 
   offset = 6
