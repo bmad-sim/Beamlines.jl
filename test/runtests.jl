@@ -1396,7 +1396,8 @@ using ForwardDiff, GTPSA, ReverseDiff
     bl = Beamline([Marker()])
     branch = Branch([bl])
     @test getfield(bl, :branch_index) == -1 # Original is not put in the Branch
-    @test branch.beamlines[1].line === bl.line # Shares the line
+    @test branch.beamlines[1].line[1].parent === bl.line[1] # Elements are children of bl's
+    @test bl.line[1].beamline === bl                        # bl is not modified
 
     @test Branch([Beamline([Marker()]; dp_over_q_ref=10.)]).beamlines[1].p_over_q_ref == 10.
 
@@ -1485,7 +1486,7 @@ using ForwardDiff, GTPSA, ReverseDiff
     @test brm.name == "mixed"
     @test length(brm.beamlines) == 5
     @test length(brm) == 9
-    @test brm.beamlines[2].line === arc.line            # Beamline shares its line
+    @test brm.beamlines[2].line[1].parent === arc.line[1] # Elements are children of arc's
     @test brm.beamlines[3].line !== cell.beamlines[1].line
     @test brm.beamlines[3].line !== brm.beamlines[4].line
     @test brm[5].L == 0.5 && brm[7].L == 0.5
@@ -1501,9 +1502,10 @@ using ForwardDiff, GTPSA, ReverseDiff
     bla = Beamline([Drift()])
     brr = Branch([bla, Drift(L=2.0), bla])                   # Repeated Beamline
     @test length(brr) == 3
-    @test brr.beamlines[1].line === bla.line
-    @test brr.beamlines[3].line !== bla.line
-    @test bla.line[1].beamline === brr.beamlines[1]
+    @test brr[1].parent === bla.line[1] && brr[3].parent === bla.line[1]
+    @test brr[1] !== brr[3]
+    @test bla.line[1].beamline === bla                       # bla is not modified
+    @test brr[1].beamline === brr.beamlines[1]
     @test brr[3].beamline === brr.beamlines[3]
     @test brr[3].parent === bla.line[1]
     @test brr[3].s == 2.0
@@ -2062,32 +2064,59 @@ using ForwardDiff, GTPSA, ReverseDiff
           @test blE.E_ref == E
         end
 
-        # copy(::Beamline) is a shallow copy sharing the line
+        # copy(::Beamline) makes new elements that are children of those of the original
         qc = Quadrupole(L=1.0, Kn1=0.1)
         blo = Beamline([qc, Drift(L=2.0)]; E_ref=1e9, species_ref=Species("electron"),
                        context=Context(k=1))
         blcp = copy(blo)
         @test blcp !== blo
-        @test blcp.line === blo.line
+        @test blcp.line !== blo.line
+        @test all(i -> blcp.line[i].parent === blo.line[i], 1:2)
+        @test blcp.line[2].beamline === blcp && blcp.line[2].beamline_index == 2
         @test getfield(blcp, :branch_index) == -1
-        @test blo.line[1].beamline === blo   # Elements still point to the original
+        @test blo.line[1].beamline === blo   # The original is not modified
         @test blcp.context !== blo.context
         @test blcp.context.k == 1
 
-        # A Beamline in a Branch shares the line of the Beamline used to create the Branch,
-        # but the other components differ
+        # A Beamline in a Branch is a copy whose elements are children of those of the Beamline 
+        # used to create the Branch. Parameters are shared through inheritance.
         brA = Branch([blo], context=Context(k=2))
         blA = brA.beamlines[1]
         @test blA !== blo
-        @test blA.line === blo.line
-        @test blo.line[1].beamline === blA   # Elements now point to the Beamline in the Branch
+        @test blA.line[1].parent === blo.line[1]
+        @test blo.line[1].beamline === blo   # The original is not modified
+        @test blA.line[1].beamline === blA
         @test blA.branch === brA
         @test getfield(blo, :branch_index) == -1
         @test blA.context === brA.context
         @test blo.context.k == 1             # Original context is untouched
         @test blo.line[1].s == 0.0 && blo.line[2].s == 1.0
-        blA.E_ref = 2e9                      # Shared line, so shared reference energy
+        blA.E_ref = 2e9                      # Reference energy is shared through inheritance
         @test blo.E_ref == 2e9
+        blA.line[1].Kn1 = 0.3                # So are other parameters
+        @test qc.Kn1 == 0.3 && blo.line[1].Kn1 == 0.3
+        @test length(Branch([blo]).beamlines) == 1 # blo can be used in another Branch
+        @test brA[1].beamline === blA && brA[2].s == 1.0 # which does not affect brA
+
+        # Reusing a Beamline in a second Branch does not affect the first Branch
+        d0r = Drift(L=5.0)
+        blu = Beamline([Drift(L=1.0), Drift(L=2.0)])
+        bru1 = Branch([Beamline([d0r]), blu])
+        bru2 = Branch([blu])
+        @test [bru1[i].s for i in 1:3] == [0, 5, 6]
+        @test [bru2[i].s for i in 1:2] == [0, 1]
+        @test bru1[3].branch === bru1 && bru2[2].branch === bru2
+
+        # findchildren and getindex find elements through a chain of parents
+        qf2 = Quadrupole(L=1.0)
+        blf = Beamline([qf2, Drift(L=1.0), qf2])
+        brf = Branch([blf, blf])
+        @test length(blf[qf2]) == 2
+        @test length(brf.beamlines[1][qf2]) == 2
+        @test length(brf.beamlines[2][qf2]) == 2
+        @test brf.beamlines[2][blf.line[1]] == [brf.beamlines[2].line[1]]
+        @test length(copy(brf).beamlines[1][qf2]) == 2 # Great-grandchildren
+        @test isempty(brf.beamlines[1][Quadrupole()])
 
         # copy(::Branch) makes new lines whose elements are children of those in the Branch
         brAc = copy(brA)

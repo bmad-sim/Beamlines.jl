@@ -119,26 +119,23 @@ end
 """
     Base.copy(branch::Branch)
 
-Copy of `branch` that is not in any `Lattice`. Since a `line` can only be in one `Branch`,
-each `Beamline` of the copy has a new `line` whose `LineElement`s are children of those in 
-`branch`. The `Context` is copied.
+Copy of `branch` that is not in any `Lattice`. The `Beamline`s are copied as with 
+`copy(::Beamline)`, so the `LineElement`s of the copy are children of those in `branch`. The 
+`Context` is copied.
 """
-Base.copy(branch::Branch) = Branch(Beamline[Beamline(collect(bl.line)) for bl in branch.beamlines]; 
-                                   name = branch.name, context = copy(branch.context))
+Base.copy(branch::Branch) = Branch(collect(branch.beamlines); name = branch.name, 
+                                   context = copy(branch.context))
 
 #---------------------------------------------------------------------------------------------------
 
 """
     Branch(beamlines; name = "", context = Context())
 
-Constructs a `Branch` given the vector of beamlines `beamlines`. The `Branch` holds shallow
-copies (see `copy(::Beamline)`) of the `Beamline`s: each copy shares the `line` of the 
-corresponding `Beamline` in `beamlines`, and the `LineElement`s of that line are set to point 
-to the copy. A `line` can only be in one `Branch`, so a `Beamline` whose `line` is already in 
-a `Branch` cannot be used. A `Beamline` may appear more than once in `beamlines`: after the 
-first, each occurrence gets a new `line` whose `LineElement`s are children of those in the 
-`line` of the `Beamline`. The contexts of the `Beamline`s and 
-`context` are merged into a single `Context` shared by the `Branch` and all of its `Beamline`s. 
+Constructs a `Branch` given the vector of beamlines `beamlines`. The `Branch` holds copies 
+(see `copy(::Beamline)`) of the `Beamline`s, whose `LineElement`s are children of those of the 
+corresponding `Beamline` in `beamlines`. The `Beamline`s in `beamlines` are not modified, so 
+a `Beamline` may appear more than once and may also be used in other `Branch`es. The contexts 
+of the `Beamline`s and `context` are merged into a single `Context` shared by the `Branch` and all of its `Beamline`s. 
 Variables in `context` take precedence over those in the `Beamline`s.
 
 ## Example
@@ -161,13 +158,10 @@ Constructs a `Branch` given the vector `elements`, which may contain `LineElemen
 - Consecutive `LineElement`s are made into `Beamline`s. A new `Beamline` is started at each 
   `LineElement` that sets a reference species or energy (has an `InitialBeamlineParams`), so 
   each `Beamline` has a uniform reference species and energy.
-- A `Beamline` is put in the `Branch` as is (see `Branch(beamlines)`), so it shares its `line`
-  with the `Beamline` in the `Branch`. Since a `line` can only be in one `Branch`, the `Beamline`
-  must not already have its `line` in a `Branch`. A `Beamline` may appear more than once: after 
-  the first, each occurrence gets a new `line` whose `LineElement`s are children of those in 
-  the `line` of the `Beamline`.
-- For a `Branch`, each of its `Beamline`s is included as a new `Beamline` whose `LineElement`s
-  are children of those in the `Branch` (as with `copy(::Branch)`). The same `Branch` may appear
+- A `Beamline` is included as a copy (see `Branch(beamlines)`) whose `LineElement`s are 
+  children of those of the `Beamline`. The same `Beamline` may appear more than once.
+- For a `Branch`, each of its `Beamline`s is included as a copy whose `LineElement`s are 
+  children of those in the `Branch` (as with `copy(::Branch)`). The same `Branch` may appear
   more than once.
 
 The reference species and energy of the first `Beamline` can be set with `species_ref0` and 
@@ -235,9 +229,7 @@ function _Branch{T}(
       push!(beamlines, item)
       i += 1
     elseif item isa Branch
-      for bl in item.beamlines
-        push!(beamlines, Beamline(collect(bl.line); context = item.context))
-      end
+      append!(beamlines, item.beamlines) # Copied by the Branch constructor
       i += 1
     else
       error("Unable to construct Branch: entry $i of elements is a $(typeof(item)). Entries must be LineElements, Beamlines, or Branches.")
