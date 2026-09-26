@@ -11,9 +11,6 @@ mutable struct _Lattice{B<:_AbstractBranch}
     lattice = new(name, ReadOnlyVector(branches), context)
     for i in eachindex(branches)
       br = branches[i]
-      if getfield(br, :lattice_index) != -1
-        error("Branch $i is already in another Lattice!")
-      end
       context = merge(branches[i].context, context)
       setfield!(br, :lattice, lattice)
       setfield!(br, :lattice_index, i)
@@ -46,9 +43,6 @@ mutable struct _Branch{T<:_AbstractBeamline} <: _AbstractBranch
   context::Context 
   function _Branch{T}(beamlines::Vector{T}; name::String = "", context=Context()) where {T<:_AbstractBeamline}
     for i in eachindex(beamlines)
-      if getfield(beamlines[i], :branch_index) != -1
-        error("Beamline $i is already in another Branch!")
-      end
       if _line_in_branch(beamlines[i])
         error("The line of Beamline $i is already in another Branch!")
       end
