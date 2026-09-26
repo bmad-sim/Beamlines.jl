@@ -1355,6 +1355,7 @@ using ForwardDiff, GTPSA, ReverseDiff
     @test_throws ErrorException bl2.dp_over_q_ref
     @test bl2.dE_ref == -3e9
     branch = Branch([bl1, bl2])
+    bl1, bl2 = branch.beamlines # The Branch holds copies of the Beamlines
     @test bl2.E_ref == 7e9
     @test bl2.species_ref == Species("proton")
     @test bl2.dE_ref == -3e9
@@ -1387,14 +1388,16 @@ using ForwardDiff, GTPSA, ReverseDiff
 
     @test_throws ErrorException Beamline([Marker()]; pc_ref=1, dp_over_q_ref=2)
     @test_throws ErrorException Beamline([Marker()]).branch
-    @test (bl = Beamline([Marker()]; E_ref=10); branch = Branch([bl]); bl.dE_ref) == 10
+    @test (bl = Beamline([Marker()]; E_ref=10); branch = Branch([bl]); branch.beamlines[1].dE_ref) == 10
     @test_throws ErrorException Beamline([Marker()]).branch_index = 1
     @test_throws ErrorException Beamline([Marker()]).branch = Beamlines.NULL_BRANCH
     @test_throws ErrorException Beamline([Marker()]).ref_meaning = Beamlines.RefMeaning.p_over_q_ref
     
     bl = Beamline([Marker()])
     branch = Branch([bl])
-    @test_throws ErrorException Branch([bl])
+    @test getfield(bl, :branch_index) == -1 # Original is not put in the Branch
+    @test branch.beamlines[1].line[1].parent === bl.line[1] # Elements are children of bl's
+    @test bl.line[1].beamline === bl                        # bl is not modified
 
     @test Branch([Beamline([Marker()]; dp_over_q_ref=10.)]).beamlines[1].p_over_q_ref == 10.
 
@@ -1467,6 +1470,111 @@ using ForwardDiff, GTPSA, ReverseDiff
     ele1 = LineElement()
     bl1 = Beamline([ele1])
     @test_throws ErrorException Branch([Marker()]; E_ref0=10e9, pc_ref0=3e9)
+
+    # Elements before the first InitialBeamlineParams are kept
+    brk = Branch([Drift(L=1.0), Marker(E_ref=1e9, species_ref=Species("electron")), Drift(L=2.0)])
+    @test length(brk) == 3
+    @test length(brk.beamlines) == 2
+    @test brk[3].s == 1.0
+
+    # Branch(elements) with a mix of LineElements, Beamlines, and Branches
+    mbeg = Marker(E_ref=10e9, species_ref=Species("electron"))
+    arc = Beamline([Drift(L=1.0), SBend(L=2.0)]; context=Context(a=1))
+    qcell = Quadrupole(L=0.5)
+    cell = Branch([qcell, Drift(L=1.0)]; context=Context(b=2))
+    brm = Branch(Any[mbeg, Drift(L=0.5), arc, cell, cell, Marker()]; name="mixed", context=Context(a=3))
+    @test brm.name == "mixed"
+    @test length(brm.beamlines) == 5
+    @test length(brm) == 9
+    @test brm.beamlines[2].line[1].parent === arc.line[1] # Elements are children of arc's
+    @test brm.beamlines[3].line !== cell.beamlines[1].line
+    @test brm.beamlines[3].line !== brm.beamlines[4].line
+    @test brm[5].L == 0.5 && brm[7].L == 0.5
+    @test brm[9].s == 6.5
+    @test brm[end] === brm[9]
+    @test all(bl -> bl.E_ref == 10e9, brm.beamlines)    # Reference energy is inferred
+    @test brm.context.a == 3 && brm.context.b == 2
+    @test all(bl -> bl.context === brm.context, brm.beamlines)
+    qcell.L = 0.7                                       # Branch entries are children
+    @test brm[5].L == 0.7 && brm[7].L == 0.7
+    @test cell.beamlines[1].line[1].beamline === cell.beamlines[1] # cell is untouched
+    @test Branch([cell]).beamlines[1].line[1].L == 0.7
+    bla = Beamline([Drift()])
+    brr = Branch([bla, Drift(L=2.0), bla])                   # Repeated Beamline
+    @test length(brr) == 3
+    @test brr[1].parent === bla.line[1] && brr[3].parent === bla.line[1]
+    @test brr[1] !== brr[3]
+    @test bla.line[1].beamline === bla                       # bla is not modified
+    @test brr[1].beamline === brr.beamlines[1]
+    @test brr[3].beamline === brr.beamlines[3]
+    @test brr[3].parent === bla.line[1]
+    @test brr[3].s == 2.0
+    blr = Beamline([Drift(L=1.0)]; context=Context(r=1))
+    brr2 = Branch([blr, blr])
+    @test length(brr2) == 2
+    @test brr2[2].s == 1.0
+    @test brr2.context.r == 1
+    @test all(bl -> bl.context === brr2.context, brr2.beamlines)
+
+    # Repeated Beamlines: reference energy accumulates over the repeats
+    rfr = RFCavity(L=1.0)
+    secr = Beamline([rfr, Drift(L=1.0)]; dE_ref=1e9)
+    injr = Beamline([Marker()]; E_ref=10e9, species_ref=Species("electron"))
+    brE = Branch([injr, secr, secr, secr])
+    @test length(brE) == 7
+    @test [bl.E_ref for bl in brE.beamlines] == [10e9, 11e9, 12e9, 13e9]
+    @test [bl.dE_ref for bl in brE.beamlines[2:end]] == [1e9, 1e9, 1e9]
+    @test [brE[i].E_ref for i in (2, 4, 6)] == [11e9, 12e9, 13e9]
+
+    # Repeated Beamlines: every occurrence has its own elements and positions
+    @test [brE[i].s for i in 1:7] == [0, 0, 1, 2, 3, 4, 5]
+    @test [(brE[i].beamline_index, brE[i].branch_index) for i in 1:7] ==
+          [(1, 1), (1, 2), (2, 2), (1, 3), (2, 3), (1, 4), (2, 4)]
+    @test all(i -> brE[i].beamline.branch === brE, 1:7)
+    @test length(unique(objectid, [brE[i] for i in 1:7])) == 7
+    @test length(unique(objectid, [bl.line for bl in brE.beamlines])) == 4
+
+    # Repeated Beamlines: setting a parameter through any occurrence sets it for all of them,
+    # including reference quantities, which are stored in the first element of `secr`
+    brE.beamlines[4].line[1].L = 2.0
+    @test rfr.L == 2.0
+    @test [brE[i].L for i in (2, 4, 6)] == [2.0, 2.0, 2.0]
+    brE.beamlines[3].dE_ref = 2e9
+    @test [bl.dE_ref for bl in brE.beamlines[2:end]] == [2e9, 2e9, 2e9]
+    @test [bl.E_ref for bl in brE.beamlines] == [10e9, 12e9, 14e9, 16e9]
+
+    # Repeated Beamlines in a Lattice use the Lattice context
+    qr = Quadrupole(L=1.0, Kn1=DefExpr(c -> c.k))
+    cellr = Beamline([qr, Drift(L=1.0)])
+    brL = Branch([cellr, cellr]; context=Context(k=0.1))
+    latr = Lattice([brL]; context=Context(k=0.2))
+    @test [brL[i].Kn1 for i in (1, 3)] == [0.2, 0.2]
+    latr.context = Context(k=0.3)
+    @test [brL[i].Kn1 for i in (1, 3)] == [0.3, 0.3]
+    @test all(bl -> bl.context === latr.context, brL.beamlines)
+
+    # copy(::Branch) of a Branch with repeated Beamlines
+    brLc = copy(brL)
+    @test [brLc[i].s for i in 1:4] == [0, 1, 2, 3]
+    @test brLc[1] !== brLc[3]
+    @test brLc[3].beamline === brLc.beamlines[2]
+
+    # Branch(elements) with a Beamline repeated three times and a LineElement between
+    c3r = Beamline([Drift(L=1.0)])
+    br3r = Branch(Any[c3r, c3r, Drift(L=5.0), c3r])
+    @test [br3r[i].s for i in 1:4] == [0, 1, 2, 7]
+    @test length(unique(objectid, [bl.line for bl in br3r.beamlines])) == 4
+
+    # Repeated empty Beamline infers its reference energy from the Beamline before it
+    ber = Beamline(LineElement[])
+    brer = Branch([Beamline([Marker()]; E_ref=1e9, species_ref=Species("electron")), ber, ber])
+    @test length(brer) == 1
+    @test [bl.E_ref for bl in brer.beamlines] == [1e9, 1e9, 1e9]
+
+    @test_throws ErrorException Branch([Drift(), 1.0])
+    @test_throws ErrorException Branch(Any[bla]; E_ref0=1e9)  # ref0 needs a leading LineElement
+    @test_throws ErrorException Branch(LineElement[]; E_ref0=1e9)
+    @test length(Branch([cell, Beamline([Drift(L=3.0)])])) == 3
 
     # MapParams
     f = (v,q=nothing)->((1,2,3,4,5,6),(7,8,9,10))
@@ -1699,6 +1807,32 @@ using ForwardDiff, GTPSA, ReverseDiff
     c1.d = im
     @test_throws InexactError ct1.d
 
+    # Context merge tests
+    cm1 = Context(e = 1, f = 2)
+    cm2 = Context(g = 3, h = 4)
+    cm3 = merge(cm1, cm2)
+    @test cm3 isa Context{Any}
+    @test sort(collect(keys(getfield(cm3, :d)))) == [:e, :f, :g, :h]
+    @test (cm3.e, cm3.f, cm3.g, cm3.h) == (1, 2, 3, 4)
+    @test cm3 !== cm1 && cm3 !== cm2
+    cm3.e = 10
+    @test cm1.e == 1 # merge copies, so inputs are not aliased
+    @test !haskey(getfield(cm3, :d), :a) # GLOBAL_CONTEXTS variables are not pulled in
+    @test getfield(merge(cm1), :d) == getfield(cm1, :d)
+    @test merge(cm1, Context(f = 5), Context(f = 6)).f == 6 # last one wins
+    cmt = merge(Context{Int}(e = 1), Context{Float64}(f = 2.0))
+    @test cmt isa Context{Float64} # Type parameters are promoted
+    @test cmt.e === 1.0
+    @test cmt.f === 2.0
+    @test merge(Context{Float32}(e = 1f0), Context{Float64}(f = 2.0)) isa Context{Float64}
+    @test merge(Context{Float32}(e = 1f0), Context{Float32}(f = 2f0)) isa Context{Float32}
+    cma = merge(Context{Float64}(e = 1.0), Context(f = "s"))
+    @test cma isa Context{Any}
+    @test cma.e === 1.0 && cma.f == "s"
+    cmr = merge(Context{Real}(e = 1), Context{Float64}(f = 2.0))
+    @test cmr isa Context{Real}
+    @test cmr.e === 1
+
     # Beamline context test
     qf = Quadrupole(Kn1=DefExpr(c->c.a), L=DefExpr(c -> c.b))
     @test qf.Kn1 == 3
@@ -1747,4 +1881,300 @@ using ForwardDiff, GTPSA, ReverseDiff
     qq = Quadrupole(Kn1=-DefExpr(c -> c.k1), L=0.5)
     blq = Beamline([qq], context=Context(k1 = 0.36))
     @test blq[qq][1].Kn1 ≈ -0.36
+
+    @testset "Branch and Lattice" begin
+        empty!(GLOBAL_CONTEXTS)
+        ctxkeys(c) = sort(collect(keys(getfield(c, :d))))
+
+        # Type display
+        @test repr(Branch) == "Branch"
+        @test repr(Lattice) == "Lattice"
+
+        # length and indexing across the Beamlines of a Branch
+        d1 = Drift(L=1.0); d2 = Drift(L=2.0); d3 = Drift(L=3.0); d4 = Drift(L=4.0)
+        bl1 = Beamline([d1, d2]; E_ref=1e9, species_ref=Species("electron"))
+        bl2 = Beamline([d3, d4])
+        br = Branch([bl1, bl2])
+        bl1, bl2 = br.beamlines # The Branch holds copies of the Beamlines
+        @test length(bl1) == 2
+        @test length(br) == 4
+        @test length(Branch(Beamline[])) == 0
+        @test br[1] === bl1.line[1]
+        @test br[2] === bl1.line[2]
+        @test br[3] === bl2.line[1]
+        @test br[4] === bl2.line[2]
+        @test br[end] === br[4]
+        @test br[end-1] === br[3]
+        @test br[begin] === br[1]
+        @test bl2[end] === bl2.line[2]
+        @test bl2[begin] === bl2.line[1]
+        @test_throws BoundsError Branch(Beamline[])[end]
+        @test_throws BoundsError br[5]
+        @test_throws BoundsError br[0]
+        @test_throws BoundsError br[-1]
+        @test_throws BoundsError Branch(Beamline[])[1]
+
+        # s and s_downstream accumulate over the preceding Beamlines in the Branch
+        @test [br[i].s for i in 1:4] == [0, 1, 3, 6]
+        @test [br[i].s_downstream for i in 1:4] == [1, 3, 6, 10]
+        # s is a zero of the same type as L at the start of a Beamline
+        @test br[1].s isa Float64
+        @test Beamline([Drift(L=1f0)]).line[1].s isa Float32
+
+        # s of preceding Beamlines is evaluated with the (shared) context
+        dl = Drift(L=DefExpr(c -> c.len))
+        blc1 = Beamline([dl]; E_ref=1e9, species_ref=Species("electron"), context=Context(len=2.0))
+        blc2 = Beamline([Drift(L=1.0)])
+        brc = Branch([blc1, blc2])
+        blc2 = brc.beamlines[2]
+        @test blc2.line[1].s == 2.0
+        brc.context.len = 3.0
+        @test blc2.line[1].s == 3.0
+        @test blc2.line[1].s_downstream == 4.0
+
+        # Branch properties
+        @test br.name == ""
+        @test Branch([Beamline([Drift()])]; name="named").name == "named"
+        br.name = "X"
+        @test br.name == "X"
+        @test propertynames(br) == (:name, :beamlines, :lattice, :lattice_index, :context)
+        @test_throws ErrorException br.lattice       # not yet in a Lattice
+        @test_throws ErrorException br.lattice_index
+        @test_throws ErrorException br.foo
+        @test_throws ErrorException br.lattice = Beamlines.NULL_LATTICE
+        @test_throws ErrorException br.lattice_index = 1
+        @test_throws ErrorException br.foo = 1
+
+        # Lattice from Branches
+        br2 = Branch([Beamline([Drift(L=5.0)])])
+        lat = Lattice([br, br2]; name="LAT")
+        @test lat.name == "LAT"
+        @test length(lat.branches) == 2
+        @test lat.branches[1] === br
+        @test lat.branches[2] === br2
+        @test length(lat) == 2
+        @test lat[1] === br && lat[begin] === br
+        @test lat[end] === br2
+        @test br.lattice === lat
+        @test br2.lattice === lat
+        @test br.lattice_index == 1
+        @test br2.lattice_index == 2
+        @test br.name == "X"   # Explicit names are kept
+        @test br2.name == "b2" # Unnamed branches get a default name
+        lat.name = "LAT2"
+        @test lat.name == "LAT2"
+        lat.name = "LAT"
+        @test_throws ErrorException lat.branches = lat.branches
+        @test_throws ErrorException lat.foo = 1
+
+        # Lattice from Beamlines puts them all in a single Branch
+        blA = Beamline([Drift(L=1.0)])
+        blB = Beamline([Drift(L=2.0)])
+        latB = Lattice([blA, blB]; name="LB", context=Context(z=9))
+        @test latB.name == "LB"
+        @test length(latB.branches) == 1
+        @test latB.branches[1].beamlines[1] !== blA # Copies
+        @test latB.branches[1].beamlines[2] !== blB
+        @test latB.branches[1].name == "b1"
+        @test latB.branches[1].beamlines[2].context.z == 9
+        @test :z ∉ ctxkeys(blB.context) # Original is untouched
+
+        # Context merging. Precedence: Lattice > Branch > Beamline, and after construction
+        # the Lattice, its Branches, and their Beamlines all share one Context.
+        q = Quadrupole(L=1.0, Kn1=DefExpr(c -> c.k))
+        blq = Beamline([q], context=Context(k=0.1, x=1))
+        brq = Branch([blq], context=Context(k=0.2, y=2))
+        @test ctxkeys(brq.context) == [:k, :x, :y]
+        @test brq.context.k == 0.2
+        @test blq.context.k == 0.1 # Original is untouched
+        blq = brq.beamlines[1]
+        @test blq.context === brq.context
+        @test blq.line[1].Kn1 == 0.2
+        latq = Lattice([brq], context=Context(k=0.3, w=3))
+        @test ctxkeys(latq.context) == [:k, :w, :x, :y]
+        @test latq.context.k == 0.3
+        @test brq.context === latq.context
+        @test blq.context === latq.context
+        @test blq.line[1].Kn1 == 0.3
+        latq.context.k = 0.4
+        @test blq.line[1].Kn1 == 0.4
+
+        # Setting the context at any level sets the one shared by the whole tree
+        blq2 = Beamline([Drift()])
+        brq2 = Branch([Beamline([Drift()]), blq2])
+        blq2 = brq2.beamlines[2]
+        brq3 = Branch([Beamline([Drift()])])
+        latq3 = Lattice([Branch([Beamline([Quadrupole(L=1.0, Kn1=DefExpr(c -> c.k))])]), brq3])
+        blq3 = latq3.branches[1].beamlines[1]
+        allctx(lat) = [lat.context; [b.context for b in lat.branches];
+                       [bl.context for b in lat.branches for bl in b.beamlines]]
+        c1 = Context(k=0.5)
+        latq3.context = c1
+        @test all(c -> c === c1, allctx(latq3))
+        @test blq3.line[1].Kn1 == 0.5
+        c2 = Context(k=0.6)
+        brq3.context = c2                        # Branch in a Lattice
+        @test all(c -> c === c2, allctx(latq3))
+        @test blq3.line[1].Kn1 == 0.6
+        c3 = Context(k=0.7)
+        brq3.beamlines[1].context = c3           # Beamline in a Branch in a Lattice
+        @test all(c -> c === c3, allctx(latq3))
+        @test blq3.line[1].Kn1 == 0.7
+        # Branch not in a Lattice
+        c4 = Context(k=0.8)
+        blq2.context = c4
+        @test brq2.context === c4
+        @test all(bl -> bl.context === c4, brq2.beamlines)
+        c5 = Context(k=0.9)
+        brq2.context = c5
+        @test all(bl -> bl.context === c5, brq2.beamlines)
+        # Beamline not in a Branch only sets its own context
+        bls = Beamline([Drift()])
+        c6 = Context(k=1.0)
+        bls.context = c6
+        @test bls.context === c6
+
+        # Context-dependent reference energy of a Beamline in a Branch and Lattice
+        mE = Marker(E_ref=DefExpr(c -> c.E), species_ref=Species("electron"))
+        brE0 = Branch([Beamline([mE, Drift(L=1.0)]), Beamline(LineElement[])], context=Context(E=5e9))
+        blE = brE0.beamlines[1]
+        @test getfield(blE, :context) === Beamlines.NULL_CONTEXT # Stored only in the Branch
+        @test getfield(brE0, :context) === brE0.context
+        @test blE.context === brE0.context
+        @test blE.E_ref == 5e9
+        @test blE.line[2].E_ref == 5e9
+        @test blE.line[1].dE_ref == 5e9      # BeamlineParams getter, first element
+        @test blE.line[2].dE_ref == 0        # BeamlineParams getter, other elements
+        @test brE0.beamlines[2].E_ref == 5e9 # Empty Beamline infers from the one before
+        @test_throws ErrorException Beamline(LineElement[]).E_ref
+        latE = Lattice([brE0], context=Context(E=6e9))
+        @test getfield(blE, :context) === Beamlines.NULL_CONTEXT  # Stored only in the Lattice
+        @test getfield(brE0, :context) === Beamlines.NULL_CONTEXT
+        @test getfield(latE, :context) === latE.context
+        @test blE.context === latE.context && brE0.context === latE.context
+        @test blE.E_ref == 6e9
+        @test brE0.beamlines[2].E_ref == 6e9
+        # Setting the context at any level sets only the Lattice field
+        for (obj, E) in ((blE, 7e9), (brE0, 8e9), (latE, 9e9))
+          cE = Context(E=E)
+          obj.context = cE
+          @test getfield(latE, :context) === cE
+          @test getfield(brE0, :context) === Beamlines.NULL_CONTEXT
+          @test all(bl -> getfield(bl, :context) === Beamlines.NULL_CONTEXT, brE0.beamlines)
+          @test blE.E_ref == E
+        end
+
+        # copy(::Beamline) makes new elements that are children of those of the original
+        qc = Quadrupole(L=1.0, Kn1=0.1)
+        blo = Beamline([qc, Drift(L=2.0)]; E_ref=1e9, species_ref=Species("electron"),
+                       context=Context(k=1))
+        blcp = copy(blo)
+        @test blcp !== blo
+        @test blcp.line !== blo.line
+        @test all(i -> blcp.line[i].parent === blo.line[i], 1:2)
+        @test blcp.line[2].beamline === blcp && blcp.line[2].beamline_index == 2
+        @test getfield(blcp, :branch_index) == -1
+        @test blo.line[1].beamline === blo   # The original is not modified
+        @test blcp.context !== blo.context
+        @test blcp.context.k == 1
+
+        # A Beamline in a Branch is a copy whose elements are children of those of the Beamline 
+        # used to create the Branch. Parameters are shared through inheritance.
+        brA = Branch([blo], context=Context(k=2))
+        blA = brA.beamlines[1]
+        @test blA !== blo
+        @test blA.line[1].parent === blo.line[1]
+        @test blo.line[1].beamline === blo   # The original is not modified
+        @test blA.line[1].beamline === blA
+        @test blA.branch === brA
+        @test getfield(blo, :branch_index) == -1
+        @test blA.context === brA.context
+        @test blo.context.k == 1             # Original context is untouched
+        @test blo.line[1].s == 0.0 && blo.line[2].s == 1.0
+        blA.E_ref = 2e9                      # Reference energy is shared through inheritance
+        @test blo.E_ref == 2e9
+        blA.line[1].Kn1 = 0.3                # So are other parameters
+        @test qc.Kn1 == 0.3 && blo.line[1].Kn1 == 0.3
+        @test length(Branch([blo]).beamlines) == 1 # blo can be used in another Branch
+        @test brA[1].beamline === blA && brA[2].s == 1.0 # which does not affect brA
+
+        # Reusing a Beamline in a second Branch does not affect the first Branch
+        d0r = Drift(L=5.0)
+        blu = Beamline([Drift(L=1.0), Drift(L=2.0)])
+        bru1 = Branch([Beamline([d0r]), blu])
+        bru2 = Branch([blu])
+        @test [bru1[i].s for i in 1:3] == [0, 5, 6]
+        @test [bru2[i].s for i in 1:2] == [0, 1]
+        @test bru1[3].branch === bru1 && bru2[2].branch === bru2
+
+        # findchildren and getindex find elements through a chain of parents
+        qf2 = Quadrupole(L=1.0)
+        blf = Beamline([qf2, Drift(L=1.0), qf2])
+        brf = Branch([blf, blf])
+        @test length(blf[qf2]) == 2
+        @test length(brf.beamlines[1][qf2]) == 2
+        @test length(brf.beamlines[2][qf2]) == 2
+        @test brf.beamlines[2][blf.line[1]] == [brf.beamlines[2].line[1]]
+        @test length(copy(brf).beamlines[1][qf2]) == 2 # Great-grandchildren
+        @test isempty(brf.beamlines[1][Quadrupole()])
+
+        # copy(::Branch) makes new lines whose elements are children of those in the Branch
+        brAc = copy(brA)
+        @test brAc !== brA
+        @test brAc.beamlines[1].line !== brA.beamlines[1].line
+        @test brAc.beamlines[1].line[1].beamline === brAc.beamlines[1]
+        @test brAc.beamlines[1].branch === brAc
+        @test brAc.context !== brA.context
+        @test brAc.context.k == 2
+        @test brAc.beamlines[1].E_ref == 2e9
+        qc.Kn1 = 0.5                         # Parents are shared
+        @test brAc.beamlines[1].line[1].Kn1 == 0.5
+
+        # Branch(elements; context) keeps the context, with or without InitialBeamlineParams
+        brE = Branch([Drift(L=1.0), Drift()]; context=Context(a=1, b=2))
+        @test ctxkeys(brE.context) == [:a, :b]
+        @test brE.beamlines[1].context === brE.context
+        brE2 = Branch([Marker(E_ref=1e9, species_ref=Species("electron")), Drift(),
+                       RFCavity(dE_ref=1e6), Drift()]; context=Context(a=1, b=2))
+        @test length(brE2.beamlines) == 2
+        @test ctxkeys(brE2.context) == [:a, :b]
+        latE = Lattice([Branch([Drift(), Drift()]; context=Context(a=1, b=2)),
+                        Branch([Drift(), Drift()])]; context=Context(c=3, d=4))
+        @test ctxkeys(latE.context) == [:a, :b, :c, :d]
+
+        # show
+        slat = sprint(show, lat)
+        @test occursin("Lattice: LAT", slat)
+        @test occursin(r"1\s+X\s+4\s+10\.0", slat)
+        @test occursin(r"2\s+b2\s+1\s+5\.0", slat)
+        sbr = sprint(show, br)
+        @test startswith(sbr, "Branch:\n")
+        @test occursin("name = X", sbr)
+        @test occursin("s_downstream [m]", sbr)
+        @test occursin("lattice_index = 1", sbr)
+        @test occursin(r"4\s+Drift\s+4\.0\s+6\.0\s+10\.0", sbr)
+
+        # Reference species and energy shown are those at the start of the Branch
+        @test occursin("species_ref = electron", sbr)
+        @test occursin("E_ref = 1.0e9", sbr)
+        @test occursin("species_ref = Inferred", sprint(show, Branch(Beamline[])))
+
+        # Empty Beamlines in a Branch contribute zero length to s
+        brx = Branch([Beamline(LineElement[]), Beamline([Drift(L=1.0)]; E_ref=1e9,
+                      species_ref=Species("electron")), Beamline(LineElement[]),
+                      Beamline([Drift(L=2.0)])])
+        @test brx.beamlines[2].line[1].s == 0
+        @test brx.beamlines[4].line[1].s == 1.0
+        @test brx.beamlines[4].line[1].s_downstream == 3.0
+        brx32 = Branch([Beamline([Drift(L=1f0)]), Beamline(LineElement[]), Beamline(LineElement[]),
+                        Beamline([Drift(L=2f0), Drift(L=3f0)])])
+        @test [brx32[i].s for i in 1:3] == [0, 1, 3]
+        @test all(i -> brx32[i].s isa Float32, 1:3)
+        @test brx32[3].s_downstream == 6
+
+        # Showing a Lattice that contains an empty Branch
+        slat0 = sprint(show, Lattice([Branch(Beamline[]), brx]))
+        @test occursin(r"1\s+b1\s+0\s+0", slat0)
+        @test occursin(r"2\s+b2\s+2\s+3\.0", slat0)
+    end
 end

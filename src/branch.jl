@@ -1,0 +1,389 @@
+#---------------------------------------------------------------------------------------------------
+
+"""
+    Branch
+
+Structure containing a vector of `Beamline`s, where currently each follows in-order, 
+one after the other. 
+
+## Properties
+- `name`: Name of the `Branch`. Default is `""` if not in a lattice and if in a lattice,
+  the default is `"bN"` where `N` is the index of the branch in `lattice.branches`
+- `beamlines`: Vector of the beamlines in the `Branch`
+- `lattice`: `Lattice` that the branch is placed in, if any
+- `lattice_index`: Index of the branch in the `Lattice`, if in a `Lattice`
+- `context`: `Context` shared by the `Branch` and all of its `Beamline`s, and by the whole
+    `Lattice` if the `Branch` is in one. Setting the `context` of any of them sets it for
+    all of them.
+"""
+const Branch = _Branch{Beamline}
+
+#---------------------------------------------------------------------------------------------------
+
+"""
+    Lattice
+
+Structure containing a vector of `Branch`es. 
+
+## Properties
+- `name`: Name of the `Lattice`. Defaults to blank `""`.
+- `branches`: Vector of the branches in the `Lattice`
+- `context`: `Context` shared by the `Lattice`, all of its `Branch`es, and all of their
+    `Beamline`s. Setting the `context` of any of them sets it for all of them.
+"""
+const Lattice = _Lattice{Branch}
+
+#---------------------------------------------------------------------------------------------------
+
+# NULL_LATTICE must be defined before NULL_BRANCH: the `_Branch` constructor references it. 
+# Both are constructed from empty vectors.
+
+const NULL_LATTICE = Lattice(Branch[])
+const NULL_BRANCH = Branch(Beamline[])
+
+Base.show(io::IO, ::Type{Branch}) = print(io, "Branch")
+Base.show(io::IO, ::Type{Lattice}) = print(io, "Lattice")
+
+#---------------------------------------------------------------------------------------------------
+
+function Base.show(io::IO, branch::Branch)
+  lines_used = 1; println(io, "Branch:")
+  # The reference species and energy shown are those at the start of the Branch.
+  name = :Inferred
+  try
+    species_ref = first(branch.beamlines).species_ref
+    name = nameof(species_ref)
+  catch
+  end
+  lines_used += 1; println(io, " species_ref", " = ", name)
+  lines_used += 1; println(io, " name", " = ", branch.name)
+  ref = :Inferred
+  ref_meaning = refmeaning_to_sym(getfield(InitialBeamlineParams(), :ref_meaning)) # Default
+  try
+    ibp = first(first(branch.beamlines).line).InitialBeamlineParams
+    ref_meaning = refmeaning_to_sym(ibp.ref_meaning)
+    ref = ibp.ref 
+  catch
+  end
+  lines_used += 1; println(io, " "*String(ref_meaning), " = ", param_repr(ref))
+
+  lattice_index = getfield(branch, :lattice_index)
+  if lattice_index != -1
+    lines_used += 1; println(io, " lattice_index", " = ", lattice_index)
+  end
+
+  offset = 6
+
+  N_ele = length(branch)
+  # Index, Name, Kind, s
+  ele_table = Matrix{Any}(nothing, 1+N_ele, 6)
+  ele_table[1,:] = ["Index", "Name", "Kind", "L [m]", "s [m]", "s_downstream [m]"]
+
+  i = 0
+  for bl in branch.beamlines
+    for ele in bl.line
+      i += 1
+      ele_table[i+1,:] = [i, ele.name, ele.kind, param_repr(ele.L), param_repr(ele.s), param_repr(ele.s+ele.L)]
+      lines_used += 1
+      if get(io, :limit, false) && lines_used > displaysize(io)[1]-offset
+        break
+      end
+    end
+  end
+
+  println(io)
+  pretty_table(io, ele_table;
+    limit_printing=get(io, :limit, false),
+    alignment = :l,
+    show_column_labels = false,
+    fit_table_in_display_horizontally = get(io, :limit, false),
+    fit_table_in_display_vertically = get(io, :limit, false),
+    table_format = TextTableFormat(
+      borders = text_table_borders__borderless,
+      horizontal_line_at_beginning=false,
+    ),
+    display_size=(displaysize(io)[1]-offset, displaysize(io)[2]),
+    highlighters=[TextHighlighter((v,i,j)->i == 1, crayon"bold")],
+    new_line_at_end=false,
+    formatters=[(v, i, j)-> isnothing(v) ? "" : v]
+  )
+
+  return
+end
+
+#---------------------------------------------------------------------------------------------------
+
+"""
+    Base.copy(branch::Branch)
+
+Copy of `branch` that is not in any `Lattice`. The `Beamline`s are copied as with 
+`copy(::Beamline)`, so the `LineElement`s of the copy are children of those in `branch`. The 
+`Context` is copied.
+"""
+Base.copy(branch::Branch) = Branch(collect(branch.beamlines); name = branch.name, 
+                                   context = copy(branch.context))
+
+#---------------------------------------------------------------------------------------------------
+
+"""
+    Branch(beamlines; name = "", context = Context())
+
+Constructs a `Branch` given the vector of beamlines `beamlines`. The `Branch` holds copies 
+(see `copy(::Beamline)`) of the `Beamline`s, whose `LineElement`s are children of those of the 
+corresponding `Beamline` in `beamlines`. The `Beamline`s in `beamlines` are not modified, so 
+a `Beamline` may appear more than once and may also be used in other `Branch`es. The contexts 
+of the `Beamline`s and `context` are merged into a single `Context` shared by the `Branch` and all of its `Beamline`s. 
+Variables in `context` take precedence over those in the `Beamline`s.
+
+## Example
+```julia
+ele = LineElement()
+bl1 = Beamline([ele], E_ref=2e9, species_ref=Species("electron"))
+bl2 = Beamline([ele], dE_ref=1e9)
+
+branch = Branch([bl1, bl2])
+```
+
+---
+
+    Branch(elements; species_ref0 = Species(), E_ref0 = nothing, pc_ref0 = nothing, 
+           p_over_q_ref0 = nothing, name = "", context = Context())
+
+Constructs a `Branch` given the vector `elements`, which may contain `LineElement`s, 
+`Beamline`s, and `Branch`es, in any combination:
+
+- Consecutive `LineElement`s are made into `Beamline`s. A new `Beamline` is started at each 
+  `LineElement` that sets a reference species or energy (has an `InitialBeamlineParams`), so 
+  each `Beamline` has a uniform reference species and energy.
+- A `Beamline` is included as a copy (see `Branch(beamlines)`) whose `LineElement`s are 
+  children of those of the `Beamline`. The same `Beamline` may appear more than once.
+- For a `Branch`, each of its `Beamline`s is included as a copy whose `LineElement`s are 
+  children of those in the `Branch` (as with `copy(::Branch)`). The same `Branch` may appear
+  more than once.
+
+The reference species and energy of the first `Beamline` can be set with `species_ref0` and 
+one of `E_ref0`, `pc_ref0`, or `p_over_q_ref0`. These are only allowed if `elements` starts 
+with a `LineElement`.
+
+## Example
+```julia
+beginning = Marker(E_ref=10e9, species_ref=Species("electron"))
+rf0 = RFCavity(dE_ref=1e9)
+next = LineElement()
+
+branch = Branch([beginning, rf0, next]) # Partitioned into 2 `Beamline`s
+
+arc = Beamline([Drift(L=1.0), SBend(L=2.0)])
+cell = Branch([Quadrupole(L=0.5), Drift(L=1.0)])
+branch2 = Branch([beginning, arc, cell, cell, Marker()]) # 5 `Beamline`s
+```
+"""
+# Defined for `_Branch{T}` rather than `Branch` so the inner constructor 
+# `_Branch{T}(::Vector{T})` is more specific and `Branch(::Vector{Beamline})` is not ambiguous.
+function _Branch{T}(
+  elements::AbstractVector;
+  species_ref0::Species=Species(),
+  E_ref0=nothing,
+  p_over_q_ref0=nothing,
+  pc_ref0=nothing,
+  name::String = "",
+  context = Context(),
+) where {T<:_AbstractBeamline}
+  kwargs = (p_over_q_ref0, E_ref0, pc_ref0)
+  kwarg_syms = (:p_over_q_ref, :E_ref, :pc_ref)
+  c = count(t->!isnothing(t), kwargs)
+  if c > 1
+    error("Only one of E_ref0, pc_ref0, p_over_q_ref0 can be specified")
+  end
+  kwarg_idx = findfirst(t->!isnothing(t), kwargs)
+  kwarg_val = isnothing(kwarg_idx) ? nothing : kwargs[kwarg_idx]
+  kwarg_sym = isnothing(kwarg_idx) ? :p_over_q_ref : kwarg_syms[kwarg_idx] 
+
+  if (c == 1 || !isnullspecies(species_ref0)) && (isempty(elements) || !(first(elements) isa LineElement))
+    error("species_ref0, E_ref0, pc_ref0, and p_over_q_ref0 can only be used if the first entry of elements is a LineElement")
+  end
+
+  has_ibp(ele) = ele isa LineElement && haskey(getfield(ele, :pdict), InitialBeamlineParams)
+
+  beamlines = Beamline[]
+  i = firstindex(elements)
+  while i <= lastindex(elements)
+    item = elements[i]
+    if item isa LineElement
+      # Run of LineElements up to the next entry that is not a LineElement or that starts a new Beamline
+      j = i
+      while j < lastindex(elements) && elements[j+1] isa LineElement && !has_ibp(elements[j+1])
+        j += 1
+      end
+      line = LineElement[elements[k] for k in i:j]
+      if isempty(beamlines)
+        push!(beamlines, Beamline(line; species_ref=species_ref0, kwarg_sym=>kwarg_val, context = context))
+      else
+        push!(beamlines, Beamline(line; context = context))
+      end
+      i = j + 1
+    elseif item isa Beamline
+      push!(beamlines, item)
+      i += 1
+    elseif item isa Branch
+      append!(beamlines, item.beamlines) # Copied by the Branch constructor
+      i += 1
+    else
+      error("Unable to construct Branch: entry $i of elements is a $(typeof(item)). Entries must be LineElements, Beamlines, or Branches.")
+    end
+  end
+
+  return Branch(beamlines; name = name, context = context)
+end
+
+#---------------------------------------------------------------------------------------------------
+
+"""
+    _context(branch::Branch)
+
+Return the `Context` of `branch`: the `Context` stored in the `Lattice` that `branch` is in, 
+if any, else the `Context` stored in `branch` itself.
+
+The `Context` of a `Lattice`, or of a `Branch` not in a `Lattice`, is stored only at that 
+highest level. The `Branch`es and `Beamline`s below it store `NULL_CONTEXT`, which is set 
+when they are put in the `Branch` or `Lattice`. Setting the `context` property at any level 
+sets the field of the highest level only.
+"""
+@inline function _context(branch::Branch)
+  if getfield(branch, :lattice_index) == -1
+    return getfield(branch, :context)
+  else
+    return getfield(getfield(branch, :lattice), :context)
+  end
+end
+
+#---------------------------------------------------------------------------------------------------
+
+Base.propertynames(::Branch) = (:name, :beamlines, :lattice, :lattice_index, :context)
+
+function Base.getproperty(branch::Branch, key::Symbol)
+  prop = trygetproperty(branch, key)
+  if prop isa GetError
+    error(prop.msg)
+  end
+  return prop
+end
+
+function trygetproperty(b::Branch, key::Symbol)
+  if key == :context
+    return _context(b)
+  elseif key in (:beamlines, :lattice, :lattice_index, :name)
+    field = getfield(b, key)
+    if key in (:lattice, :lattice_index) && (field == -1 || field === NULL_LATTICE)
+      return GetError("Unable to get $key: Branch is not in a Lattice")
+    else
+      return field
+    end
+  else
+    error("Unable to get property $key from Branch: Branch does not have this property")
+  end
+end
+
+function Base.setproperty!(b::Branch, key::Symbol, value)
+  if key == :name
+    setfield!(b, key, value)
+  elseif key == :context
+    if getfield(b, :lattice_index) == -1
+      setfield!(b, :context, value)
+    else  # The Context is stored only in the Lattice
+      setfield!(getfield(b, :lattice), :context, value)
+    end
+  elseif key in (:beamlines, :lattice, :lattice_index)
+    error("Unable to set property $key: this field is protected")
+  else
+    error("Unable to set property $key of Branch: Branch does not have this property")
+  end
+end
+
+#---------------------------------------------------------------------------------------------------
+
+"""
+    Lattice(branches; name = "", context = Context())
+
+Constructs a `Lattice` given the vector of branches `branches`. Branches without a name
+are named `"b<i>"`, where `<i>` is the index of the branch. The contexts of the `Branch`es
+and `context` are merged into a single `Context` shared by the `Lattice`, all of its
+`Branch`es, and all of their `Beamline`s. Variables in `context` take precedence over those
+in the `Branch`es.
+
+## Example
+```julia
+bl1 = Beamline([Marker(E_ref=10e9, species_ref=Species("electron")), Drift(L=1)])
+bl2 = Beamline([Drift(L=2)])
+
+lattice = Lattice([Branch([bl1]), Branch([bl2])])
+```
+
+---
+
+    Lattice(beamlines; name = "", context = Context())
+
+Constructs a `Lattice` containing a single `Branch` made up of the vector of
+`Beamline`s `beamlines`.
+
+## Example
+```julia
+bl1 = Beamline([Marker(E_ref=10e9, species_ref=Species("electron")), Drift(L=1)])
+bl2 = Beamline([Drift(L=2)])
+
+lattice = Lattice([bl1, bl2]) # Equivalent to Lattice([Branch([bl1, bl2])])
+```
+"""
+function Lattice(beamlines::Vector{Beamline}; name = "", context = Context())
+  return Lattice([Branch(beamlines)], name = name, context = context)
+end
+
+#---------------------------------------------------------------------------------------------------
+
+function Base.setproperty!(lat::Lattice, key::Symbol, value)
+  if key == :name
+    setfield!(lat, key, value)
+  elseif key == :context
+    setfield!(lat, :context, value)
+  elseif key == :branches
+    error("Unable to set property $key: this field is protected")
+  else
+    error("Unable to set property $key of Lattice: Lattice does not have this property")
+  end
+end
+
+#---------------------------------------------------------------------------------------------------
+
+function Base.show(io::IO, lat::Lattice)
+  println(io, "Lattice: $(lat.name)")
+
+  N_br = length(lat.branches)
+  branch_table = Matrix{Any}(nothing, 1+N_br, 4)
+  branch_table[1,:] = ["Index", "Name", "# Eles", "Length"]
+  for (ix, branch) in enumerate(lat.branches)
+    nele = length(branch)
+    len = nele == 0 ? 0 : branch[nele].s_downstream
+    branch_table[ix+1,:] = [ix, branch.name, nele, len]
+  end
+
+  offset = 6
+
+  println(io, "Branches:")
+  pretty_table(io, branch_table;
+    limit_printing=get(io, :limit, false),
+    alignment = :l,
+    show_column_labels = false,
+    fit_table_in_display_horizontally = get(io, :limit, false),
+    fit_table_in_display_vertically = get(io, :limit, false),
+    table_format = TextTableFormat(
+      borders = text_table_borders__borderless,
+      horizontal_line_at_beginning=false,
+    ),
+    display_size=(displaysize(io)[1]-offset, displaysize(io)[2]),
+    highlighters=[TextHighlighter((v,i,j)->i == 1, crayon"bold")],
+    new_line_at_end=false,
+    formatters=[(v, i, j)-> isnothing(v) ? "" : v]
+  )
+
+  return
+end
