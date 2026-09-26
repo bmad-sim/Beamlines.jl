@@ -42,12 +42,6 @@ mutable struct _Branch{T<:_AbstractBeamline} <: _AbstractBranch
   lattice_index::Int            # This should be HARD to change, not allowed easily
   context::Context 
   function _Branch{T}(beamlines::Vector{T}; name::String = "", context=Context()) where {T<:_AbstractBeamline}
-    for i in eachindex(beamlines)
-      if _line_in_branch(beamlines[i])
-        error("The line of Beamline $i is already in another Branch!")
-      end
-    end
-
     # The Branch holds copies of the Beamlines. The first time a line appears, the copy shares
     # that line and the elements of the line are pointed to the copy. If the same line appears 
     # again, the copy gets a new line whose elements are children of the elements of that line.
@@ -435,13 +429,6 @@ in any `Branch`, and has a copy of the `Context` of `bl`. The `BeamlineParams` o
 `LineElement`s are not changed, so they still point to `bl`.
 """
 Base.copy(bl::Beamline) = Beamline(bl)
-
-# True if the `LineElement`s of `bl` are in a `Beamline` that is in a `Branch`.
-function _line_in_branch(bl::Beamline)
-  isempty(bl.line) && return false
-  owner = getfield(getfield(first(bl.line), :pdict)[BeamlineParams]::BeamlineParams, :beamline)
-  return getfield(owner, :branch_index) != -1
-end
 
 #---------------------------------------------------------------------------------------------------
 
