@@ -8,7 +8,7 @@ one after the other.
 
 ## Properties
 - `name`: Name of the `Branch`. Default is `""` if not in a lattice and if in a lattice,
-  the default is `"bN"` where `N` is the index of the branch in `lattice.branches[]`
+  the default is `"bN"` where `N` is the index of the branch in `lattice.branches`
 - `beamlines`: Vector of the beamlines in the `Branch`
 - `lattice`: `Lattice` that the branch is placed in, if any
 - `lattice_index`: Index of the branch in the `Lattice`, if in a `Lattice`
