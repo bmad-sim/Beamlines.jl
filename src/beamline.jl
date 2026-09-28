@@ -557,8 +557,7 @@ function Base.getproperty(bp::BeamlineParams, key::Symbol)
     # s is the sum of the lengths of the preceding elements in the Beamline plus, if the Beamline
     # is in a Branch, s at the end of the nearest preceding non-empty Beamline.
     bl = bp.beamline
-    L0 = zero(bl.line[bp.beamline_index].L)  # So s has the same type as L
-    s_in_bl = deval(sum(bl.line[i].L for i in 1:n; init=L0), _context(bl))
+    s_in_bl = deval(sum(bl.line[i].L for i in 1:n; init=0.0f0), _context(bl))
     branch_idx = getfield(bl, :branch_index)
     if branch_idx > 1
       beamlines = getfield(bl, :branch).beamlines

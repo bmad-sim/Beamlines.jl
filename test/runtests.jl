@@ -1919,9 +1919,12 @@ using ForwardDiff, GTPSA, ReverseDiff
         # s and s_downstream accumulate over the preceding Beamlines in the Branch
         @test [br[i].s for i in 1:4] == [0, 1, 3, 6]
         @test [br[i].s_downstream for i in 1:4] == [1, 3, 6, 10]
-        # s is a zero of the same type as L at the start of a Beamline
-        @test br[1].s isa Float64
-        @test Beamline([Drift(L=1f0)]).line[1].s isa Float32
+        # s at the start of a Beamline is a Float32 zero, which promotes with any L type.
+        # After that, s has the type of the sum of the preceding lengths.
+        @test br[1].s === 0.0f0
+        @test Beamline([Drift(L=1f0)]).line[1].s === 0.0f0
+        @test br[2].s isa Float64
+        @test Beamline([Drift(L=1f0), Drift(L=2f0)]).line[2].s isa Float32
 
         # s of preceding Beamlines is evaluated with the (shared) context
         dl = Drift(L=DefExpr(c -> c.len))
