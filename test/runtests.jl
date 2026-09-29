@@ -1527,6 +1527,80 @@ using ForwardDiff, GTPSA, ReverseDiff
     ele1.four_potential_normalized = false
     @test ele1 ≈ ele2
 
+    # EMFieldParams
+    struct TestEMField{T}
+        strength::T
+    end
+    (f::TestEMField)(x, y, s, t, p=nothing) = (0, 0, 0, 0, f.strength, 0)
+
+    default = EMFieldParams()
+    @test default.em_field(0, 0, 0, 0) === (0, 0, 0, 0, 0, 0)
+    @test default.em_field(0, 0, 0, 0, nothing) === (0, 0, 0, 0, 0, 0)
+    @test isnothing(default.em_field_params)
+    @test !default.em_field_normalized
+    @test isnothing(Drift().EMFieldParams)
+    @test Drift().em_field(0, 0, 0, 0) === (0, 0, 0, 0, 0, 0)
+
+    callback = (x,y,s,t,p=nothing) -> isnothing(p) ? (1,2,3,4,5,6) : Tuple(p)
+    for normalized in (false, true)
+        parameter_free = EMFieldParams(em_field=callback, em_field_normalized=normalized)
+        @test parameter_free.em_field(0,0,0,0,parameter_free.em_field_params) === (1,2,3,4,5,6)
+        @test Beamlines.deval(parameter_free).em_field === callback
+        @test scalarize(parameter_free).em_field === callback
+        @test parameter_free ≈ deepcopy(parameter_free)
+
+        # EMFieldParams currently supports tuple parameters.
+        context = Context(strength=5.0)
+        params = (1,2,3,4,DefExpr{Float64}(c -> c.strength),6)
+        group = EMFieldParams(callback, params, normalized)
+        for strength in (5.0, 7.0)
+            context.strength = strength
+            evaluated = Beamlines.deval(group, context)
+            @test evaluated.em_field_params === (1,2,3,4,strength,6)
+            @test evaluated.em_field === callback
+            @test evaluated.em_field_normalized == normalized
+            @test evaluated ≈ deepcopy(evaluated)
+        end
+
+        params = (ForwardDiff.Dual(5.0, 1.0),)
+        group = EMFieldParams(callback, params, normalized)
+        result = @inferred scalarize(group)
+        @test result.em_field_params === (5.0,)
+        @test result.em_field === callback
+        @test result.em_field_normalized == normalized
+
+        group = EMFieldParams(callback, (), normalized)
+        @test Beamlines.deval(group).em_field_params === ()
+        @test scalarize(group).em_field_params === ()
+    end
+
+    params = (0.004,)
+    group = EMFieldParams(callback, params, false)
+    @test group ≈ EMFieldParams(callback, (0.004 + eps(),), false)
+    @test !(group ≈ EMFieldParams(callback, (0.008,), false))
+    @test !(group ≈ EMFieldParams(callback, params, true))
+    @test !(group ≈ EMFieldParams(callback, nothing, false))
+    @test !(group ≈ EMFieldParams(TestEMField(0.004), params, false))
+
+    parent = Drift(EMFieldParams=group)
+    line = Beamline([parent])
+    child = only(line.line)
+    @test child.em_field === callback
+    @test child.em_field_params === params
+    parent.em_field = TestEMField(0.008)
+    parent.em_field_params = nothing
+    parent.em_field_normalized = true
+    @test child.em_field isa TestEMField
+    @test child.em_field(0,0,0,0) === (0,0,0,0,0.008,0)
+    @test isnothing(child.em_field_params)
+    @test child.em_field_normalized
+    @test Beamlines.deval(child.EMFieldParams).em_field === parent.em_field
+    @test scalarize(child.EMFieldParams).em_field === parent.em_field
+    # Inherited groups forward writes as well as reads to the parent.
+    child.EMFieldParams = nothing
+    @test isnothing(child.EMFieldParams)
+    @test isnothing(parent.EMFieldParams)
+
     # MetaParams
     alias = "matt"
     label = "the matt"
