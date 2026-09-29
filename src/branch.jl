@@ -306,7 +306,7 @@ end
 #---------------------------------------------------------------------------------------------------
 
 """
-    Lattice(branches; name = "", context = Context())
+    Lattice(branches::Vector{Branch}; name = "", context = Context())
 
 Constructs a `Lattice` given the vector of branches `branches`. The `Lattice` holds copies 
 (see `copy(::Branch)`) of the `Branch`es, whose `LineElement`s are children of those of the 
