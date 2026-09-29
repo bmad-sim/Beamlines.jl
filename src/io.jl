@@ -21,9 +21,6 @@ function writebl(io::IO, bl::Beamline)
       end
       writeparam(io, pg)
     end
-    if !isempty(ele.do_not_use)
-      print(io, "do_not_use=", ele.do_not_use, ",")
-    end
     println(io, ")")
   end
   print(io, "])")
@@ -42,7 +39,11 @@ end
 function writeparam(io::IO, a::UniversalParams)
   fields = fieldnames(typeof(a))
   for field in fields
-    if field == :tracking_method
+    if field == :ignore_parameters
+      if !isempty(getproperty(a, field))
+        print(io, String(field), "=", param_repr(getproperty(a, field)), ",")
+      end
+    elseif field == :tracking_method
       tm = getproperty(a, field)
       print(io, String(field), "=", typeof(tm), "(")
       subfields = fieldnames(typeof(tm))

@@ -1748,72 +1748,73 @@ using ForwardDiff, GTPSA, ReverseDiff
     blq = Beamline([qq], context=Context(k1 = 0.36))
     @test blq[qq][1].Kn1 ≈ -0.36
 
-    # do_not_use
+    # ignore_parameters
     ele = Quadrupole(L=0.5, Kn1=0.3, x_offset=1e-3)
-    @test ele.do_not_use == Symbol[]
-    @test :do_not_use in propertynames(ele)
-    @test isactive(ele.AlignmentParams, ele.do_not_use)
-    ele.do_not_use = [:AlignmentParams]
-    @test ele.do_not_use == [:AlignmentParams]
-    @test !isactive(ele.AlignmentParams, ele.do_not_use)
-    @test isactive(ele.AlignmentParams) # Single argument form ignores do_not_use
-    @test isactive(ele.BMultipoleParams, ele.do_not_use)
-    @test !isactive(nothing, ele.do_not_use)
+    @test ele.ignore_parameters == Symbol[]
+    @test :ignore_parameters in propertynames(ele)
+    @test ele.UniversalParams.ignore_parameters === ele.ignore_parameters
+    @test isactive(ele.AlignmentParams, ele.ignore_parameters)
+    ele.ignore_parameters = [:AlignmentParams]
+    @test ele.ignore_parameters == [:AlignmentParams]
+    @test !isactive(ele.AlignmentParams, ele.ignore_parameters)
+    @test isactive(ele.AlignmentParams) # Single argument form ignores ignore_parameters
+    @test isactive(ele.BMultipoleParams, ele.ignore_parameters)
+    @test !isactive(nothing, ele.ignore_parameters)
     @test !isactive(ele.AlignmentParams, Val((:AlignmentParams,)))
     @test isactive(ele.AlignmentParams, Val((:BendParams,)))
     @test !isactive(nothing, Val(()))
-    push!(ele.do_not_use, :BMultipoleParams)
-    @test !isactive(ele.BMultipoleParams, ele.do_not_use)
+    push!(ele.ignore_parameters, :BMultipoleParams)
+    @test !isactive(ele.BMultipoleParams, ele.ignore_parameters)
     # Single symbol, strings, duplicates, and aliasing
-    ele.do_not_use = :ApertureParams
-    @test ele.do_not_use == [:ApertureParams]
-    ele.do_not_use = ("BendParams", :BendParams, :RFParams)
-    @test ele.do_not_use == [:BendParams, :RFParams]
-    ele.do_not_use = ele.do_not_use
-    @test ele.do_not_use == [:BendParams, :RFParams]
-    ele.do_not_use = []
-    @test isempty(ele.do_not_use)
+    ele.ignore_parameters = :ApertureParams
+    @test ele.ignore_parameters == [:ApertureParams]
+    ele.ignore_parameters = ("BendParams", :BendParams, :RFParams)
+    @test ele.ignore_parameters == [:BendParams, :RFParams]
+    ele.ignore_parameters = ele.ignore_parameters
+    @test ele.ignore_parameters == [:BendParams, :RFParams]
+    ele.ignore_parameters = []
+    @test isempty(ele.ignore_parameters)
     # Keyword argument
-    ele = Quadrupole(L=0.5, Kn1=0.3, do_not_use=[:BMultipoleParams])
-    @test ele.do_not_use == [:BMultipoleParams]
+    ele = Quadrupole(L=0.5, Kn1=0.3, ignore_parameters=[:BMultipoleParams])
+    @test ele.ignore_parameters == [:BMultipoleParams]
     # Invalid symbols throw and leave the list unchanged
-    @test_throws ErrorException ele.do_not_use = [:BMultipoleParam]
-    @test_throws ErrorException Quadrupole(do_not_use=[:Foo])
-    @test ele.do_not_use == [:BMultipoleParams]
-    @test_throws ErrorException Beamlines.check_do_not_use([:Foo])
-    @test Beamlines.check_do_not_use([:BendParams]) == [:BendParams]
+    @test_throws ErrorException ele.ignore_parameters = [:BMultipoleParam]
+    @test_throws ErrorException Quadrupole(ignore_parameters=[:Foo])
+    @test ele.ignore_parameters == [:BMultipoleParams]
+    @test_throws ErrorException Beamlines.check_ignore_parameters([:Foo])
+    @test Beamlines.check_ignore_parameters([:BendParams]) == [:BendParams]
     # Custom symbols
-    push!(Beamlines.DO_NOT_USE_SYMBOLS, :MyParams)
-    ele.do_not_use = [:MyParams]
-    @test ele.do_not_use == [:MyParams]
-    delete!(Beamlines.DO_NOT_USE_SYMBOLS, :MyParams)
-    @test_throws ErrorException ele.do_not_use = [:MyParams]
-    # Show only includes do_not_use if non-empty
-    ele.do_not_use = []
-    @test !occursin("do_not_use", sprint(show, ele))
-    ele.do_not_use = [:BMultipoleParams]
-    @test occursin("do_not_use = [:BMultipoleParams]", sprint(show, ele))
-    # Elements in a Beamline share the do_not_use list of the parent element
-    ele.do_not_use = [:AlignmentParams]
+    push!(Beamlines.IGNORE_PARAMETERS_SYMBOLS, :MyParams)
+    ele.ignore_parameters = [:MyParams]
+    @test ele.ignore_parameters == [:MyParams]
+    delete!(Beamlines.IGNORE_PARAMETERS_SYMBOLS, :MyParams)
+    @test_throws ErrorException ele.ignore_parameters = [:MyParams]
+    # Show only includes ignore_parameters if non-empty
+    ele.ignore_parameters = []
+    @test !occursin("ignore_parameters", sprint(show, ele))
+    ele.ignore_parameters = [:BMultipoleParams]
+    @test occursin("ignore_parameters = [:BMultipoleParams]", sprint(show, ele))
+    # Elements in a Beamline share the ignore_parameters list of the parent element
+    ele.ignore_parameters = [:AlignmentParams]
     bl = Beamline([ele, Drift(L=1.0), ele], species_ref=Species("electron"), E_ref=1e9)
-    @test bl.line[1].do_not_use === ele.do_not_use
-    @test bl.line[3].do_not_use == [:AlignmentParams]
-    bl.line[3].do_not_use = [:BMultipoleParams]
-    @test ele.do_not_use == [:BMultipoleParams]
-    @test bl.line[1].do_not_use == [:BMultipoleParams]
-    @test isempty(bl.line[2].do_not_use)
-    @test occursin("do_not_use = [:BMultipoleParams]", sprint(show, bl.line[1]))
+    @test bl.line[1].ignore_parameters === ele.ignore_parameters
+    @test bl.line[3].ignore_parameters == [:AlignmentParams]
+    bl.line[3].ignore_parameters = [:BMultipoleParams]
+    @test ele.ignore_parameters == [:BMultipoleParams]
+    @test bl.line[1].ignore_parameters == [:BMultipoleParams]
+    @test isempty(bl.line[2].ignore_parameters)
+    @test occursin("ignore_parameters = [:BMultipoleParams]", sprint(show, bl.line[1]))
     # Copying and comparing
     ele2 = deepcopy(bl.line[3]) # Flattens InheritParams
-    @test ele2.do_not_use == [:BMultipoleParams]
-    @test ele2.do_not_use !== ele.do_not_use
+    @test ele2.ignore_parameters == [:BMultipoleParams]
+    @test ele2.ignore_parameters !== ele.ignore_parameters
     @test ele2 ≈ ele
-    ele2.do_not_use = []
+    ele2.ignore_parameters = []
     @test !(ele2 ≈ ele)
     # writebl
     str = sprint(Beamlines.writebl, bl)
-    @test occursin("do_not_use=[:BMultipoleParams]", str)
+    @test occursin("ignore_parameters=[:BMultipoleParams]", str)
     bl2 = eval(Meta.parse(str))
-    @test bl2.line[1].do_not_use == [:BMultipoleParams]
-    @test isempty(bl2.line[2].do_not_use)
+    @test bl2.line[1].ignore_parameters == [:BMultipoleParams]
+    @test isempty(bl2.line[2].ignore_parameters)
 end
