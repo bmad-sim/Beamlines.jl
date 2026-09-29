@@ -327,7 +327,7 @@ lattice = Lattice([Branch([bl1]), Branch([bl2])])
 
 ---
 
-    Lattice(beamlines; name = "", context = Context())
+    Lattice(beamlines::Vector{Beamline}; name = "", context = Context())
 
 Constructs a `Lattice` containing a single `Branch` made up of the vector of
 `Beamline`s `beamlines`. As with `Branch(beamlines)`, the `Branch` holds copies of the 
