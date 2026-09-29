@@ -45,6 +45,7 @@ export AbstractParams,
        Patch,
        set!,
        Branch,
+       Lattice,
 
        deepcopy_no_beamline,
 
@@ -94,6 +95,7 @@ include("context.jl")
 include("defexpr.jl")
 include("element.jl")
 include("beamline.jl")
+include("branch.jl")
 include("scalarize.jl")
 include("bmultipole.jl")
 include("emultipole.jl")
