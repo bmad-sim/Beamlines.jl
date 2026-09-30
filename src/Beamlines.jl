@@ -15,6 +15,7 @@ export AbstractParams,
        ApertureParams,
        MapParams,
        FourPotentialParams,
+       EMFieldParams,
        MetaParams,
        ApertureAt,
        ApertureShape,
@@ -44,6 +45,7 @@ export AbstractParams,
        Patch,
        set!,
        Branch,
+       Lattice,
 
        deepcopy_no_beamline,
 
@@ -93,6 +95,7 @@ include("context.jl")
 include("defexpr.jl")
 include("element.jl")
 include("beamline.jl")
+include("branch.jl")
 include("scalarize.jl")
 include("bmultipole.jl")
 include("emultipole.jl")
@@ -108,6 +111,7 @@ include("keymaps.jl")
 include("element-name-handling.jl")
 include("search.jl")
 include("element-doc.jl")
+include("io.jl")
 
 # BitsBeamline is no longer supported
 # Support may continue in the future with 

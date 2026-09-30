@@ -23,23 +23,22 @@ ele.BMultipoleParams        # Goes to InheritParams to get parent
 =#
 
 function get_BM_strength(ele::LineElement, key::Symbol, context)
-  b = deval(ele.BMultipoleParams, context)
+  b = ele.BMultipoleParams
   if isnothing(b)
     return 0f0
   end
-  return @noinline _get_BM_strength(ele, b, key, context)
-end
-
-function _get_BM_strength(ele, b::BMultipoleParams, key, context)
   normal, order, normalized, integrated = BMULTIPOLE_STRENGTH_MAP[key]
-  # Default
   if !(order in b.order)
-    return zero(first(b.n))
+    return 0f0
   end
   i = o2i(b,order)
-  strength = normal ? b.n[i] : b.s[i]
+  strength = normal ? deval(b.n[i], context) : deval(b.s[i], context)
   stored_normalized = b.normalized[i]
   stored_integrated = b.integrated[i]
+  return @noinline _get_BM_strength(ele, strength, normalized, integrated, stored_normalized, stored_integrated, context)
+end
+
+function _get_BM_strength(ele, strength, normalized, integrated, stored_normalized, stored_integrated, context)
   # Yes there is a simpler way to write the below but this 
   # way minimizes type instability.
   if stored_normalized == normalized
@@ -194,22 +193,22 @@ function _set_BM_strength!(ele, context::Context, b::BMultipoleParams, key, valu
 end
 
 function get_EM_strength(ele::LineElement, key::Symbol, context)
-  b = deval(ele.EMultipoleParams, context)
+  b = ele.EMultipoleParams
   if isnothing(b)
     return 0f0
   end
-  return @noinline _get_EM_strength(ele, b, key, context)
-end
-
-function _get_EM_strength(ele, b::EMultipoleParams, key, context)
   normal, order, integrated = EMULTIPOLE_STRENGTH_MAP[key]
   # Default
   if !(order in b.order)
     return zero(first(b.n))
   end
   i = o2i(b,order)
-  strength = normal ? b.n[i] : b.s[i]
+  strength = normal ? deval(b.n[i], context) : deval(b.s[i], context)
   stored_integrated = b.integrated[i]
+  return @noinline _get_EM_strength(ele, strength, integrated, stored_integrated, context)
+end
+
+function _get_EM_strength(ele, strength, integrated, stored_integrated, context)
   if stored_integrated == integrated
     return strength
   else
