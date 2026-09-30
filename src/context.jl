@@ -110,6 +110,46 @@ end
 
 Base.copy(c::Context{T}) where {T} = Context{T}(copy(getfield(c, :d)))
 
+"""
+    merge(c::Context, cs::Context...)
+
+Construct a new `Context` containing the variables of all of the given `Context`s. If a
+variable is defined in more than one of the `Context`s, the value from the last one is
+used. The type parameter of the returned `Context` is the `promote_type` of the type
+parameters of the inputs, and each value is converted to it using `coerce`. For example, 
+merging a `Context{Float32}` with a `Context{Float64}` gives a `Context{Float64}`. Only the 
+variables stored in the given `Context`s are included; variables from `GLOBAL_CONTEXTS` are not.
+
+## Examples
+```jldoctest
+julia> c1 = Context(a = 1, b = 2);
+
+julia> c2 = Context(c = 3, d = 4);
+
+julia> c3 = merge(c1, c2);
+
+julia> c3.a + c3.d
+5
+
+julia> c4 = merge(Context{Int}(a = 1), Context{Float64}(b = 2.0));
+
+julia> typeof(c4)
+Context{Float64}
+
+julia> c4.a
+1.0
+```
+"""
+function Base.merge(c::Context, cs::Context...)
+  ds = map(x -> getfield(x, :d), (c, cs...))
+  T = promote_type(map(valtype, ds)...)
+  d = Dict{Symbol,T}()
+  for di in ds, (k, v) in di
+    d[k] = coerce(T, v)
+  end
+  return Context{T}(d)
+end
+
 const NULL_CONTEXT = Context()
 const GLOBAL_CONTEXTS = Stack{Context}()
 
