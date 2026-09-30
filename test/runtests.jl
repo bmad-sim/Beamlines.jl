@@ -2359,6 +2359,8 @@ using ForwardDiff, GTPSA, ReverseDiff
         @test_throws ErrorException findelements(lat, "q1#x")
         @test_throws ErrorException findelements(lat, "q1#0")
         @test_throws ErrorException findelements(lat, "q1>L")
+        @test_throws "Invalid regular expression \"*\"" findelements(lat, r"Quadrupole::*")
+        @test_throws "Invalid regular expression \"+q\"" findelements(lat, r"ring>>+q")
 
         # Branches
         bnames(v) = [b.name for b in v]

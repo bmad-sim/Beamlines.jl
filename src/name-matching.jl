@@ -174,7 +174,15 @@ _NameMatcher(r::Regex) = _NameMatcher(r.pattern, true, r.compile_options, r.matc
 function _name_regex(nm::_NameMatcher, text::AbstractString)
   isempty(text) && error("Blank name in match string: $(nm.str)")
   if nm.is_regex
-    return Regex("\\A(?:" * text * ")\\z", nm.compile_options, nm.match_options)
+    try
+      return Regex("\\A(?:" * text * ")\\z", nm.compile_options, nm.match_options)
+    catch err
+      # The PCRE error offset refers to the wrapped pattern above, so report the part instead.
+      err isa ErrorException || rethrow()
+      msg = replace(err.msg, r"^PCRE compilation error: " => "", r" at offset \d+$" => "")
+      hint = startswith(text, '*') ? " (With a Regex, use \".*\" to match any name.)" : ""
+      error("Invalid regular expression \"$text\" in match string $(nm.str): $msg.$hint")
+    end
   else
     return _wildcard_regex(text)
   end
@@ -313,7 +321,7 @@ end
 #---------------------------------------------------------------------------------------------------
 
 """
-    findelements(where, pattern::Union{AbstractString,Regex}) -> Vector{LineElement}
+    findelements(where::Union{Lattice,Branch,Beamline}, pattern::Union{AbstractString,Regex}) -> Vector{LineElement}
 
 Returns all the `LineElement`s in `where` that match `pattern`. `where` may be a `Lattice`, a
 `Branch`, or a `Beamline`. The returned elements are ordered by the order of the branches
@@ -348,7 +356,7 @@ around the end of the branch.
 
 If `pattern` is a `String`, the branch and element names may use the Bmad wild card
 characters `*`, which matches any number of characters (including zero), and `%`, which matches
-any single character. All other characters match only themselves.
+any single character. There are no other wildcard characters here.
 
 If `pattern` is a `Regex`, e.g. `r"q[0-9]+"`, the branch and element names are PCRE2
 regular expressions. Each regular expression must match the whole name, and the flags of
@@ -356,8 +364,7 @@ regular expressions. Each regular expression must match the whole name, and the 
 group `(...)`, character class `[...]`, or quantifier `{n,m}`, or that are escaped with a
 backslash, are part of the regular expression.
 
-Matching is case sensitive unless the `i` flag is used with a `Regex`. Element parameter
-matching (`name>parameter`) is not supported.
+Matching is case sensitive unless the `i` flag is used with a `Regex`.
 
 ## Examples
 ```julia
@@ -367,7 +374,7 @@ findelements(lat, "Quadrupole::q%")         # Quadrupoles with a two character n
 findelements(lat, "ring>>7")                # 7th element of the branch named "ring".
 findelements(lat, "b*>>bpm#2")              # 2nd element named "bpm" in each branch with a name
                                             #   starting with "b".
-findelements(lat, "m1:m2")                  # Elements from "m1" through "m2".
+findelements(lat, "m1:m2")                  # Elements from "m1" through "m2" in a line.
 findelements(lat, "Marker::* & m1:m2")      # Markers from "m1" through "m2".
 findelements(lat, "q1, q2")                 # Elements named "q1" or "q2".
 findelements(lat, r"(q|s)[0-9]{1,2}")       # Regex with operator characters in a group and quantifier.
