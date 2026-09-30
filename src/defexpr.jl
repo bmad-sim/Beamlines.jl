@@ -1,4 +1,12 @@
 
+# Source text of a deferred expression written in another language, e.g. `lambda c: c.k1`
+# for one built from Python. It is shown as is and not combined with other sources.
+struct SourceText
+  text::String
+end
+
+Base.show(io::IO, s::SourceText) = print(io, s.text)
+
 """
     DefExpr{T}
   
@@ -99,14 +107,6 @@ julia> DefExpr(c -> c.k1, "lambda c: c.k1")
 DefExpr{Any}(lambda c: c.k1)
 ```
 """
-# Source text of a deferred expression written in another language, e.g. `lambda c: c.k1`
-# for one built from Python. It is shown as is and not combined with other sources.
-struct SourceText
-  text::String
-end
-
-Base.show(io::IO, s::SourceText) = print(io, s.text)
-
 struct DefExpr{T}
   f::FunctionWrapper{T,Tuple{Context}}
   # Source used for display: a lambda expression with captured local variables substituted,
