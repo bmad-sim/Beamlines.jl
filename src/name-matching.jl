@@ -53,13 +53,16 @@ struct _SearchLine
   eles::Vector{LineElement}
 end
 
-_search_line(br::Branch) = _SearchLine(br.name, LineElement[ele for bl in br.beamlines for ele in bl.line])
+# `getfield` is used since the properties of a `Branch` and `Beamline` are not inferred, which would
+# make collecting the elements slow.
+_search_line(br::Branch) = _SearchLine(getfield(br, :name),
+                    LineElement[ele for bl in getfield(br, :beamlines) for ele in getfield(bl, :line)])
 
 function _search_line(bl::Beamline)
   if getfield(bl, :branch_index) == -1
-    return _SearchLine(nothing, collect(bl.line))
+    return _SearchLine(nothing, collect(getfield(bl, :line)))
   else
-    return _SearchLine(getfield(bl, :branch).name, collect(bl.line))
+    return _SearchLine(getfield(getfield(bl, :branch), :name), collect(getfield(bl, :line)))
   end
 end
 
@@ -133,10 +136,11 @@ function _lex_match_str(str::AbstractString, is_regex::Bool)
       end
     end
 
-    if depth == 0 && startswith(SubString(s, i), ">>>")
+    rest = SubString(s, i)  # Not used in the closure below as `i` since that would box `i`.
+    if depth == 0 && startswith(rest, ">>>")
       error("Lattice qualification (using \">>>\") is not supported. Match string: $str")
     end
-    op = depth > 0 ? nothing : findfirst(op -> startswith(SubString(s, i), op), _MATCH_OPS)
+    op = depth > 0 ? nothing : findfirst(op -> startswith(rest, op), _MATCH_OPS)
     if isnothing(op)
       if c == '>' && depth == 0
         error("Parameter matching (using \">\") is not supported. Match string: $str")
@@ -331,6 +335,10 @@ _qualifier_match(pattern::Nothing, name) = true
 _qualifier_match(pattern::Regex, name::Nothing) = false
 _qualifier_match(pattern::Regex, name::String) = occursin(pattern, name)
 
+# The `name` and `kind` of an element are not inferred. Converting them to a `String` here means
+# the matching that follows does not need runtime dispatch.
+_ele_str(x)::String = x isa String ? x : string(x)
+
 """
     _eval_ele_atom(lines::Vector{_SearchLine}, a::_EleAtom) -> Vector{_EleID}
 
@@ -343,8 +351,8 @@ function _eval_ele_atom(lines::Vector{_SearchLine}, a::_EleAtom)
   for (il, line) in enumerate(lines)
     _qualifier_match(a.branch, line.branch_name) || continue
     ixs = a.index > 0 ? (a.index <= length(line.eles) ? [a.index] : Int[]) :
-                        findall(ele -> occursin(a.name, ele.name), line.eles)
-    !isnothing(a.kind) && filter!(ix -> line.eles[ix].kind == a.kind, ixs)
+                        findall(ele -> occursin(a.name::Regex, _ele_str(ele.name)), line.eles)
+    !isnothing(a.kind) && filter!(ix -> _ele_str(line.eles[ix].kind) == a.kind, ixs)
     if a.instance > 0
       ixs = a.instance <= length(ixs) ? [ixs[a.instance]] : Int[]
     end
