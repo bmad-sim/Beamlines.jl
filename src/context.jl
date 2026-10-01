@@ -108,6 +108,18 @@ function Base.propertynames(c::Context)
   return unique(vars)
 end
 
+function Base.show(io::IO, c::Context{T}) where {T}
+  d = getfield(c, :d)
+  println(io, "Context{", T, "} with ", length(d), " variable", length(d) == 1 ? "" : "s", ":")
+  isempty(d) && return
+  vars = sort!(collect(keys(d)))
+  width = maximum(length, String.(vars))
+  for var in vars
+    println(io, " ", rpad(String(var), width), " = ", param_repr(d[var]))
+  end
+  return
+end
+
 Base.copy(c::Context{T}) where {T} = Context{T}(copy(getfield(c, :d)))
 
 """
