@@ -1,10 +1,11 @@
 #---------------------------------------------------------------------------------------------------
 # Element and Branch name matching.
 #
-# The syntax follows the PALS name matching standard. A match string is broken into "atoms" of
-# the form `{branch>>}{kind::}name{#N}` which are combined with the range (`:`), union (`,`),
-# and intersection (`&`) operators. If the match string is a `Regex`, the branch and element names are matched with PCRE2. If it is a `String`, they are matched with the
-# Bmad wild card characters `*` and `%`.
+# The syntax is based on Bmad's. A match string is broken into "atoms" of the form
+# `{branch>>}{kind::}name{#N}` which are combined with the range (`:`), union (`,`), and
+# intersection (`&`) operators. If the match string is a `Regex`, the branch and element names
+# are Julia regular expressions that must match the whole name. If it is a `String`, they are
+# matched with the Bmad wild card characters `*` and `%`.
 
 """
     Internal: _SearchLine
@@ -170,16 +171,19 @@ end
 _NameMatcher(str::AbstractString) = _NameMatcher(str, false, 0, 0)
 _NameMatcher(r::Regex) = _NameMatcher(r.pattern, true, r.compile_options, r.match_options)
 
-# Regex that matches a whole name to the name part `text` of a match string.
+# Regex that matches a whole name to the name part `text` of a match string. With a `Regex`
+# match string, `text` is compiled with the flags of the match string, anchored at both ends.
+# Otherwise it is a Bmad wild card pattern.
 function _name_regex(nm::_NameMatcher, text::AbstractString)
   isempty(text) && error("Blank name in match string: $(nm.str)")
   if nm.is_regex
     try
-      return Regex("\\A(?:" * text * ")\\z", nm.compile_options, nm.match_options)
+      anchored = nm.compile_options | Base.PCRE.ANCHORED | Base.PCRE.ENDANCHORED
+      return Regex(text, anchored, nm.match_options)
     catch err
-      # The PCRE error offset refers to the wrapped pattern above, so report the part instead.
+      # Say which part of the match string is bad since the error offset is relative to the part.
       err isa ErrorException || rethrow()
-      msg = replace(err.msg, r"^PCRE compilation error: " => "", r" at offset \d+$" => "")
+      msg = replace(err.msg, r"^PCRE compilation error: " => "")
       hint = startswith(text, '*') ? " (With a Regex, use \".*\" to match any name.)" : ""
       error("Invalid regular expression \"$text\" in match string $(nm.str): $msg.$hint")
     end
@@ -329,7 +333,7 @@ followed by their order in the branch, and each element appears at most once. No
 
 ## Syntax
 
-The syntax follows the PALS name matching standard. An "atom" is of the form
+The syntax is based on Bmad's. An "atom" is of the form
 ```
   {branch>>}{kind::}name{#N}
 ```
@@ -358,11 +362,11 @@ If `pattern` is a `String`, the branch and element names may use the Bmad wild c
 characters `*`, which matches any number of characters (including zero), and `%`, which matches
 any single character. There are no other wildcard characters here.
 
-If `pattern` is a `Regex`, e.g. `r"q[0-9]+"`, the branch and element names are PCRE2
-regular expressions. Each regular expression must match the whole name, and the flags of
-`pattern` (e.g. `i` for case insensitive) are applied to each. Operator characters in a regex
-group `(...)`, character class `[...]`, or quantifier `{n,m}`, or that are escaped with a
-backslash, are part of the regular expression.
+If `pattern` is a `Regex`, e.g. `r"q[0-9]+"`, the branch and element names are Julia regular
+expressions. Each must match the whole name, so `r"Q"` does not match an element named `Q1`.
+The flags of `pattern` (e.g. `i` for case insensitive) are applied to each. Operator characters
+in a regex group `(...)`, character class `[...]`, or quantifier `{n,m}`, or that are escaped
+with a backslash, are part of the regular expression.
 
 Matching is case sensitive unless the `i` flag is used with a `Regex`.
 
@@ -410,7 +414,7 @@ Each branch appears at most once.
 `pattern` is built from atoms that are either a branch name or an integer index of the branch
 in `lat`. Atoms may be combined with `,` (union) and `&` (intersection). Names are matched as
 with `findelements`: a `String` `pattern` may use the Bmad wild card characters `*` and `%`
-while with a `Regex` pattern the names are PCRE2 regular expressions that must match the whole
+while with a `Regex` pattern the names are Julia regular expressions that must match the whole
 name.
 
 ## Examples

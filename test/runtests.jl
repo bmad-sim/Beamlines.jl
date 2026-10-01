@@ -2305,8 +2305,10 @@ using ForwardDiff, GTPSA, ReverseDiff
         # Regex
         @test names(findelements(lat, r"q.*")) == names(findelements(lat, "q*"))
         @test names(findelements(lat, r"q.")) == names(findelements(lat, "q%"))
-        @test isempty(findelements(lat, r"q"))     # Anchored
+        @test isempty(findelements(lat, r"q"))     # Whole name match
+        @test isempty(findelements(lat, r"Q"i))
         @test names(findelements(lat, r"Q1"i)) == ["q1", "q1", "q1"]  # Flags are kept
+        @test names(findelements(lat, r"q2|m1")) == ["m1", "q2", "m1"]  # Anchoring covers alternation
         @test names(findelements(lat, r"(q|m)[0-9]{1,2}")) == ["m1", "q1", "q2", "m2", "q10", "m1", "q1", "q1"]
         @test names(findelements(lat, r"[q,m]1")) == ["m1", "q1", "m1", "q1", "q1"]
         @test names(findelements(lat, r"(?:q)2")) == ["q2"]
