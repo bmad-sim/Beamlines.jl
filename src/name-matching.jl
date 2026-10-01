@@ -452,6 +452,7 @@ Matching is case sensitive unless the `i` flag is used with a `Regex`.
 ```julia
 findelements(lat, "q*")                     # Elements whose name begins with "q".
 findelements(lat, r"q.*")                   # Same as above using a regex.
+findelements(lat, r"q.*"i)                  # Same as above but case insensitive, so "Q1" also matches.
 findelements(lat, "Quadrupole::q%")         # Quadrupoles with a two character name starting with "q".
 findelements(lat, "ring>>7")                # 7th element of the branch named "ring".
 findelements(lat, "b*>>bpm#2")              # 2nd element named "bpm" in each branch with a name
