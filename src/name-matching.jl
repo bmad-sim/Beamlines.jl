@@ -1,14 +1,15 @@
 #---------------------------------------------------------------------------------------------------
 # Element and Branch name matching.
 #
-# The syntax is based on Bmad's. A match string is broken into "atoms" of the form
+# The syntax is similar to what is implemented in Bmad and PALS.
+# A match string is broken into "atoms" of the form
 # `{branch>>}{kind::}name{#N}` which are combined with the range (`:`), union (`,`), and
 # intersection (`&`) operators. If the match string is a `Regex`, the branch and element names
 # are Julia regular expressions that must match the whole name. If it is a `String`, they are
 # matched with the Bmad wild card characters `*` and `%`.
 
 """
-    Internal: _SearchLine
+    Internal: struct _SearchLine
 
 A line of elements searched by `findelements`: the elements of a `Branch`, or of a `Beamline`
 when a `Beamline` is searched, along with the name of the `Branch` the elements are in. The
@@ -155,7 +156,7 @@ end
 # Parsing
 
 """
-    Internal: _NameMatcher
+    Internal: struct _NameMatcher
 
 Holds the information needed to turn the name parts of a match string into `Regex`es.
 `is_regex` is `true` if the match string was a `Regex`, in which case `compile_options` and
@@ -220,7 +221,7 @@ end
 _is_index(text::AbstractString) = !isempty(text) && all(isdigit, text)
 
 """
-    Internal: _EleAtom
+    Internal: struct _EleAtom
 
 A parsed `{branch>>}{kind::}name{#N}` element match. `index` is nonzero if `name`
 is an element index, and `instance` is nonzero if there is a `#N` suffix.
