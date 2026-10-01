@@ -2298,6 +2298,9 @@ using ForwardDiff, GTPSA, ReverseDiff
         @test names(findelements(lat, "q*")) == ["q1", "q2", "qq", "q10", "q1", "q1"]
         @test names(findelements(lat, "q%")) == ["q1", "q2", "qq", "q1", "q1"]
         @test names(findelements(lat, "q%0")) == ["q10"]
+        @test names(findelements(lat, "q?")) == names(findelements(lat, "q%"))  # "?" is the same as "%"
+        @test names(findelements(lat, "q?0")) == ["q10"]
+        @test names(findelements(lat, "?%")) == ["m1", "q1", "q2", "m2", "qq", "m1", "q1", "q1"]
         @test names(findelements(lat, "*")) == names([br1.beamlines[1].line; br2.beamlines[1].line])
         @test isempty(findelements(lat, "Q1"))     # Case sensitive
         @test isempty(findelements(lat, "q"))      # Whole name match
@@ -2371,6 +2374,40 @@ using ForwardDiff, GTPSA, ReverseDiff
         @test bnames(findbranches(lat, "x*, 1")) == ["ring", "xline"]
         @test bnames(findbranches(lat, r"RING"i)) == ["ring"]
         @test bnames(findbranches(lat, "* & %line")) == ["xline"]
+        @test bnames(findbranches(lat, "?line")) == ["xline"]
+
+        # getindex
+        @test br1["Quadrupole::q*"] == findelements(br1, "Quadrupole::q*")
+        @test isempty(br1["xline>>q1"])
+        @test br2.beamlines[1]["q1"] == findelements(br2.beamlines[1], "q1")
+        @test br2.beamlines[1]["3"] == [br2[3]]
+        blg = Beamline([Drift(L=1.0, name="dd"), Marker(name="mm")])
+        @test blg["m*"] == [blg.line[2]]
+        @test lat["ring"] == [br1]
+        @test lat["2"] == [br2]
+        @test lat["*line, ring"] == [br1, br2]
+        @test isempty(lat["q1"])                    # Only branches are searched
+        @test_throws "lat[:, \"ring>>2\"]" lat["ring>>2"]  # Element match
+        @test lat[:, "q1"] == findelements(lat, "q1")
+        @test lat[:, "ring>>2"] == [br1[2]]
+        @test lat[:, "Marker::* & m1:m2"] == findelements(lat, "Marker::* & m1:m2")
+        @test lat["ring", "q1"] == [br1[2]]
+        @test lat["*", "q1"] == findelements(lat, "q1")
+        @test lat["xline", "ring>>q1"] == []        # Branch qualifier still applies
+        @test lat[2, "q1"] == [br2[2], br2[4]]
+        @test lat[2, "3"] == [br2[3]]
+        @test_throws BoundsError lat[3, "q1"]
+        @test isempty(lat["nothing_here", "q1"])
+        @test lat[:, "q1"] isa Vector{LineElement} && lat["q1"] isa Vector{Branch}
+        @test br1[r"q\d+"] == findelements(br1, r"q\d+")
+        @test blg[r"M."i] == [blg.line[2]]
+        @test lat[r"RING"i] == [br1]
+        @test isempty(lat[r"q\d"])
+        @test lat[:, r"q\d"] == findelements(lat, r"q\d")
+        @test lat[:, r"x.*>>q1"] == findelements(lat, "xline>>q1")
+        @test lat[r"x.*", r"q\d"] == [br2[2], br2[4]]
+        @test_throws ErrorException lat[r"x.*>>q1"]
+        @test lat[r"[,x]line"] == [br2]             # "," inside [...] is not an operator
         @test isempty(findbranches(lat, "2 & ring"))
         @test isempty(findbranches(lat, "r"))
         @test findbranches(lat, "2") == [br2]

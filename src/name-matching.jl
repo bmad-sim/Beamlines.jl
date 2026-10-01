@@ -6,7 +6,7 @@
 # `{branch>>}{kind::}name{#N}` which are combined with the range (`:`), union (`,`), and
 # intersection (`&`) operators. If the match string is a `Regex`, the branch and element names
 # are Julia regular expressions that must match the whole name. If it is a `String`, they are
-# matched with the Bmad wild card characters `*` and `%`.
+# matched with the Bmad wild card characters `*`, `%`, and `?`.
 #
 # Structure of the implementation
 #
@@ -42,7 +42,7 @@
 # `m1` to `m2` in branch "ring", and the result is the intersection of the two.
 
 """
-    Internal: struct _SearchLine
+    struct _SearchLine
 
 A line of elements searched by `findelements`: the elements of a `Branch`, or of a `Beamline`
 when a `Beamline` is searched, along with the name of the `Branch` the elements are in. The
@@ -64,7 +64,7 @@ function _search_line(bl::Beamline)
 end
 
 """
-    Internal: _search_lines(where::Union{Lattice,Branch,Beamline}) -> Vector{_SearchLine}
+    _search_lines(where::Union{Lattice,Branch,Beamline}) -> Vector{_SearchLine}
 
 The lines searched by `findelements`: one per branch of a `Lattice`, the `Branch` itself, or
 the `Beamline` itself. Element indexes, `#N` instances, and ranges are all relative to a line.
@@ -83,7 +83,7 @@ _line_str(line::_SearchLine) = isnothing(line.branch_name) ? "the Beamline" : "b
 const _MATCH_OPS = (">>", "::", ":", ",", "&", "#")
 
 """
-    Internal: _lex_match_str(str::AbstractString, is_regex::Bool) -> (texts, ops)
+    _lex_match_str(str::AbstractString, is_regex::Bool) -> (texts, ops)
 
 Splits the match string `str` at the operators in `_MATCH_OPS`. Returned are the vector `ops`
 of operators and the vector `texts` of the (whitespace stripped) strings between them, with
@@ -178,7 +178,7 @@ function _regex_class_end(s::String, i::Int)
 end
 
 """
-    Internal: _split_at_op(texts, ops, op::String) -> Vector{Tuple{Vector{String},Vector{String}}}
+    _split_at_op(texts, ops, op::String) -> Vector{Tuple{Vector{String},Vector{String}}}
 
 Splits the `texts`/`ops` sequence returned by `_lex_match_str` at each occurrence of the
 operator `op`. Each returned piece is itself a `(texts, ops)` sequence with
@@ -202,7 +202,7 @@ end
 # Parsing
 
 """
-    Internal: struct _NameMatcher
+    struct _NameMatcher
 
 Holds the information needed to turn the name parts of a match string into `Regex`es.
 `is_regex` is `true` if the match string was a `Regex`, in which case `compile_options` and
@@ -219,7 +219,7 @@ _NameMatcher(str::AbstractString) = _NameMatcher(str, false, 0, 0)
 _NameMatcher(r::Regex) = _NameMatcher(r.pattern, true, r.compile_options, r.match_options)
 
 """
-    Internal: _name_regex(nm::_NameMatcher, text::AbstractString) -> Regex
+    _name_regex(nm::_NameMatcher, text::AbstractString) -> Regex
 
 Regex that matches a whole name to the name part `text` of a match string. If the match string
 is a `Regex`, `text` is compiled with the flags of the match string, anchored at both ends.
@@ -244,11 +244,11 @@ function _name_regex(nm::_NameMatcher, text::AbstractString)
 end
 
 """
-    Internal: _wildcard_regex(pattern::AbstractString) -> Regex
+    _wildcard_regex(pattern::AbstractString) -> Regex
 
 Converts `pattern`, which may contain the Bmad wild card characters `*` (matches any number of
-characters including zero) and `%` (matches any single character), to a `Regex` that matches
-whole strings. All other characters match only themselves.
+characters including zero) and `%` or `?` (each matches any single character), to a `Regex`
+that matches whole strings. All other characters match only themselves.
 """
 function _wildcard_regex(pattern::AbstractString)
   io = IOBuffer()
@@ -256,9 +256,9 @@ function _wildcard_regex(pattern::AbstractString)
   for c in pattern
     if c == '*'
       print(io, ".*")
-    elseif c == '%'
+    elseif c == '%' || c == '?'
       print(io, ".")
-    elseif c in "\\^\$.|?+()[]{}#"
+    elseif c in "\\^\$.|+()[]{}#"
       print(io, '\\', c)
     else
       print(io, c)
@@ -271,7 +271,7 @@ end
 _is_index(text::AbstractString) = !isempty(text) && all(isdigit, text)
 
 """
-    Internal: struct _EleAtom
+    struct _EleAtom
 
 A parsed `{branch>>}{kind::}name{#N}` element match. `index` is nonzero if `name`
 is an element index, and `instance` is nonzero if there is a `#N` suffix.
@@ -285,7 +285,7 @@ struct _EleAtom
 end
 
 """
-    Internal: _parse_ele_atom(nm::_NameMatcher, texts::Vector{String}, ops::Vector{String}) -> _EleAtom
+    _parse_ele_atom(nm::_NameMatcher, texts::Vector{String}, ops::Vector{String}) -> _EleAtom
 
 Parses the `texts`/`ops` sequence of a single atom `{branch>>}{kind::}name{#N}`, where `ops`
 contains only `>>`, `::`, and `#`, each at most once and in that order.
@@ -332,7 +332,7 @@ _qualifier_match(pattern::Regex, name::Nothing) = false
 _qualifier_match(pattern::Regex, name::String) = occursin(pattern, name)
 
 """
-    Internal: _eval_ele_atom(lines::Vector{_SearchLine}, a::_EleAtom) -> Vector{_EleID}
+    _eval_ele_atom(lines::Vector{_SearchLine}, a::_EleAtom) -> Vector{_EleID}
 
 IDs of the elements in `lines` that match the atom `a`. For each line that passes the branch
 qualifier, the elements are selected by name (or index), then by kind, and then the `#N`
@@ -354,7 +354,7 @@ function _eval_ele_atom(lines::Vector{_SearchLine}, a::_EleAtom)
 end
 
 """
-    Internal: _eval_ele_range(lines, a1::_EleAtom, a2::_EleAtom, nm::_NameMatcher) -> Vector{_EleID}
+    _eval_ele_range(lines, a1::_EleAtom, a2::_EleAtom, nm::_NameMatcher) -> Vector{_EleID}
 
 IDs of the elements in the range `a1:a2`: all elements from the element matched by `a1` to the
 element matched by `a2`, inclusive. The range is evaluated separately in each line where both
@@ -380,7 +380,7 @@ function _eval_ele_range(lines::Vector{_SearchLine}, a1::_EleAtom, a2::_EleAtom,
 end
 
 """
-    Internal: _eval_match_str(atom_ids::Function, nm::_NameMatcher, texts, ops) -> Vector{_EleID}
+    _eval_match_str(atom_ids::Function, nm::_NameMatcher, texts, ops) -> Vector{_EleID}
 
 Evaluates the lexed match string `texts`/`ops` with the union (`,`) and intersection (`&`)
 operators, `&` having the lower precedence. Each piece between the `,`s is evaluated by
@@ -437,8 +437,8 @@ around the end of the branch.
 ## Name matching
 
 If `pattern` is a `String`, the branch and element names may use the Bmad wild card
-characters `*`, which matches any number of characters (including zero), and `%`, which matches
-any single character. There are no other wildcard characters here.
+characters `*`, which matches any number of characters (including zero), and `%` or `?`, either
+of which matches any single character. There are no other wildcard characters here.
 
 If `pattern` is a `Regex`, e.g. `r"q[0-9]+"`, the branch and element names are Julia regular
 expressions. Each must match the whole name, so `r"Q"` does not match an element named `Q1`.
@@ -454,6 +454,7 @@ findelements(lat, "q*")                     # Elements whose name begins with "q
 findelements(lat, r"q.*")                   # Same as above using a regex.
 findelements(lat, r"q.*"i)                  # Same as above but case insensitive, so "Q1" also matches.
 findelements(lat, "Quadrupole::q%")         # Quadrupoles with a two character name starting with "q".
+findelements(lat, "Quadrupole::q?")         # Same as above. "?" and "%" are equivalent.
 findelements(lat, "ring>>7")                # 7th element of the branch named "ring".
 findelements(lat, "b*>>bpm#2")              # 2nd element named "bpm" in each branch with a name
                                             #   starting with "b".
@@ -492,7 +493,7 @@ Each branch appears at most once.
 
 `pattern` is built from atoms that are either a branch name or an integer index of the branch
 in `lat`. Atoms may be combined with `,` (union) and `&` (intersection). Names are matched as
-with `findelements`: a `String` `pattern` may use the Bmad wild card characters `*` and `%`
+with `findelements`: a `String` `pattern` may use the Bmad wild card characters `*`, `%`, and `?`
 while with a `Regex` pattern the names are Julia regular expressions that must match the whole
 name.
 
@@ -518,4 +519,65 @@ function findbranches(lat::Lattice, pattern::Union{AbstractString,Regex})
   end
 
   return Branch[lat.branches[ib] for (_, ib) in _eval_match_str(atom_ids, nm, texts, ops)]
+end
+
+#---------------------------------------------------------------------------------------------------
+
+"""
+    Base.getindex(bl::Beamline, pattern::Union{AbstractString,Regex}) -> Vector{LineElement}
+
+Same as `findelements(bl, pattern)`. Example: `bl["Quadrupole::q*"]` or `bl[r"q\\d+"]`.
+"""
+Base.getindex(bl::Beamline, pattern::Union{AbstractString,Regex}) = findelements(bl, pattern)
+
+"""
+    Base.getindex(branch::Branch, pattern::Union{AbstractString,Regex}) -> Vector{LineElement}
+
+Same as `findelements(branch, pattern)`. Example: `branch["Quadrupole::q*"]` or `branch[r"q\\d+"]`.
+"""
+Base.getindex(branch::Branch, pattern::Union{AbstractString,Regex}) = findelements(branch, pattern)
+
+"""
+    Base.getindex(lat::Lattice, pattern::Union{AbstractString,Regex}) -> Vector{Branch}
+    Base.getindex(lat::Lattice, branches, pattern::Union{AbstractString,Regex}) -> Vector{LineElement}
+
+With one index, returns the branches of `lat` that match `pattern`, the same as
+`findbranches(lat, pattern)`.
+
+With two indexes, returns the elements that match `pattern` in the branches selected by
+`branches`, which is `:` (all branches), a branch index, or a branch `pattern` as used with
+`findbranches`. The elements are in the order of the branches and then their order in the
+branch. `lat[:, pattern]` is the same as `findelements(lat, pattern)`.
+
+The one index form always returns branches and the two index form always returns elements, so
+the type of the result does not depend on what is matched.
+
+## Examples
+```julia
+lat["ring"]           # The branches named "ring".
+lat["2"]              # The second branch.
+lat[r"x.*"]           # Branches whose name starts with "x".
+lat[:, "q*"]          # Elements whose name starts with "q" in all branches.
+lat["ring", "q*"]     # Elements whose name starts with "q" in the branches named "ring".
+lat[2, "Quadrupole::*"]  # Quadrupoles in the second branch.
+lat[:, "ring>>7"]     # 7th element of the branch named "ring".
+```
+"""
+function Base.getindex(lat::Lattice, pattern::Union{AbstractString,Regex})
+  nm = _NameMatcher(pattern)
+  _, ops = _lex_match_str(nm.str, nm.is_regex)
+  if !all(op -> op in (",", "&"), ops)
+    error("$(repr(pattern)) is an element match. Use lat[:, $(repr(pattern))] to search for elements.")
+  end
+  return findbranches(lat, pattern)
+end
+
+Base.getindex(lat::Lattice, ::Colon, pattern::Union{AbstractString,Regex}) = findelements(lat, pattern)
+
+Base.getindex(lat::Lattice, ix::Integer, pattern::Union{AbstractString,Regex}) =
+                                                          findelements(lat.branches[ix], pattern)
+
+function Base.getindex(lat::Lattice, branches::Union{AbstractString,Regex},
+                       pattern::Union{AbstractString,Regex})
+  return LineElement[ele for br in findbranches(lat, branches) for ele in findelements(br, pattern)]
 end
