@@ -7,6 +7,39 @@
 # intersection (`&`) operators. If the match string is a `Regex`, the branch and element names
 # are Julia regular expressions that must match the whole name. If it is a `String`, they are
 # matched with the Bmad wild card characters `*` and `%`.
+#
+# Structure of the implementation
+#
+# `findelements` and `findbranches` are the only public functions. They work in four steps:
+#
+#   1. Collect what is searched (`_search_lines`). The `Lattice`, `Branch`, or `Beamline` being
+#      searched is turned into a vector of `_SearchLine`s, one per branch, each holding the
+#      elements of the branch and its name. This lets the same code search all three kinds of
+#      containers. An element is identified by an `_EleID`, the tuple (line index, element
+#      index), so that ranges, `#N`, union, and intersection are simple operations on integers
+#      and sorting the IDs puts the elements in lattice order.
+#
+#   2. Lex (`_lex_match_str`). The match string is split at the operators `>>`, `::`, `:`, `,`,
+#      `&`, and `#` into a vector of texts and a vector of the operators between them. With a
+#      `Regex` match string, operator characters inside a regex group, character class, or
+#      `{n,m}` quantifier, or that are escaped, are left as part of the text.
+#
+#   3. Parse (`_parse_ele_atom`). The texts and operators of each atom `{branch>>}{kind::}name{#N}`
+#      are parsed into an `_EleAtom`. Each branch and element name text is turned into a `Regex`
+#      that matches whole names by `_name_regex`, which uses `_NameMatcher` to know whether the
+#      match string was a `Regex` (and with what flags) or a `String` with Bmad wild cards.
+#
+#   4. Evaluate. `_eval_match_str` splits the operator sequence at `&` and then at `,`, and
+#      takes the intersection of the unions. Each piece between the `,`s is evaluated by a
+#      closure defined in `findelements` (or `findbranches`) that handles a single atom
+#      (`_eval_ele_atom`) or a range of two atoms (`_eval_ele_range`). The resulting `_EleID`s
+#      are converted back into elements.
+#
+# For example, `findelements(lat, "Quadrupole::q* & ring>>m1:m2")` lexes to the texts
+# `["Quadrupole", "q*", "ring", "m1", "m2"]` and operators `["::", "&", ">>", ":"]`. The `&`
+# splits this into the atom `Quadrupole::q*` and the range `ring>>m1:m2`. The atom matches the
+# quadrupoles whose name starts with "q" in every branch, the range matches the elements from
+# `m1` to `m2` in branch "ring", and the result is the intersection of the two.
 
 """
     Internal: struct _SearchLine
@@ -30,6 +63,12 @@ function _search_line(bl::Beamline)
   end
 end
 
+"""
+    Internal: _search_lines(where::Union{Lattice,Branch,Beamline}) -> Vector{_SearchLine}
+
+The lines searched by `findelements`: one per branch of a `Lattice`, the `Branch` itself, or
+the `Beamline` itself. Element indexes, `#N` instances, and ranges are all relative to a line.
+"""
 _search_lines(bl::Beamline) = [_search_line(bl)]
 _search_lines(br::Branch) = [_search_line(br)]
 _search_lines(lat::Lattice) = [_search_line(br) for br in lat.branches]
@@ -138,7 +177,14 @@ function _regex_class_end(s::String, i::Int)
   return nothing
 end
 
-# Splits the `texts`/`ops` sequence at each `op`.
+"""
+    Internal: _split_at_op(texts, ops, op::String) -> Vector{Tuple{Vector{String},Vector{String}}}
+
+Splits the `texts`/`ops` sequence returned by `_lex_match_str` at each occurrence of the
+operator `op`. Each returned piece is itself a `(texts, ops)` sequence with
+`length(texts) == length(ops) + 1`. For example, splitting `a, b::c` at `","` gives the pieces
+`(["a"], [])` and `(["b", "c"], ["::"])`.
+"""
 function _split_at_op(texts::AbstractVector, ops::AbstractVector, op::String)
   pieces = Tuple{Vector{String},Vector{String}}[]
   i0 = 1
@@ -172,9 +218,13 @@ end
 _NameMatcher(str::AbstractString) = _NameMatcher(str, false, 0, 0)
 _NameMatcher(r::Regex) = _NameMatcher(r.pattern, true, r.compile_options, r.match_options)
 
-# Regex that matches a whole name to the name part `text` of a match string. With a `Regex`
-# match string, `text` is compiled with the flags of the match string, anchored at both ends.
-# Otherwise it is a Bmad wild card pattern.
+"""
+    Internal: _name_regex(nm::_NameMatcher, text::AbstractString) -> Regex
+
+Regex that matches a whole name to the name part `text` of a match string. If the match string
+is a `Regex`, `text` is compiled with the flags of the match string, anchored at both ends.
+Otherwise `text` is a Bmad wild card pattern converted by `_wildcard_regex`.
+"""
 function _name_regex(nm::_NameMatcher, text::AbstractString)
   isempty(text) && error("Blank name in match string: $(nm.str)")
   if nm.is_regex
@@ -234,6 +284,12 @@ struct _EleAtom
   instance::Int
 end
 
+"""
+    Internal: _parse_ele_atom(nm::_NameMatcher, texts::Vector{String}, ops::Vector{String}) -> _EleAtom
+
+Parses the `texts`/`ops` sequence of a single atom `{branch>>}{kind::}name{#N}`, where `ops`
+contains only `>>`, `::`, and `#`, each at most once and in that order.
+"""
 function _parse_ele_atom(nm::_NameMatcher, texts::Vector{String}, ops::Vector{String})
   # The operators must appear at most once each and in this order.
   order = (">>", "::", "#")
@@ -269,10 +325,19 @@ end
 # An element is identified by the index of its line and its index in the line.
 const _EleID = Tuple{Int,Int}
 
+# True if a line with branch name `name` passes the branch qualifier `pattern`. No qualifier
+# always passes, and a line that is not in a branch fails any qualifier.
 _qualifier_match(pattern::Nothing, name) = true
 _qualifier_match(pattern::Regex, name::Nothing) = false
 _qualifier_match(pattern::Regex, name::String) = occursin(pattern, name)
 
+"""
+    Internal: _eval_ele_atom(lines::Vector{_SearchLine}, a::_EleAtom) -> Vector{_EleID}
+
+IDs of the elements in `lines` that match the atom `a`. For each line that passes the branch
+qualifier, the elements are selected by name (or index), then by kind, and then the `#N`
+instance is picked.
+"""
 function _eval_ele_atom(lines::Vector{_SearchLine}, a::_EleAtom)
   ids = _EleID[]
   for (il, line) in enumerate(lines)
@@ -288,8 +353,13 @@ function _eval_ele_atom(lines::Vector{_SearchLine}, a::_EleAtom)
   return ids
 end
 
-# All elements in the range from the element matched by `a1` to the element matched by `a2`.
-# The range is evaluated separately in each line where both `a1` and `a2` match.
+"""
+    Internal: _eval_ele_range(lines, a1::_EleAtom, a2::_EleAtom, nm::_NameMatcher) -> Vector{_EleID}
+
+IDs of the elements in the range `a1:a2`: all elements from the element matched by `a1` to the
+element matched by `a2`, inclusive. The range is evaluated separately in each line where both
+`a1` and `a2` match, and wraps around the end of the line if `a2` comes before `a1`.
+"""
 function _eval_ele_range(lines::Vector{_SearchLine}, a1::_EleAtom, a2::_EleAtom, nm::_NameMatcher)
   ids1 = _eval_ele_atom(lines, a1)
   ids2 = _eval_ele_atom(lines, a2)
@@ -309,8 +379,15 @@ function _eval_ele_range(lines::Vector{_SearchLine}, a1::_EleAtom, a2::_EleAtom,
   return ids
 end
 
-# Evaluates a match string built from `atom_ids(texts, ops) -> Vector` using the union (`,`)
-# and intersection (`&`) operators. Ranges (`:`) are handled by `atom_ids`.
+"""
+    Internal: _eval_match_str(atom_ids::Function, nm::_NameMatcher, texts, ops) -> Vector{_EleID}
+
+Evaluates the lexed match string `texts`/`ops` with the union (`,`) and intersection (`&`)
+operators, `&` having the lower precedence. Each piece between the `,`s is evaluated by
+`atom_ids(texts, ops) -> Vector{_EleID}`, which `findelements` and `findbranches` supply and
+which handles a single atom or a range (`:`). Returned are the unique IDs, sorted so they are
+in lattice order. `findbranches` uses `(1, branch index)` as the ID of a branch.
+"""
 function _eval_match_str(atom_ids::Function, nm::_NameMatcher, texts, ops)
   result = nothing
   for (t_and, o_and) in _split_at_op(texts, ops, "&")
