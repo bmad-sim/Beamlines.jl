@@ -1,5 +1,5 @@
 using Beamlines
-using Beamlines: isactive
+using Beamlines: isactive, isapprox_ignoring
 using Test
 using ForwardDiff, GTPSA, ReverseDiff
 
@@ -1408,8 +1408,8 @@ using ForwardDiff, GTPSA, ReverseDiff
     ele2a = LineElement()
     ele2b = LineElement()
     branch = Branch([ele1, ele1a, ele2, ele2a, ele2b])
-    @test all(branch.beamlines[1].line .≈ [ele1, ele1a])
-    @test all(branch.beamlines[2].line .≈ [ele2, ele2a, ele2b])
+    @test all(isapprox_ignoring.(branch.beamlines[1].line, [ele1, ele1a], InitialBeamlineParams))
+    @test all(isapprox_ignoring.(branch.beamlines[2].line, [ele2, ele2a, ele2b], InitialBeamlineParams))
     bl1 = branch.beamlines[1]
     bl2 = branch.beamlines[2]
     @test bl2.E_ref == 7e9
@@ -1444,7 +1444,7 @@ using ForwardDiff, GTPSA, ReverseDiff
     ele1 = LineElement(E_ref=10e9, species_ref=Species("electron"))
     ele1a = LineElement()
     branch = Branch([ele1, ele1a]; species_ref0=Species("proton"), E_ref0=20e9)
-    @test all(branch.beamlines[1].line .≈ [ele1, ele1a])
+    @test all(isapprox_ignoring.(branch.beamlines[1].line, [ele1, ele1a], InitialBeamlineParams))
     bl1 = branch.beamlines[1]
     @test bl1.E_ref == 20e9
     @test bl1.species_ref == Species("proton")
@@ -1455,8 +1455,8 @@ using ForwardDiff, GTPSA, ReverseDiff
     ele2a = LineElement()
     ele2b = LineElement()
     branch = Branch([ele1, ele1a, ele2, ele2a, ele2b]; species_ref0=Species("proton"), E_ref0=20e9)
-    @test all(branch.beamlines[1].line .≈ [ele1, ele1a])
-    @test all(branch.beamlines[2].line .≈ [ele2, ele2a, ele2b])
+    @test all(isapprox_ignoring.(branch.beamlines[1].line, [ele1, ele1a], InitialBeamlineParams))
+    @test all(isapprox_ignoring.(branch.beamlines[2].line, [ele2, ele2a, ele2b], InitialBeamlineParams))
     bl1 = branch.beamlines[1]
     bl2 = branch.beamlines[2]
     @test bl1.E_ref == 20e9
