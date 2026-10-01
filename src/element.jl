@@ -93,6 +93,8 @@ function Base.show(io::IO, ele::LineElement)
   if haskey(own_pdict, InheritParams)
     pdict[InheritParams] = own_pdict[InheritParams]
   end
+  # Parameter groups not in the element itself are marked as inherited
+  inherited = [v for (k,v) in pdict if !haskey(own_pdict, k)]
   ks = collect(keys(pdict))
   vs = collect(values(pdict))
   idxs = sortperm(String.(Symbol.(ks))) # Sort alphabetically
@@ -133,11 +135,21 @@ function Base.show(io::IO, ele::LineElement)
     fit_table_in_display_vertically=get(io, :limit, false),
     table_format = TextTableFormat(borders = text_table_borders__borderless),
     new_line_at_end=false,
-    formatters=[(v, i, j)-> isnothing(v) ? "" : v]
+    formatters=[(v, i, j)-> format_param_group(v, inherited)]
   )
   print(io, rstrip(String(take!(buf))))
 
   return
+end
+
+# Parameter group string for the element show table. Inherited groups get a marked header line.
+function format_param_group(v, inherited)
+  isnothing(v) && return ""
+  str = sprint(show, v)
+  if any(x -> x === v, inherited)
+    str = replace(str, "\n" => " (inherited)\n"; count=1)
+  end
+  return str
 end
 
 function flattened_pdict(ele::LineElement, p=nothing)
