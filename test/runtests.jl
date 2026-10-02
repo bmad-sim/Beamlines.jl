@@ -1986,12 +1986,11 @@ using ForwardDiff, GTPSA, ReverseDiff
     @test ele.ignore_parameters == [:BMultipoleParams]
     @test_throws ErrorException Beamlines.check_ignore_parameters([:Foo])
     @test Beamlines.check_ignore_parameters([:BendParams]) == [:BendParams]
-    # Custom symbols
-    push!(Beamlines.IGNORE_PARAMETERS_SYMBOLS, :MyParams)
-    ele.ignore_parameters = [:MyParams]
-    @test ele.ignore_parameters == [:MyParams]
-    delete!(Beamlines.IGNORE_PARAMETERS_SYMBOLS, :MyParams)
-    @test_throws ErrorException ele.ignore_parameters = [:MyParams]
+    # Any parameter group name is allowed, except those always needed in tracking
+    ele.ignore_parameters = [:UniversalParams, :MetaParams, :EMFieldParams]
+    @test ele.ignore_parameters == [:UniversalParams, :MetaParams, :EMFieldParams]
+    @test_throws ErrorException ele.ignore_parameters = [:BeamlineParams]
+    @test_throws ErrorException ele.ignore_parameters = [:InitialBeamlineParams]
     # Show only includes ignore_parameters if non-empty
     ele.ignore_parameters = []
     @test !occursin("ignore_parameters", sprint(show, ele))

@@ -18,50 +18,19 @@ isactive(::Nothing) = false
 #---------------------------------------------------------------------------------------------------
 
 """
-    IGNORE_PARAMETERS_SYMBOLS
-
-Set of the symbols allowed in the `ignore_parameters` list of a `LineElement`. Any other
-symbol placed in an `ignore_parameters` list throws an error, so that misspellings are
-caught. By default this contains the names of the parameter groups used in tracking.
-
-Custom symbols can be registered with `push!`. For example, to allow ignoring a
-user-defined parameter group `MyParams <: AbstractParams`:
-
-```julia
-push!(Beamlines.IGNORE_PARAMETERS_SYMBOLS, :MyParams)
-```
-
-Custom tracking code is then responsible for checking for the symbol, e.g. with
-`:MyParams in ele.ignore_parameters`. A registered symbol does not need to be the name of a
-parameter group.
-"""
-const IGNORE_PARAMETERS_SYMBOLS = Set{Symbol}([
-  :AlignmentParams,
-  :ApertureParams,
-  :BendParams,
-  :BMultipoleParams,
-  :EMFieldParams,
-  :EMultipoleParams,
-  :FourPotentialParams,
-  :MapParams,
-  :PatchParams,
-  :RFParams,
-])
-
-#---------------------------------------------------------------------------------------------------
-
-"""
     check_ignore_parameters(ignore_parameters)
 
-Throws an error if any symbol in `ignore_parameters` is not in `IGNORE_PARAMETERS_SYMBOLS`.
+Throws an error if any symbol in `ignore_parameters` is not the name of a parameter group
+(a key of `PARAMS_MAP`), so that misspellings are caught. `BeamlineParams` and
+`InitialBeamlineParams` are also not allowed, since they are always needed in tracking.
 Otherwise returns `ignore_parameters`.
 """
 function check_ignore_parameters(ignore_parameters)
   for sym in ignore_parameters
-    if !(sym in IGNORE_PARAMETERS_SYMBOLS)
+    if !haskey(PARAMS_MAP, sym) || sym in (:BeamlineParams, :InitialBeamlineParams)
+      valid = sort!([k for k in keys(PARAMS_MAP) if !(k in (:BeamlineParams, :InitialBeamlineParams))])
       error("Invalid symbol $(repr(sym)) in `ignore_parameters`. Valid symbols are: " *
-            join(repr.(sort!(collect(IGNORE_PARAMETERS_SYMBOLS))), ", ") * ". A custom " *
-            "symbol can be added with `push!(Beamlines.IGNORE_PARAMETERS_SYMBOLS, :MySymbol)`.")
+            join(repr.(valid), ", "))
     end
   end
   return ignore_parameters

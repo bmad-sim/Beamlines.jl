@@ -97,14 +97,10 @@ share the `UniversalParams` of the original element, and therefore also its
 `ignore_parameters` list. Setting `ignore_parameters` on the original element, or on any of
 its instances in a `Beamline`, affects every instance.
 
-Only symbols in `Beamlines.IGNORE_PARAMETERS_SYMBOLS` are allowed in `ignore_parameters`,
-so that misspellings throw an error. By default, the allowed symbols are the names of the
-parameter groups used in tracking: `:AlignmentParams`, `:ApertureParams`, `:BendParams`,
-`:BMultipoleParams`, `:EMFieldParams`, `:EMultipoleParams`, `:FourPotentialParams`,
-`:MapParams`, `:PatchParams`, and `:RFParams`. Custom symbols can be added with e.g.
-`push!(Beamlines.IGNORE_PARAMETERS_SYMBOLS, :MyParams)`. The list is checked when it is
-set, and again at the start of tracking through each element, which catches invalid symbols
-added with e.g. `push!`.
+Only the names of parameter groups are allowed in `ignore_parameters`, so that misspellings
+throw an error. `:BeamlineParams` and `:InitialBeamlineParams` are not allowed, since they
+are always needed in tracking. The list is checked when it is set, and again at the start of
+tracking through each element, which catches invalid symbols added with e.g. `push!`.
 
 Tracking code handles the list when unpacking an element: each parameter group whose name is
 in `ignore_parameters` is replaced with `nothing` before tracking, exactly as if the element
