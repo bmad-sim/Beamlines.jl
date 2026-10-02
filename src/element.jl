@@ -2,26 +2,18 @@ abstract type AbstractParams end
 
 """
     isactive(p) -> Bool
-    isactive(p, ignore_parameters) -> Bool
 
 Returns `true` if the parameter group `p` should be used in tracking. `isactive(nothing)`
 is always `false`. By default a parameter group is active, however some parameter groups
 define their own criteria, e.g. `RFParams` is only active if `voltage != 0`, and
 `ApertureParams` is only active if `aperture_active == true`.
 
-In the second form, `p` is additionally inactive if the name of its type (e.g.
-`:ApertureParams` for an `ApertureParams`) is in `ignore_parameters`, which is typically
-the `ignore_parameters` list of the `LineElement` containing `p`. See the documentation for
-`LineElement` for details.
+`isactive` does not check the `ignore_parameters` list of a `LineElement`. Tracking code
+instead replaces a parameter group in `ignore_parameters` with `nothing` before tracking.
+See the documentation for `LineElement` for details.
 """
 isactive(::AbstractParams) = true
 isactive(::Nothing) = false
-isactive(p::AbstractParams, ignore_parameters) = !(nameof(typeof(p)) in ignore_parameters) && isactive(p)
-isactive(::Nothing, ignore_parameters) = false
-# With the list as a type parameter (e.g. `Val((:ApertureParams,))`), the check is done at
-# compile time. This is used in tracking so that ignored parameter groups are compiled out
-@generated isactive(p::AbstractParams, ::Val{ignore_parameters}) where {ignore_parameters} =
-  nameof(p) in ignore_parameters ? :(false) : :(isactive(p))
 
 #---------------------------------------------------------------------------------------------------
 
@@ -39,16 +31,16 @@ user-defined parameter group `MyParams <: AbstractParams`:
 push!(Beamlines.IGNORE_PARAMETERS_SYMBOLS, :MyParams)
 ```
 
-After this, `isactive(p::MyParams, ignore_parameters)` automatically returns `false` if
-`:MyParams` is in `ignore_parameters`. A registered symbol does not need to be the name of
-a parameter group: custom tracking code can check for any symbol using
-`:MySymbol in ele.ignore_parameters`.
+Custom tracking code is then responsible for checking for the symbol, e.g. with
+`:MyParams in ele.ignore_parameters`. A registered symbol does not need to be the name of a
+parameter group.
 """
 const IGNORE_PARAMETERS_SYMBOLS = Set{Symbol}([
   :AlignmentParams,
   :ApertureParams,
   :BendParams,
   :BMultipoleParams,
+  :EMFieldParams,
   :EMultipoleParams,
   :FourPotentialParams,
   :MapParams,

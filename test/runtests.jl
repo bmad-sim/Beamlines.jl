@@ -1963,18 +1963,11 @@ using ForwardDiff, GTPSA, ReverseDiff
     @test ele.ignore_parameters == Symbol[]
     @test :ignore_parameters in propertynames(ele)
     @test ele.UniversalParams.ignore_parameters === ele.ignore_parameters
-    @test isactive(ele.AlignmentParams, ele.ignore_parameters)
     ele.ignore_parameters = [:AlignmentParams]
     @test ele.ignore_parameters == [:AlignmentParams]
-    @test !isactive(ele.AlignmentParams, ele.ignore_parameters)
-    @test isactive(ele.AlignmentParams) # Single argument form ignores ignore_parameters
-    @test isactive(ele.BMultipoleParams, ele.ignore_parameters)
-    @test !isactive(nothing, ele.ignore_parameters)
-    @test !isactive(ele.AlignmentParams, Val((:AlignmentParams,)))
-    @test isactive(ele.AlignmentParams, Val((:BendParams,)))
-    @test !isactive(nothing, Val(()))
+    @test isactive(ele.AlignmentParams) # isactive does not check ignore_parameters
     push!(ele.ignore_parameters, :BMultipoleParams)
-    @test !isactive(ele.BMultipoleParams, ele.ignore_parameters)
+    @test ele.ignore_parameters == [:AlignmentParams, :BMultipoleParams]
     # Single symbol, strings, duplicates, and aliasing
     ele.ignore_parameters = :ApertureParams
     @test ele.ignore_parameters == [:ApertureParams]
