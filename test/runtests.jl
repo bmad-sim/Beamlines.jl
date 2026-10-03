@@ -1958,6 +1958,68 @@ using ForwardDiff, GTPSA, ReverseDiff
     blq = Beamline([qq], context=Context(k1 = 0.36))
     @test blq[qq][1].Kn1 ≈ -0.36
 
+    # ignore_parameters
+    ele = Quadrupole(L=0.5, Kn1=0.3, x_offset=1e-3)
+    @test ele.ignore_parameters == Symbol[]
+    @test :ignore_parameters in propertynames(ele)
+    @test ele.UniversalParams.ignore_parameters === ele.ignore_parameters
+    ele.ignore_parameters = [:AlignmentParams]
+    @test ele.ignore_parameters == [:AlignmentParams]
+    @test isactive(ele.AlignmentParams) # isactive does not check ignore_parameters
+    push!(ele.ignore_parameters, :BMultipoleParams)
+    @test ele.ignore_parameters == [:AlignmentParams, :BMultipoleParams]
+    # Single symbol, strings, duplicates, and aliasing
+    ele.ignore_parameters = :ApertureParams
+    @test ele.ignore_parameters == [:ApertureParams]
+    ele.ignore_parameters = ("BendParams", :BendParams, :RFParams)
+    @test ele.ignore_parameters == [:BendParams, :RFParams]
+    ele.ignore_parameters = ele.ignore_parameters
+    @test ele.ignore_parameters == [:BendParams, :RFParams]
+    ele.ignore_parameters = []
+    @test isempty(ele.ignore_parameters)
+    # Keyword argument
+    ele = Quadrupole(L=0.5, Kn1=0.3, ignore_parameters=[:BMultipoleParams])
+    @test ele.ignore_parameters == [:BMultipoleParams]
+    # Invalid symbols throw and leave the list unchanged
+    @test_throws ErrorException ele.ignore_parameters = [:BMultipoleParam]
+    @test_throws ErrorException Quadrupole(ignore_parameters=[:Foo])
+    @test ele.ignore_parameters == [:BMultipoleParams]
+    @test_throws ErrorException Beamlines.check_ignore_parameters([:Foo])
+    @test Beamlines.check_ignore_parameters([:BendParams]) == [:BendParams]
+    # Any parameter group name is allowed, except those always needed in tracking
+    ele.ignore_parameters = [:UniversalParams, :MetaParams, :EMFieldParams]
+    @test ele.ignore_parameters == [:UniversalParams, :MetaParams, :EMFieldParams]
+    @test_throws ErrorException ele.ignore_parameters = [:BeamlineParams]
+    @test_throws ErrorException ele.ignore_parameters = [:InitialBeamlineParams]
+    # Show only includes ignore_parameters if non-empty
+    ele.ignore_parameters = []
+    @test !occursin("ignore_parameters", sprint(show, ele))
+    ele.ignore_parameters = [:BMultipoleParams]
+    @test occursin("ignore_parameters = [:BMultipoleParams]", sprint(show, ele))
+    # Elements in a Beamline share the ignore_parameters list of the parent element
+    ele.ignore_parameters = [:AlignmentParams]
+    bl = Beamline([ele, Drift(L=1.0), ele], species_ref=Species("electron"), E_ref=1e9)
+    @test bl.line[1].ignore_parameters === ele.ignore_parameters
+    @test bl.line[3].ignore_parameters == [:AlignmentParams]
+    bl.line[3].ignore_parameters = [:BMultipoleParams]
+    @test ele.ignore_parameters == [:BMultipoleParams]
+    @test bl.line[1].ignore_parameters == [:BMultipoleParams]
+    @test isempty(bl.line[2].ignore_parameters)
+    @test occursin("ignore_parameters = [:BMultipoleParams]", sprint(show, bl.line[1]))
+    # Copying and comparing
+    ele2 = deepcopy(bl.line[3]) # Flattens InheritParams
+    @test ele2.ignore_parameters == [:BMultipoleParams]
+    @test ele2.ignore_parameters !== ele.ignore_parameters
+    @test ele2 ≈ ele
+    ele2.ignore_parameters = []
+    @test !(ele2 ≈ ele)
+    # writebl
+    str = sprint(Beamlines.writebl, bl)
+    @test occursin("ignore_parameters=[:BMultipoleParams]", str)
+    bl2 = eval(Meta.parse(str))
+    @test bl2.line[1].ignore_parameters == [:BMultipoleParams]
+    @test isempty(bl2.line[2].ignore_parameters)
+
     # Showing a Context must list every variable, sorted by name, and must not
     # truncate the way the underlying Dict's show does past 10 entries.
     empty!(GLOBAL_CONTEXTS)

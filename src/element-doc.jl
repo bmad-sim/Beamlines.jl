@@ -73,5 +73,37 @@ ele.rf_frequency = 1e6
 For detailed descriptions of properties in a given parameter group, see the documentation 
 for that parameter group.
 
+## Ignoring parameter groups with `ignore_parameters`
+
+The `ignore_parameters` property of a `LineElement`, part of its `UniversalParams`, is a
+list of symbols. Any parameter group whose name is in this list is ignored in tracking,
+without having to remove it from the element. This makes it easy to switch parameter groups
+on and off:
+
+```julia
+ele = Quadrupole(L=0.5, Kn1=0.3, x_offset=1e-3)
+ele.ignore_parameters = [:AlignmentParams] # Track as if the quadrupole were not misaligned
+push!(ele.ignore_parameters, :BMultipoleParams) # Also ignore the multipoles
+ele.ignore_parameters = []                 # Use all parameter groups again
+```
+
+`ignore_parameters` can also be set as a keyword argument, e.g.
+`Quadrupole(L=0.5, Kn1=0.3, ignore_parameters=[:BMultipoleParams])`. A single symbol, or
+strings, may also be given when setting `ignore_parameters`, e.g.
+`ele.ignore_parameters = :AlignmentParams`.
+
+When an element is placed in a `Beamline`, all instances of that element in the `Beamline`
+share the `UniversalParams` of the original element, and therefore also its
+`ignore_parameters` list. Setting `ignore_parameters` on the original element, or on any of
+its instances in a `Beamline`, affects every instance.
+
+Only the names of parameter groups are allowed in `ignore_parameters`, so that misspellings
+throw an error. `:BeamlineParams` and `:InitialBeamlineParams` are not allowed, since they
+are always needed in tracking. The list is checked when it is set, and again at the start of
+tracking through each element, which catches invalid symbols added with e.g. `push!`.
+
+Tracking code handles the list when unpacking an element: each parameter group whose name is
+in `ignore_parameters` is replaced with `nothing` before tracking, exactly as if the element
+did not have that parameter group.
 """
 LineElement

@@ -48,6 +48,7 @@ const PROPERTIES_MAP = Dict{Symbol,Type{<:AbstractParams}}(
 
   :L => UniversalParams,
   :tracking_method => UniversalParams,
+  :ignore_parameters => UniversalParams,
   :kind => UniversalParams,
   :name => UniversalParams,
 
