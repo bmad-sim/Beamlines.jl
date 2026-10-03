@@ -86,7 +86,15 @@ end
 # Element show
 function Base.show(io::IO, ele::LineElement)
   print(io, "LineElement:")
-  pdict = getfield(ele, :pdict)
+  # Show the parameter groups the element effectively has, i.e. with any inherited parameter
+  # groups flattened in. InheritParams itself is shown compactly (see below).
+  own_pdict = getfield(ele, :pdict)
+  pdict = copy(flattened_pdict(ele))
+  if haskey(own_pdict, InheritParams)
+    pdict[InheritParams] = own_pdict[InheritParams]
+  end
+  # Parameter groups not in the element itself are marked as inherited
+  inherited = [v for (k,v) in pdict if !haskey(own_pdict, k)]
   ks = collect(keys(pdict))
   vs = collect(values(pdict))
   idxs = sortperm(String.(Symbol.(ks))) # Sort alphabetically
@@ -116,7 +124,10 @@ function Base.show(io::IO, ele::LineElement)
     end
   end
 
-  pretty_table(io, permutedims(pgs);
+  # Print to a buffer first so trailing newlines can be stripped. Otherwise there are extra
+  # blank lines before the next REPL prompt.
+  buf = IOBuffer()
+  pretty_table(IOContext(IOContext(buf, io), :displaysize => displaysize(io)), permutedims(pgs);
     show_column_labels=false,
     line_breaks=true,
     alignment=:l,
@@ -124,18 +135,30 @@ function Base.show(io::IO, ele::LineElement)
     fit_table_in_display_vertically=get(io, :limit, false),
     table_format = TextTableFormat(borders = text_table_borders__borderless),
     new_line_at_end=false,
-    formatters=[(v, i, j)-> isnothing(v) ? "" : v]
+    formatters=[(v, i, j)-> format_param_group(v, inherited)]
   )
+  print(io, rstrip(String(take!(buf))))
 
   return
 end
 
-function flattened_pdict(ele::LineElement, p=ParamDict())
+# Parameter group string for the element show table. Inherited groups get a marked header line.
+function format_param_group(v, inherited)
+  isnothing(v) && return ""
+  str = sprint(show, v)
+  if any(x -> x === v, inherited)
+    str = replace(str, "\n" => " (inherited)\n"; count=1)
+  end
+  return str
+end
+
+function flattened_pdict(ele::LineElement, p=nothing)
   curpdict = getfield(ele, :pdict)
-  if !haskey(curpdict, InheritParams)
+  if !haskey(curpdict, InheritParams) && isnothing(p)
     return curpdict
   end
-  # First go through the element and get the 
+  isnothing(p) && (p = ParamDict())
+  # Add the element's parameter groups, giving precedence to those already present (from children)
   for (k,v) in curpdict
     # Do not add InheritParams or parameters already present
     if !(v isa InheritParams) && !haskey(p, k)
@@ -148,15 +171,24 @@ function flattened_pdict(ele::LineElement, p=ParamDict())
   return p
 end
 
-function Base.isapprox(a::LineElement, b::LineElement)
+Base.isapprox(a::LineElement, b::LineElement) = isapprox_ignoring(a, b)
+
+"""
+    isapprox_ignoring(a::LineElement, b::LineElement, ignore::Type{<:AbstractParams}...)
+
+Same as `isapprox(a, b)` except that the parameter groups `ignore` are also not compared. 
+`BeamlineParams` and `MetaParams` are never compared. 
+"""
+function isapprox_ignoring(a::LineElement, b::LineElement, ignore::Type{<:AbstractParams}...)
+  skip = (BeamlineParams, MetaParams, ignore...)
   l = flattened_pdict(a)
   r = flattened_pdict(b)
-  L_l = length(l) - (haskey(l, BeamlineParams) ? 1 : 0) - (haskey(l, MetaParams) ? 1 : 0)
-  L_r = length(r) - (haskey(r, BeamlineParams) ? 1 : 0) - (haskey(r, MetaParams) ? 1 : 0)
+  L_l = count(k -> !(k in skip), keys(l))
+  L_r = count(k -> !(k in skip), keys(r))
   L_l != L_r && return false
   anymissing = false
   for pair in l
-      if pair[1] == BeamlineParams || pair[1] == MetaParams
+      if pair[1] in skip
         continue
       end
 
@@ -293,6 +325,14 @@ write to the child's `BeamlineParams`.
 $(PROPSDOC(InheritParams))
 """
 InheritParams
+
+# Only print a short description of the parent to avoid recursively printing the whole parent.
+function Base.show(io::IO, a::InheritParams)
+  parent = a.parent
+  println(io, nameof(typeof(a)))
+  println(io, " parent = LineElement(name = ", repr(parent.name), ", kind = ", repr(parent.kind), ")")
+  return
+end
 
 @inline get_parent(pdict::ParamDict) = (pdict[InheritParams]::InheritParams).parent::LineElement
 
