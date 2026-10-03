@@ -173,7 +173,7 @@ end
 # Common kind choices
 # Copy docstring to all aliases
 for kind in (:Solenoid, :SBend, :Quadrupole, :Sextupole, :Drift, :Octupole, :Multipole, 
-              :Marker, :Kicker, :HKicker, :VKicker, :RFCavity, :Patch, :BPM
+              :Marker, :Kicker, :HKicker, :VKicker, :RFCavity, :Patch, :BPM, :Fork
   )
   @eval begin
     """

@@ -80,6 +80,10 @@ const PROPERTIES_MAP = Dict{Symbol,Type{<:AbstractParams}}(
   :dy_rot => PatchParams,
   :dz_rot => PatchParams,
 
+  :fork_to_element          => ForkParams,
+  :fork_direction           => ForkParams,
+  :fork_propagate_reference => ForkParams,
+
   :x1_limit         => ApertureParams,
   :x2_limit         => ApertureParams,
   :y1_limit         => ApertureParams,
@@ -121,6 +125,7 @@ const PARAMS_MAP = Dict{Symbol,Type{<:AbstractParams}}(
   :BendParams => BendParams,
   :AlignmentParams => AlignmentParams,
   :PatchParams => PatchParams,
+  :ForkParams => ForkParams,
   :RFParams => RFParams,
   :ApertureParams => ApertureParams,
   :MapParams => MapParams,

@@ -36,6 +36,78 @@ const Lattice = _Lattice{Branch}
 
 #---------------------------------------------------------------------------------------------------
 
+# `_connect_forks!` must be defined before NULL_LATTICE: the `_Lattice` constructor calls it.
+
+"""
+    _connect_forks!(branches, sources)
+
+Internal: used by the `Lattice` constructor. `branches` are the `Branch`es of the `Lattice` 
+and `sources[i]` is the `Branch` that `branches[i]` was copied from (or `branches[i]` itself 
+if it was not copied).
+
+For each element in `branches` with a `fork_to_element`, the destination `Branch` is found:
+- If the destination element is in the source of the fork's own `Branch`, the fork connects 
+  within that `Branch`.
+- Else if the destination is in a `Branch` (or the source of a `Branch`) of the `Lattice`, 
+  the fork connects to that `Branch`.
+- Else a copy of the destination `Branch` is appended to `branches`. Forks in the appended 
+  `Branch` are processed in turn.
+
+The fork element in the `Lattice` is then given its own `ForkParams` whose `fork_to_element` 
+is the corresponding element in the `Lattice`. The elements the `Lattice` was constructed
+from are not modified.
+"""
+function _connect_forks!(branches::AbstractVector{B}, sources::AbstractVector{B}) where {B<:_AbstractBranch}
+  i = 1
+  while i <= length(branches)  # `branches` may grow as forks add new Branches
+    for bl in branches[i].beamlines, ele in bl.line
+      fp = ele.ForkParams
+      (isnothing(fp) || isnothing(fp.fork_to_element)) && continue
+      dest = fp.fork_to_element
+      dest_pdict = getfield(dest, :pdict)
+      if !haskey(dest_pdict, BeamlineParams) || getfield((dest_pdict[BeamlineParams]::BeamlineParams).beamline, :branch_index) == -1
+        error("""
+          Unable to connect fork element $(repr(ele.name)) in branch $(repr(branches[i].name)): 
+          fork_to_element $(repr(dest.name)) is not in a Branch. The fork_to_element must be an 
+          element in a Branch, e.g. found using `findchildren`.
+        """)
+      end
+      dest_bp = dest_pdict[BeamlineParams]::BeamlineParams
+      dest_bl = dest_bp.beamline
+      j = _fork_branch_index(branches, sources, i, getfield(dest_bl, :branch), ele)
+      target = branches[j].beamlines[getfield(dest_bl, :branch_index)].line[dest_bp.beamline_index]
+      # Set in the fork element's own pdict: setting the property would write through 
+      # InheritParams to the element the Lattice was constructed from.
+      getfield(ele, :pdict)[ForkParams] = ForkParams(target, fp.fork_direction, fp.fork_propagate_reference)
+    end
+    i += 1
+  end
+  return branches
+end
+
+# Index in `branches` of the Branch that a fork in `branches[i]` to an element in `dest_branch` 
+# connects to. Appends a copy of `dest_branch` if it is not already in the Lattice.
+function _fork_branch_index(branches, sources, i, dest_branch, ele)
+  if dest_branch === sources[i] || dest_branch === branches[i]
+    return i
+  end
+  js = findall(j -> sources[j] === dest_branch || branches[j] === dest_branch, eachindex(branches))
+  if length(js) > 1
+    error("""
+      Unable to connect fork element $(repr(ele.name)) in branch $(repr(branches[i].name)): 
+      the Branch containing the fork_to_element appears more than once in the Lattice 
+      (at indices $js) so the destination is ambiguous.
+    """)
+  elseif length(js) == 1
+    return only(js)
+  end
+  push!(sources, dest_branch)
+  push!(branches, copy(dest_branch))
+  return length(branches)
+end
+
+#---------------------------------------------------------------------------------------------------
+
 # NULL_LATTICE must be defined before NULL_BRANCH: the `_Branch` constructor references it. 
 # Both are constructed from empty vectors.
 
@@ -317,12 +389,30 @@ a name are named `"b<i>"`, where `<i>` is the index of the branch. The contexts 
 `Branch`es, and all of their `Beamline`s. Variables in `context` take precedence over those
 in the `Branch`es.
 
+Fork elements (elements with a `ForkParams` whose `fork_to_element` is set) add and connect
+branches. The `fork_to_element` must be an element in a `Branch`. If that `Branch` is not
+in `branches`, a copy of it is appended to the `Lattice`, and any forks in it are processed
+in turn. Each fork element in the `Lattice` is given its own `ForkParams` whose
+`fork_to_element` is the corresponding element in the `Lattice`. A fork to an element in
+the fork's own `Branch` connects within that `Branch`, even if the `Branch` appears more
+than once in `branches`. Otherwise, it is an error if the destination `Branch` appears more
+than once.
+
 ## Example
 ```julia
 bl1 = Beamline([Marker(E_ref=10e9, species_ref=Species("electron")), Drift(L=1)])
 bl2 = Beamline([Drift(L=2)])
 
 lattice = Lattice([Branch([bl1]), Branch([bl2])])
+```
+
+Forking from a ring to an extraction line:
+```julia
+extraction = Branch([Marker(name="ext_start"), Drift(L=3)]; name="extraction")
+ring = Branch([Marker(E_ref=10e9, species_ref=Species("electron")), Drift(L=1),
+               Fork(fork_to_element=extraction.beamlines[1].line[1]), Drift(L=1)]; name="ring")
+
+lattice = Lattice([ring]) # Branches "ring" and "extraction"
 ```
 
 ---
