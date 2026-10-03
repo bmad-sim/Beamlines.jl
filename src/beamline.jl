@@ -51,6 +51,7 @@ mutable struct _Branch{T<:_AbstractBeamline} <: _AbstractBranch
   const beamlines::ReadOnlyVector{T,Vector{T}}
   lattice::_Lattice{_Branch{T}} # This should be HARD to change, not allowed easily
   lattice_index::Int            # This should be HARD to change, not allowed easily
+  from_fork_element::Union{LineElement,Nothing} # Fork element that caused the Branch to be added to the Lattice
   context::Context 
   function _Branch{T}(beamlines::Vector{T}; name::String = "", context=Context(), 
                       _adopt::Bool = false) where {T<:_AbstractBeamline}
@@ -61,7 +62,7 @@ mutable struct _Branch{T<:_AbstractBeamline} <: _AbstractBranch
     # Context merged below is the same either way.
     beamlines = _adopt ? beamlines : T[copy(bl) for bl in beamlines]
 
-    branch = new(name, ReadOnlyVector(beamlines), NULL_LATTICE, -1, context)
+    branch = new(name, ReadOnlyVector(beamlines), NULL_LATTICE, -1, nothing, context)
     for (i, bl) in enumerate(beamlines)
       context = merge(bl.context, context)
       setfield!(bl, :branch, branch)

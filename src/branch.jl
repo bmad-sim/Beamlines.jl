@@ -12,6 +12,8 @@ one after the other.
 - `beamlines`: Vector of the beamlines in the `Branch`
 - `lattice`: `Lattice` that the branch is placed in, if any
 - `lattice_index`: Index of the branch in the `Lattice`, if in a `Lattice`
+- `from_fork_element`: The fork element (in the `Lattice`) whose fork caused the `Branch`
+  to be added to the `Lattice`. `nothing` if the `Branch` was not added due to a fork
 - `context`: `Context` shared by the `Branch` and all of its `Beamline`s, and by the whole
     `Lattice` if the `Branch` is in one. Setting the `context` of any of them sets it for
     all of them.
@@ -50,8 +52,8 @@ For each element in `branches` with a `fork_to_element`, the destination `Branch
   within that `Branch`.
 - Else if the destination is in a `Branch` (or the source of a `Branch`) of the `Lattice`, 
   the fork connects to that `Branch`.
-- Else a copy of the destination `Branch` is appended to `branches`. Forks in the appended 
-  `Branch` are processed in turn.
+- Else a copy of the destination `Branch` is appended to `branches`, with `from_fork_element`
+  set to the fork element. Forks in the appended `Branch` are processed in turn.
 
 The fork element in the `Lattice` is then given its own `ForkParams` whose `fork_to_element` 
 is the corresponding element in the `Lattice`. The elements the `Lattice` was constructed
@@ -102,7 +104,9 @@ function _fork_branch_index(branches, sources, i, dest_branch, ele)
     return only(js)
   end
   push!(sources, dest_branch)
-  push!(branches, copy(dest_branch))
+  new_branch = copy(dest_branch)
+  setfield!(new_branch, :from_fork_element, ele)
+  push!(branches, new_branch)
   return length(branches)
 end
 
@@ -143,6 +147,10 @@ function Base.show(io::IO, branch::Branch)
   lattice_index = getfield(branch, :lattice_index)
   if lattice_index != -1
     lines_used += 1; println(io, " lattice_index", " = ", lattice_index)
+  end
+  from_fork_element = getfield(branch, :from_fork_element)
+  if !isnothing(from_fork_element)
+    lines_used += 1; println(io, " from_fork_element", " = ", repr(from_fork_element.name))
   end
 
   offset = 6
@@ -334,7 +342,7 @@ end
 
 #---------------------------------------------------------------------------------------------------
 
-Base.propertynames(::Branch) = (:name, :beamlines, :lattice, :lattice_index, :context)
+Base.propertynames(::Branch) = (:name, :beamlines, :lattice, :lattice_index, :from_fork_element, :context)
 
 function Base.getproperty(branch::Branch, key::Symbol)
   prop = trygetproperty(branch, key)
@@ -347,7 +355,7 @@ end
 function trygetproperty(b::Branch, key::Symbol)
   if key == :context
     return _context(b)
-  elseif key in (:beamlines, :lattice, :lattice_index, :name)
+  elseif key in (:beamlines, :lattice, :lattice_index, :from_fork_element, :name)
     field = getfield(b, key)
     if key in (:lattice, :lattice_index) && (field == -1 || field === NULL_LATTICE)
       return GetError("Unable to get $key: Branch is not in a Lattice")
@@ -368,7 +376,7 @@ function Base.setproperty!(b::Branch, key::Symbol, value)
     else  # The Context is stored only in the Lattice
       setfield!(getfield(b, :lattice), :context, value)
     end
-  elseif key in (:beamlines, :lattice, :lattice_index)
+  elseif key in (:beamlines, :lattice, :lattice_index, :from_fork_element)
     error("Unable to set property $key: this field is protected")
   else
     error("Unable to set property $key of Branch: Branch does not have this property")
@@ -391,8 +399,8 @@ in the `Branch`es.
 
 Fork elements (elements with a `ForkParams` whose `fork_to_element` is set) add and connect
 branches. The `fork_to_element` must be an element in a `Branch`. If that `Branch` is not
-in `branches`, a copy of it is appended to the `Lattice`, and any forks in it are processed
-in turn. Each fork element in the `Lattice` is given its own `ForkParams` whose
+in `branches`, a copy of it is appended to the `Lattice` with its `from_fork_element` set to
+the fork element, and any forks in it are processed in turn. Each fork element in the `Lattice` is given its own `ForkParams` whose
 `fork_to_element` is the corresponding element in the `Lattice`. A fork to an element in
 the fork's own `Branch` connects within that `Branch`, even if the `Branch` appears more
 than once in `branches`. Otherwise, it is an error if the destination `Branch` appears more

@@ -1770,6 +1770,13 @@ using ForwardDiff, GTPSA, ReverseDiff
     @test lat.branches[2].name == "extraction"
     lfork = lat.branches[1].beamlines[1].line[3]
     @test lfork.fork_to_element === lat.branches[2].beamlines[1].line[1]
+    @test isnothing(lat.branches[1].from_fork_element)
+    @test lat.branches[2].from_fork_element === lfork
+    @test occursin("from_fork_element = \"to_ext\"", sprint(show, lat.branches[2]))
+    @test !occursin("from_fork_element", sprint(show, lat.branches[1]))
+    @test_throws ErrorException (lat.branches[2].from_fork_element = nothing)
+    @test isnothing(ext.from_fork_element)
+    @test isnothing(copy(lat.branches[2]).from_fork_element)
     @test lfork.fork_direction == ForkDirection.FORWARDS
     @test lfork.fork_propagate_reference
     # Elements the Lattice was constructed from are not modified
@@ -1779,6 +1786,7 @@ using ForwardDiff, GTPSA, ReverseDiff
     # Destination branch already in the Lattice: no new branch
     lat = Lattice([ext, ring])
     @test length(lat.branches) == 2
+    @test isnothing(lat.branches[1].from_fork_element)
     @test lat.branches[2].beamlines[1].line[3].fork_to_element === lat.branches[1].beamlines[1].line[1]
     # Unnamed added branch gets default name
     ext2 = Branch([Marker(), Drift(L=1)])
@@ -1793,6 +1801,8 @@ using ForwardDiff, GTPSA, ReverseDiff
     @test lat.branches[1].beamlines[1].line[1].fork_to_element === lat.branches[2].beamlines[2].line[1]
     @test lat.branches[1].beamlines[1].line[1].fork_to_element.name == "m2"
     @test lat.branches[2].beamlines[2].line[2].fork_to_element === lat.branches[3].beamlines[1].line[1]
+    @test lat.branches[2].from_fork_element === lat.branches[1].beamlines[1].line[1]
+    @test lat.branches[3].from_fork_element === lat.branches[2].beamlines[2].line[2]
     # Fork within its own branch connects to the same copy, even for duplicated branches
     self_br = Branch([Marker(name="m"), Drift(L=1)])
     self_fork = Fork(fork_to_element=self_br.beamlines[1].line[1])
@@ -2132,7 +2142,7 @@ using ForwardDiff, GTPSA, ReverseDiff
         @test Branch([Beamline([Drift()])]; name="named").name == "named"
         br.name = "X"
         @test br.name == "X"
-        @test propertynames(br) == (:name, :beamlines, :lattice, :lattice_index, :context)
+        @test propertynames(br) == (:name, :beamlines, :lattice, :lattice_index, :from_fork_element, :context)
         @test_throws ErrorException br.lattice       # not yet in a Lattice
         @test_throws ErrorException br.lattice_index
         @test_throws ErrorException br.foo
