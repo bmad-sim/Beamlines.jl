@@ -1733,6 +1733,13 @@ using ForwardDiff, GTPSA, ReverseDiff
 
     @test ele.MetaParams ≈ MetaParams()
 
+    # InheritParams show: short description of the parent
+    parent = Quadrupole(name="qp")
+    @test occursin("parent = LineElement(name = \"qp\", kind = \"Quadrupole\")", 
+                   sprint(show, InheritParams(parent)))
+    @test occursin("parent = LineElement with no UniversalParams", 
+                   sprint(show, InheritParams(LineElement(Beamlines.ParamDict()))))
+
     # SciBmadStandard fields
     ele = LineElement()
     @test !ele.tracking_method.radiation_damping_on

@@ -351,7 +351,11 @@ InheritParams
 function Base.show(io::IO, a::InheritParams)
   parent = a.parent
   println(io, nameof(typeof(a)))
-  println(io, " parent = LineElement(name = ", repr(parent.name), ", kind = ", repr(parent.kind), ")")
+  if isnothing(parent.UniversalParams) # name and kind would just be the defaults
+    println(io, " parent = LineElement with no UniversalParams")
+  else
+    println(io, " parent = LineElement(name = ", repr(parent.name), ", kind = ", repr(parent.kind), ")")
+  end
   return
 end
 
