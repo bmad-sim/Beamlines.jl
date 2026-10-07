@@ -1733,6 +1733,188 @@ using ForwardDiff, GTPSA, ReverseDiff
 
     @test ele.MetaParams ≈ MetaParams()
 
+    # ForkParams
+    ele = LineElement()
+    @test isnothing(ele.ForkParams)
+    @test isnothing(ele.fork_connect_element)
+    @test ele.fork_orientation == ForkOrientation.TANGENT
+    @test ele.fork_propagate_reference
+    dest = Marker(name="dest")
+    fork = Fork(fork_connect_element=dest, fork_orientation=ForkOrientation.ANTI_TANGENT, fork_propagate_reference=false)
+    @test fork.kind == "Fork"
+    @test fork.fork_connect_element === dest
+    @test fork.fork_orientation == ForkOrientation.ANTI_TANGENT
+    @test !fork.fork_propagate_reference
+    @test fork.ForkParams ≈ ForkParams(dest, ForkOrientation.ANTI_TANGENT, false)
+    @test !(fork.ForkParams ≈ ForkParams(Marker(name="dest"), ForkOrientation.ANTI_TANGENT, false))
+    @test Beamlines.deval(fork.ForkParams).fork_connect_element === dest
+    @test scalarize(fork.ForkParams).fork_connect_element === dest
+    # Copying a fork element does not copy the destination element
+    fork2 = deepcopy(fork)
+    @test fork2.fork_connect_element === dest
+    @test fork2 ≈ fork
+    # Forks pointing at each other show without infinite recursion
+    dest.fork_connect_element = fork
+    @test occursin("fork_connect_element     = Marker \"dest\"\n", sprint(show, fork.ForkParams))
+    @test occursin("ForkParams", sprint(show, MIME"text/plain"(), fork))
+    bl = Beamline([fork, dest])
+    @test bl.line[1].fork_connect_element === dest
+
+    # Lattice construction adds and connects forked-to branches
+    ext = Branch([Marker(name="ext_start"), Drift(L=3)]; name="extraction")
+    ext_start = ext.beamlines[1].line[1]
+    rfork = Fork(name="to_ext", fork_connect_element=ext_start, fork_orientation=ForkOrientation.ANTI_TANGENT, fork_propagate_reference=false)
+    ring = Branch([Marker(name="start"), Drift(L=1), rfork, Drift(L=1)]; name="ring")
+    lat = Lattice([ring])
+    @test length(lat.branches) == 2
+    @test lat.branches[2].name == "extraction"
+    lfork = lat.branches[1].beamlines[1].line[3]
+    @test lfork.fork_connect_element === lat.branches[2].beamlines[1].line[1]
+    @test lfork.fork_orientation == ForkOrientation.ANTI_TANGENT
+    @test !lfork.fork_propagate_reference
+    # The connected element points back to the fork element
+    lconn = lat.branches[2].beamlines[1].line[1]
+    @test lconn.fork_connect_element === lfork
+    @test lconn.fork_orientation == ForkOrientation.ANTI_TANGENT
+    @test !lconn.fork_propagate_reference
+    @test occursin("Marker \"ext_start\" (branch \"extraction\", index 1)", sprint(show, lfork.ForkParams))
+    @test occursin("Fork \"to_ext\" (branch \"ring\", index 3)", sprint(show, lconn.ForkParams))
+    @test Beamlines._ele_location_repr(Beamline([Drift(), LineElement(name="x")]).line[2]) == "\"x\" (beamline index 2)"
+    @test Beamlines._ele_location_repr(Branch([Beamline([Drift(), Drift()]), Beamline([Drift(name="y")])])[3]) == "Drift \"y\" (unnamed branch, index 3)"
+    @test isnothing(lat.branches[2].beamlines[1].line[2].ForkParams)
+    # Elements the Lattice was constructed from are not modified
+    @test rfork.fork_connect_element === ext_start
+    @test ring.beamlines[1].line[3].fork_connect_element === ext_start
+    @test getfield(ext, :lattice_index) == -1
+    @test isnothing(ext_start.ForkParams)
+    # Destination branch already in the Lattice: no new branch
+    lat = Lattice([ext, ring])
+    @test length(lat.branches) == 2
+    @test lat.branches[2].beamlines[1].line[3].fork_connect_element === lat.branches[1].beamlines[1].line[1]
+    @test lat.branches[1].beamlines[1].line[1].fork_connect_element === lat.branches[2].beamlines[1].line[3]
+    # Unnamed added branch gets default name
+    ext2 = Branch([Marker(), Drift(L=1)])
+    lat = Lattice([Branch([Fork(fork_connect_element=ext2.beamlines[1].line[1])])])
+    @test lat.branches[2].name == "b2"
+    # Chained forks and multiple beamlines in the destination branch
+    third = Branch([Marker(name="m3")])
+    second = Branch([Beamline([Drift(L=1)]), Beamline([Marker(name="m2"), Fork(fork_connect_element=third.beamlines[1].line[1])])]; name="second")
+    first_ = Branch([Fork(fork_connect_element=second.beamlines[2].line[1])]; name="first")
+    lat = Lattice([first_])
+    @test [b.name for b in lat.branches] == ["first", "second", "b3"]
+    @test lat.branches[1].beamlines[1].line[1].fork_connect_element === lat.branches[2].beamlines[2].line[1]
+    @test lat.branches[1].beamlines[1].line[1].fork_connect_element.name == "m2"
+    @test lat.branches[2].beamlines[2].line[2].fork_connect_element === lat.branches[3].beamlines[1].line[1]
+    @test lat.branches[2].beamlines[2].line[1].fork_connect_element === lat.branches[1].beamlines[1].line[1]
+    @test lat.branches[3].beamlines[1].line[1].fork_connect_element === lat.branches[2].beamlines[2].line[2]
+    # Fork within its own branch connects to the same copy, even for duplicated branches
+    self_br = Branch([Marker(name="m"), Drift(L=1)])
+    self_fork = Fork(fork_connect_element=self_br.beamlines[1].line[1])
+    self_br = Branch([Marker(name="m"), Drift(L=1), self_fork])
+    self_fork.fork_connect_element = self_br.beamlines[1].line[1]
+    lat = Lattice([self_br, self_br])
+    @test length(lat.branches) == 2
+    for b in lat.branches
+      @test b.beamlines[1].line[3].fork_connect_element === b.beamlines[1].line[1]
+      @test b.beamlines[1].line[1].fork_connect_element === b.beamlines[1].line[3]
+    end
+    # Ambiguous destination
+    @test_throws ErrorException Lattice([Branch([Fork(fork_connect_element=ext_start)]), ext, ext])
+    # More than one fork connecting to the same non-fork element
+    @test_throws ErrorException Lattice([Branch([Fork(fork_connect_element=ext_start), Fork(fork_connect_element=ext_start)])])
+    # Connected element with non-zero length
+    ext_len = Branch([Drift(name="d", L=1.5)])
+    @test_throws "non-zero length" Lattice([Branch([Fork(fork_connect_element=ext_len.beamlines[1].line[1])])])
+    # Fork element with non-zero length
+    @test_throws "fork element has non-zero length" Lattice([Branch([Fork(L=0.5, fork_connect_element=ext_start)])])
+    # Error messages name unnamed branches by their default names
+    @test_throws "(branch \"b2\", index 1)" Lattice([ring, Branch([Fork(name="f", fork_connect_element=ext_len.beamlines[1].line[1])])])
+    unnamed = Branch([Fork(fork_connect_element=ext_len.beamlines[1].line[1])])
+    @test_throws "(branch \"b2\", index 1)" Lattice([Branch([Fork(fork_connect_element=unnamed.beamlines[1].line[1])]; name="top")])
+    # At least one element of a connected pair must be a Fork element
+    @test_throws "At least one" Lattice([Branch([Marker(name="nf", fork_connect_element=ext_start)])])
+    fork_br = Branch([Fork(name="fk"), Drift(L=1)]; name="fork_br")
+    mk = Marker(name="mk", fork_connect_element=fork_br.beamlines[1].line[1])
+    lat = Lattice([Branch([mk]; name="mk_br")])
+    @test lat.branches[1][1].fork_connect_element === lat.branches[2][1]
+    @test lat.branches[2][1].fork_connect_element === lat.branches[1][1]
+    # Destination not in a Branch
+    @test_throws ErrorException Lattice([Branch([Fork(fork_connect_element=Marker())])])
+    @test_throws ErrorException Lattice([Branch([Fork(fork_connect_element=Beamline([Marker()]).line[1])])])
+    # Mutual forks between two branches
+    a_fork = Fork(name="a_fork")
+    b_fork = Fork(name="b_fork")
+    br_a = Branch([a_fork]; name="A")
+    br_b = Branch([b_fork]; name="B")
+    a_fork.fork_connect_element = br_b.beamlines[1].line[1]
+    b_fork.fork_connect_element = br_a.beamlines[1].line[1]
+    lat = Lattice([br_a])
+    @test length(lat.branches) == 2
+    la = lat.branches[1].beamlines[1].line[1]
+    lb = lat.branches[2].beamlines[1].line[1]
+    @test la.fork_connect_element === lb
+    @test lb.fork_connect_element === la
+    # Lattice from Beamlines, and from the Branches of another Lattice
+    lat = Lattice([Beamline([Marker(), rfork])])
+    @test lat.branches[1].beamlines[1].line[2].fork_connect_element === lat.branches[2].beamlines[1].line[1]
+    lat0 = Lattice([ring])
+    lat = Lattice([lat0.branches[1]])
+    @test length(lat.branches) == 2
+    @test lat.branches[1].beamlines[1].line[3].fork_connect_element === lat.branches[2].beamlines[1].line[1]
+    @test lat.branches[2].beamlines[1].line[1].fork_connect_element === lat.branches[1].beamlines[1].line[3]
+
+    # writebl round trip of forks
+    function writebl_roundtrip(lat)
+      m = Module()
+      Core.eval(m, :(using Beamlines))
+      return include_string(m, sprint(Beamlines.writebl, lat))
+    end
+    lat = Lattice([ring]; name="LAT")
+    str = sprint(Beamlines.writebl, lat)
+    @test occursin("b1[3].fork_connect_element = b2[1]", str)
+    @test !occursin("b2[1].fork_connect_element", str)  # Pointed back by the Lattice constructor
+    lat2 = writebl_roundtrip(lat)
+    @test lat2.name == "LAT"
+    @test [b.name for b in lat2.branches] == ["ring", "extraction"]
+    @test lat2.branches[1][3].fork_connect_element === lat2.branches[2][1]
+    @test lat2.branches[2][1].fork_connect_element === lat2.branches[1][3]
+    @test lat2.branches[1][3].fork_orientation == ForkOrientation.ANTI_TANGENT
+    @test !lat2.branches[2][1].fork_propagate_reference
+    @test lat2.branches[2][2].L == 3
+    # Non-Fork element connected to a Fork that has its own fork_connect_element
+    x_br = Branch([Marker(name="x")]; name="x_br")
+    f_br = Branch([Fork(name="f", fork_connect_element=x_br[1])]; name="f_br")
+    lat = Lattice([Branch([Marker(name="m", fork_connect_element=f_br[1])]; name="m_br")])
+    lat2 = writebl_roundtrip(lat)
+    @test lat2.branches[1][1].fork_connect_element === lat2.branches[2][1]
+    @test lat2.branches[2][1].fork_connect_element === lat2.branches[3][1]
+    @test lat2.branches[3][1].fork_connect_element === lat2.branches[2][1]
+    # Mutual Forks with different settings write both connections
+    a_fork = Fork(name="a_fork")
+    b_fork = Fork(name="b_fork", fork_orientation=ForkOrientation.ANTI_TANGENT)
+    br_a = Branch([a_fork]; name="A")
+    br_b = Branch([b_fork]; name="B")
+    a_fork.fork_connect_element = br_b[1]
+    b_fork.fork_connect_element = br_a[1]
+    lat = Lattice([br_a])
+    str = sprint(Beamlines.writebl, lat)
+    @test occursin("b1[1].fork_connect_element = b2[1]", str)
+    @test occursin("b2[1].fork_connect_element = b1[1]", str)
+    lat2 = writebl_roundtrip(lat)
+    @test lat2.branches[1][1].fork_orientation == ForkOrientation.TANGENT
+    @test lat2.branches[2][1].fork_orientation == ForkOrientation.ANTI_TANGENT
+    @test lat2.branches[2][1].fork_connect_element === lat2.branches[1][1]
+    # Self forks in duplicated branches
+    lat2 = writebl_roundtrip(Lattice([self_br, self_br]))
+    for b in lat2.branches
+      @test b[3].fork_connect_element === b[1]
+      @test b[1].fork_connect_element === b[3]
+    end
+    # Beamline: fork_orientation and fork_propagate_reference are written, fork_connect_element is not
+    str = sprint(Beamlines.writebl, Beamline([Fork(fork_connect_element=ext_start, fork_propagate_reference=false)]))
+    @test occursin("fork_orientation=ForkOrientation.TANGENT,fork_propagate_reference=false,", str)
+    @test !occursin("fork_connect_element", str)
+
     # SciBmadStandard fields
     ele = LineElement()
     @test !ele.tracking_method.radiation_damping_on
