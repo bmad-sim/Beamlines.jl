@@ -265,6 +265,11 @@ using ForwardDiff, GTPSA, ReverseDiff
     @test b4.g_ref == pi/2/b4.L
     @test b4.Kn0 == pi/2/b4.L
 
+    # `L` must be applied before dependent properties even when keyword order differs.
+    b4_reordered = SBend(angle=pi/2, L=2.0)
+    @test b4_reordered.g_ref == b4.g_ref
+    @test b4_reordered.Kn0 == b4.Kn0
+
     # Basic beamline:
     a = LineElement(L=0.5f0, Bn1=2.0f0)
     ele.Bn2L = 1.2
