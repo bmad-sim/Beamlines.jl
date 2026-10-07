@@ -123,6 +123,9 @@ function Base.show(io::IO, ele::LineElement)
   end
 
   for v in vs[idxs]
+    if v isa IgnoreParams && isempty(v.ignore_params)
+      continue # An empty IgnoreParams has no effect, and may have been created just by reading
+    end
     if !(v in pgs)
       pgs[idx] = v
       idx += 1
@@ -365,7 +368,13 @@ function _getproperty(ele::LineElement, key::Symbol, context::Context)
       # Default value will be done by constructing the parameter group 
       # and then just extracting the particular property.
       # This ensures that if a default is changed elsewhere, it is handled properly
-      if PROPERTIES_MAP[key] == BeamlineParams
+      if PROPERTIES_MAP[key] == IgnoreParams
+        # Create IgnoreParams on first access, so that the list returned is stored in the
+        # element and e.g. `push!(ele.ignore_params, BendParams)` works
+        p = IgnoreParams()
+        setindex!(pdict, p, IgnoreParams)
+        return p.ignore_params
+      elseif PROPERTIES_MAP[key] == BeamlineParams
         error("""
           Unable to get key $key from LineElement: element is not in a Beamline. 
           If you placed this element in a Beamline, use `findchildren` to find 

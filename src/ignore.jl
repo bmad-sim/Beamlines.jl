@@ -29,9 +29,10 @@ Only parameter group types (e.g. `BMultipoleParams`, not `:BMultipoleParams`) ar
 allowed, since they are always needed. The list is checked when it is set, and again at the
 start of tracking through each element, which catches invalid entries added with e.g. `push!`.
 
-An element without `IgnoreParams` ignores nothing. Note that `push!(ele.ignore_params, ...)`
-only works if the element already has `IgnoreParams`: otherwise `ele.ignore_params` returns
-a new empty list which is not stored in the element. Setting `ele.ignore_params` always works.
+An element without `IgnoreParams` ignores nothing. Reading `ele.ignore_params` from an
+element without `IgnoreParams` adds an `IgnoreParams` with an empty list to the element, so
+that e.g. `push!(ele.ignore_params, BendParams)` always works. An `IgnoreParams` with an empty
+list is not shown when the element is printed, and is equal (`≈`) to no `IgnoreParams`.
 
 When an element is placed in a `Beamline`, all instances of that element in the `Beamline`
 share the `IgnoreParams` of the original element, as with any other parameter group.

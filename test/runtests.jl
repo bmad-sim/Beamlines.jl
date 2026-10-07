@@ -1961,7 +1961,15 @@ using ForwardDiff, GTPSA, ReverseDiff
     # IgnoreParams / ignore_params
     ele = Quadrupole(L=0.5, Kn1=0.3, x_offset=1e-3)
     @test isnothing(ele.IgnoreParams)
-    @test isempty(ele.ignore_params) # Default when there is no IgnoreParams
+    @test isempty(ele.ignore_params)
+    @test ele.IgnoreParams isa IgnoreParams # Created on first access
+    @test !occursin("IgnoreParams", sprint(show, ele)) # Empty IgnoreParams are not shown
+    @test ele ≈ Quadrupole(L=0.5, Kn1=0.3, x_offset=1e-3)
+    push!(Quadrupole(L=0.5).ignore_params, BendParams) # push! works without IgnoreParams
+    ele2 = Quadrupole(L=0.5)
+    push!(ele2.ignore_params, BendParams)
+    @test ele2.ignore_params == [BendParams]
+    ele = Quadrupole(L=0.5, Kn1=0.3, x_offset=1e-3)
     @test :ignore_params in propertynames(ele)
     @test :IgnoreParams in propertynames(ele)
     ele.ignore_params = [AlignmentParams]
@@ -2017,7 +2025,11 @@ using ForwardDiff, GTPSA, ReverseDiff
     @test ele.ignore_params == [BMultipoleParams]
     @test bl.line[1].ignore_params == [BMultipoleParams]
     @test isnothing(bl.line[2].IgnoreParams)
-    @test isempty(bl.line[2].ignore_params)
+    @test isempty(bl.line[2].ignore_params) # Creates IgnoreParams in the parent element
+    @test bl.line[2].IgnoreParams === Beamlines.get_parent(getfield(bl.line[2], :pdict)).IgnoreParams
+    push!(bl.line[2].ignore_params, PatchParams)
+    @test Beamlines.get_parent(getfield(bl.line[2], :pdict)).ignore_params == [PatchParams]
+    empty!(bl.line[2].ignore_params)
     @test occursin("ignore_params = [BMultipoleParams]", sprint(show, bl.line[1]))
     # Setting ignore_params on an instance whose parent has no IgnoreParams sets the parent
     d = bl.line[2]
