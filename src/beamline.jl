@@ -33,7 +33,7 @@ end
 #---------------------------------------------------------------------------------------------------
 
 """
-    Internal: mutable struct _Branch{T<:_AbstractBeamline} <: _AbstractBranch
+    mutable struct _Branch{T<:_AbstractBeamline} <: _AbstractBranch
 
 `_Branch` exists to break a mutual type recursion since
 `Beamline` has a reference to a `Branch`, and `Branch` needs a vector of `Beamline`s. 

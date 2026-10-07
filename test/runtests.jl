@@ -2363,4 +2363,139 @@ using ForwardDiff, GTPSA, ReverseDiff
         @test occursin(r"1\s+b1\s+0\s+0", slat0)
         @test occursin(r"2\s+b2\s+2\s+3\.0", slat0)
     end
+
+    @testset "Name matching" begin
+        @elements begin
+            m1 = Marker(); q1 = Quadrupole(L=1.0); d = Drift(L=1.0); q2 = Quadrupole(L=1.0)
+            m2 = Marker(); qq = Sextupole(); q10 = Quadrupole(L=1.0)
+        end
+        ring = Branch([m1, q1, d, q2, d, m2, qq, q10]; name="ring")
+        xl = Branch([m1, q1, d, q1]; name="xline")
+        lat = Lattice([ring, xl]; name="L1")
+        br1, br2 = lat.branches
+        names(v) = [e.name for e in v]
+        where_(v) = [(e.branch.name, e.beamline_index) for e in v] # Branch has a single Beamline
+
+        # Wild cards
+        @test names(findelements(lat, "q*")) == ["q1", "q2", "qq", "q10", "q1", "q1"]
+        @test names(findelements(lat, "q%")) == ["q1", "q2", "qq", "q1", "q1"]
+        @test names(findelements(lat, "q%0")) == ["q10"]
+        @test names(findelements(lat, "q?")) == names(findelements(lat, "q%"))  # "?" is the same as "%"
+        @test names(findelements(lat, "q?0")) == ["q10"]
+        @test names(findelements(lat, "?%")) == ["m1", "q1", "q2", "m2", "qq", "m1", "q1", "q1"]
+        @test names(findelements(lat, "*")) == names([br1.beamlines[1].line; br2.beamlines[1].line])
+        @test isempty(findelements(lat, "Q1"))     # Case sensitive
+        @test isempty(findelements(lat, "q"))      # Whole name match
+        @test isempty(findelements(lat, "q."))     # "." is not special in a String
+        # Regex
+        @test names(findelements(lat, r"q.*")) == names(findelements(lat, "q*"))
+        @test names(findelements(lat, r"q.")) == names(findelements(lat, "q%"))
+        @test isempty(findelements(lat, r"q"))     # Whole name match
+        @test isempty(findelements(lat, r"Q"i))
+        @test names(findelements(lat, r"Q1"i)) == ["q1", "q1", "q1"]  # Flags are kept
+        @test names(findelements(lat, r"q2|m1")) == ["m1", "q2", "m1"]  # Anchoring covers alternation
+        @test names(findelements(lat, r"(q|m)[0-9]{1,2}")) == ["m1", "q1", "q2", "m2", "q10", "m1", "q1", "q1"]
+        @test names(findelements(lat, r"[q,m]1")) == ["m1", "q1", "m1", "q1", "q1"]
+        @test names(findelements(lat, r"(?:q)2")) == ["q2"]
+        @test names(findelements(lat, r"[[:alpha:]]2")) == ["q2", "m2"]
+        @test names(findelements(lat, r"\Qq1\E")) == ["q1", "q1", "q1"]
+        # Kind
+        @test names(findelements(lat, "Quadrupole::q*")) == ["q1", "q2", "q10", "q1", "q1"]
+        @test names(findelements(lat, r"Sextupole::q.")) == ["qq"]
+        @test isempty(findelements(lat, "quadrupole::q*"))
+        # Branch qualifier
+        @test where_(findelements(lat, "xline>>q1")) == [("xline", 2), ("xline", 4)]
+        @test where_(findelements(lat, "x*>>q1")) == [("xline", 2), ("xline", 4)]
+        @test where_(findelements(lat, r"x.*>>q1")) == [("xline", 2), ("xline", 4)]
+        @test length(findelements(br1, "ring>>q1")) == 1
+        @test isempty(findelements(br1, "xline>>q1"))
+        # Index and N-th instance
+        @test where_(findelements(lat, "ring>>2")) == [("ring", 2)]
+        @test where_(findelements(lat, "2")) == [("ring", 2), ("xline", 2)]
+        @test where_(findelements(lat, "Quadrupole::3")) == []
+        @test isempty(findelements(lat, "ring>>99"))
+        @test where_(findelements(lat, "q1#2")) == [("xline", 4)]
+        @test where_(findelements(lat, "Quadrupole::*#2")) == [("ring", 4), ("xline", 4)]
+        @test isempty(findelements(lat, "q1#3"))
+        # Ranges
+        @test where_(findelements(lat, "m1:m2")) == [("ring", i) for i in 1:6]
+        @test where_(findelements(lat, "m2:q1")) == [("ring", i) for i in [1, 2, 6, 7, 8]] # Wraps
+        @test where_(findelements(lat, "ring>>2:4")) == [("ring", i) for i in 2:4]
+        @test where_(findelements(lat, "xline>>m1:3")) == [("xline", i) for i in 1:3]
+        @test_throws ErrorException findelements(lat, "m1:d")   # Multiple "d" in ring
+        @test_throws ErrorException findelements(lat, "m1:m2:q1")
+        # Union and intersection
+        @test names(findelements(lat, "q1, q2")) == ["q1", "q2", "q1", "q1"]
+        @test names(findelements(lat, "q2, q1,q2")) == ["q1", "q2", "q1", "q1"] # No duplicates
+        @test names(findelements(lat, "Marker::* & m1:m2")) == ["m1", "m2"]
+        @test names(findelements(lat, "q1, m2 & ring>>*")) == ["q1", "m2"]
+        @test names(findelements(lat, r"q\d+ & Quadrupole::q1, xline>>q2")) == ["q1", "q1", "q1"]
+        # Beamline search
+        bl = br2.beamlines[1]
+        @test where_(findelements(bl, "q1")) == [("xline", 2), ("xline", 4)]
+        @test isempty(findelements(bl, "ring>>q1"))
+        blx = Beamline([m1, q1, d])
+        @test findelements(blx, "q1") == [blx.line[2]]
+        @test findelements(blx, "3") == [blx.line[3]]
+        @test isempty(findelements(blx, "*>>q1"))   # Not in a Branch
+        # Errors
+        @test_throws ErrorException findelements(lat, "")
+        @test_throws ErrorException findelements(lat, "q1, ")
+        @test_throws ErrorException findelements(lat, "Quadrupole::ring>>q1")
+        @test_throws ErrorException findelements(lat, "::q1")
+        @test_throws ErrorException findelements(lat, "q1#x")
+        @test_throws ErrorException findelements(lat, "q1#0")
+        @test_throws ErrorException findelements(lat, "q1>L")
+        @test_throws "Invalid regular expression \"*\"" findelements(lat, r"Quadrupole::*")
+        @test_throws "Invalid regular expression \"+q\"" findelements(lat, r"ring>>+q")
+
+        # Branches
+        bnames(v) = [b.name for b in v]
+        @test findbranches(lat, "ring") == [br1]
+        @test bnames(findbranches(lat, "*")) == ["ring", "xline"]
+        @test bnames(findbranches(lat, "x*, 1")) == ["ring", "xline"]
+        @test bnames(findbranches(lat, r"RING"i)) == ["ring"]
+        @test bnames(findbranches(lat, "* & %line")) == ["xline"]
+        @test bnames(findbranches(lat, "?line")) == ["xline"]
+
+        # getindex
+        @test br1["Quadrupole::q*"] == findelements(br1, "Quadrupole::q*")
+        @test isempty(br1["xline>>q1"])
+        @test br2.beamlines[1]["q1"] == findelements(br2.beamlines[1], "q1")
+        @test br2.beamlines[1]["3"] == [br2[3]]
+        blg = Beamline([Drift(L=1.0, name="dd"), Marker(name="mm")])
+        @test blg["m*"] == [blg.line[2]]
+        @test lat["ring"] == [br1]
+        @test lat["2"] == [br2]
+        @test lat["*line, ring"] == [br1, br2]
+        @test isempty(lat["q1"])                    # Only branches are searched
+        @test_throws "lat[:, \"ring>>2\"]" lat["ring>>2"]  # Element match
+        @test lat[:, "q1"] == findelements(lat, "q1")
+        @test lat[:, "ring>>2"] == [br1[2]]
+        @test lat[:, "Marker::* & m1:m2"] == findelements(lat, "Marker::* & m1:m2")
+        @test lat["ring", "q1"] == [br1[2]]
+        @test lat["*", "q1"] == findelements(lat, "q1")
+        @test lat["xline", "ring>>q1"] == []        # Branch qualifier still applies
+        @test lat[2, "q1"] == [br2[2], br2[4]]
+        @test lat[2, "3"] == [br2[3]]
+        @test_throws BoundsError lat[3, "q1"]
+        @test isempty(lat["nothing_here", "q1"])
+        @test lat[:, "q1"] isa Vector{LineElement} && lat["q1"] isa Vector{Branch}
+        @test br1[r"q\d+"] == findelements(br1, r"q\d+")
+        @test blg[r"M."i] == [blg.line[2]]
+        @test lat[r"RING"i] == [br1]
+        @test isempty(lat[r"q\d"])
+        @test lat[:, r"q\d"] == findelements(lat, r"q\d")
+        @test lat[:, r"x.*>>q1"] == findelements(lat, "xline>>q1")
+        @test lat[r"x.*", r"q\d"] == [br2[2], br2[4]]
+        @test_throws ErrorException lat[r"x.*>>q1"]
+        @test lat[r"[,x]line"] == [br2]             # "," inside [...] is not an operator
+        @test isempty(findbranches(lat, "2 & ring"))
+        @test isempty(findbranches(lat, "r"))
+        @test findbranches(lat, "2") == [br2]
+        @test_throws ErrorException findelements(lat, "L1>>>q1")   # No Lattice qualifier
+        @test_throws ErrorException findbranches(lat, "L1>>>ring")
+        @test_throws ErrorException findbranches(lat, "ring>>q1")
+        @test_throws ErrorException findbranches(lat, "Marker::ring")
+    end
 end
