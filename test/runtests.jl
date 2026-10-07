@@ -2052,6 +2052,13 @@ using ForwardDiff, GTPSA, ReverseDiff
     @test Quadrupole(L=0.5, Kn1=0.3) ≈ Quadrupole(L=0.5, Kn1=0.3, ignore_params=[])
     @test !(Quadrupole(L=0.5, Kn1=0.3) ≈ Quadrupole(L=0.5, Kn1=0.3, ignore_params=[BendParams]))
     @test !(Quadrupole(L=0.5, Kn1=0.3, ignore_params=[BendParams]) ≈ Quadrupole(L=0.5, Kn1=0.3))
+    # isapprox_ignoring skips the given parameter groups
+    @test !(Quadrupole(L=0.5, Kn1=0.3, x_offset=1e-3) ≈ Quadrupole(L=0.5, Kn1=0.3))
+    @test Beamlines.isapprox_ignoring(Quadrupole(L=0.5, Kn1=0.3, x_offset=1e-3), Quadrupole(L=0.5, Kn1=0.3), AlignmentParams)
+    @test Beamlines.isapprox_ignoring(Quadrupole(L=0.5, Kn1=0.3, x_offset=1e-3, ignore_params=[BendParams]), 
+                                      Quadrupole(L=0.5, Kn1=0.3), AlignmentParams, IgnoreParams)
+    @test !Beamlines.isapprox_ignoring(Quadrupole(L=0.5, Kn1=0.3, x_offset=1e-3), Quadrupole(L=0.5, Kn1=0.4), AlignmentParams)
+    @test Beamlines.isapprox_ignoring(Quadrupole(L=0.5, Kn1=0.3, ignore_params=[]), Quadrupole(L=0.5, Kn1=0.3))
     # writebl
     str = sprint(Beamlines.writebl, bl)
     @test occursin("ignore_params=[BMultipoleParams]", str)

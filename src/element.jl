@@ -162,12 +162,25 @@ function flattened_pdict(ele::LineElement, p=ParamDict())
   return p
 end
 
-function Base.isapprox(a::LineElement, b::LineElement)
+Base.isapprox(a::LineElement, b::LineElement) = isapprox_ignoring(a, b)
+
+"""
+    isapprox_ignoring(a::LineElement, b::LineElement, ignore::Type{<:AbstractParams}...)
+
+Same as `isapprox(a, b)` except that the parameter groups `ignore` are also not compared. 
+`BeamlineParams` and `MetaParams` are never compared, and an `IgnoreParams` with an empty 
+list is treated as no `IgnoreParams`. 
+
+This only affects the comparison: it is unrelated to the `ignore_params` of `IgnoreParams`, 
+which switches parameter groups off in tracking.
+"""
+function isapprox_ignoring(a::LineElement, b::LineElement, ignore::Type{<:AbstractParams}...)
   l = flattened_pdict(a)
   r = flattened_pdict(b)
   # BeamlineParams and MetaParams do not affect the physics, and an IgnoreParams with an empty
   # list is the same as no IgnoreParams
-  skip(k, v) = k == BeamlineParams || k == MetaParams || (v isa IgnoreParams && isempty(v.ignore_params))
+  skip(k, v) = k == BeamlineParams || k == MetaParams || k in ignore || 
+               (v isa IgnoreParams && isempty(v.ignore_params))
   L_l = count(pair -> !skip(pair...), l)
   L_r = count(pair -> !skip(pair...), r)
   L_l != L_r && return false
