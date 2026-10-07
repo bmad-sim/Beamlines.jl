@@ -8,53 +8,12 @@ is always `false`. By default a parameter group is active, however some paramete
 define their own criteria, e.g. `RFParams` is only active if `voltage != 0`, and
 `ApertureParams` is only active if `aperture_active == true`.
 
-`isactive` does not check the `ignore_parameters` list of a `LineElement`. Tracking code
-instead replaces a parameter group in `ignore_parameters` with `nothing` before tracking.
-See the documentation for `LineElement` for details.
+`isactive` does not check the `ignore_params` list of a `LineElement`. Tracking code
+instead replaces a parameter group in `ignore_params` with `nothing` before tracking.
+See the documentation for `IgnoreParams` for details.
 """
 isactive(::AbstractParams) = true
 isactive(::Nothing) = false
-
-#---------------------------------------------------------------------------------------------------
-
-"""
-    check_ignore_parameters(ignore_parameters)
-
-Throws an error if any symbol in `ignore_parameters` is not the name of a parameter group
-(a key of `PARAMS_MAP`), so that misspellings are caught. `BeamlineParams` and
-`InitialBeamlineParams` are also not allowed, since they are always needed in tracking.
-Otherwise returns `ignore_parameters`.
-"""
-function check_ignore_parameters(ignore_parameters)
-  for sym in ignore_parameters
-    if !haskey(PARAMS_MAP, sym) || sym in (:BeamlineParams, :InitialBeamlineParams)
-      valid = sort!([k for k in keys(PARAMS_MAP) if !(k in (:BeamlineParams, :InitialBeamlineParams))])
-      error("Invalid symbol $(repr(sym)) in `ignore_parameters`. Valid symbols are: " *
-            join(repr.(valid), ", "))
-    end
-  end
-  return ignore_parameters
-end
-
-#---------------------------------------------------------------------------------------------------
-
-"""
-    ignore_parameters_list(value) -> Vector{Symbol}
-
-Converts `value`, which may be a symbol, a string, or an iterable of symbols and/or 
-strings, into a new `Vector{Symbol}` with any duplicates removed, and checks it with 
-`check_ignore_parameters`. Used when setting the `ignore_parameters` property of a 
-`LineElement`.
-"""
-function ignore_parameters_list(value)
-  # Always construct a new vector so that e.g. `ele.ignore_parameters = ele.ignore_parameters` is safe
-  if value isa Union{Symbol,AbstractString}
-    list = [Symbol(value)]
-  else
-    list = unique!(Symbol[Symbol(sym) for sym in value])
-  end
-  return check_ignore_parameters(list)
-end
 
 @generated function deval(a::AbstractParams, c::Context=NULL_CONTEXT)
     apply = [
@@ -205,12 +164,15 @@ end
 function Base.isapprox(a::LineElement, b::LineElement)
   l = flattened_pdict(a)
   r = flattened_pdict(b)
-  L_l = length(l) - (haskey(l, BeamlineParams) ? 1 : 0) - (haskey(l, MetaParams) ? 1 : 0)
-  L_r = length(r) - (haskey(r, BeamlineParams) ? 1 : 0) - (haskey(r, MetaParams) ? 1 : 0)
+  # BeamlineParams and MetaParams do not affect the physics, and an IgnoreParams with an empty
+  # list is the same as no IgnoreParams
+  skip(k, v) = k == BeamlineParams || k == MetaParams || (v isa IgnoreParams && isempty(v.ignore_params))
+  L_l = count(pair -> !skip(pair...), l)
+  L_r = count(pair -> !skip(pair...), r)
   L_l != L_r && return false
   anymissing = false
   for pair in l
-      if pair[1] == BeamlineParams || pair[1] == MetaParams
+      if skip(pair...)
         continue
       end
 
@@ -278,25 +240,19 @@ end
   name            = ""
   L               = Float32(0.0)
   tracking_method = SciBmadStandard()
-  ignore_parameters::Vector{Symbol} = Symbol[]
 end
 
 PROPS(::Type{UniversalParams}) = OrderedDict{String,String}(
   "kind" => "String specifing the \"kind\", of an element, e.g. \"Quadrupole\"",
   "name" => "The name of an element as a string",
   "L"    => "Length of the element [m]",
-  "tracking_method" => "Tracking method for the element, defaults to `SciBmadStandard()`",
-  "ignore_parameters" => 
-  """
-  List of the parameter groups of the element to not use in tracking, defaults to `Symbol[]`.
-    See the documentation for `LineElement`"""
+  "tracking_method" => "Tracking method for the element, defaults to `SciBmadStandard()`"
 )
 
 """
     UniversalParams
 
-Describes the kind, name, length, tracking method, and ignored parameter groups for a 
-`LineElement`.
+Describes the kind, name, length, and tracking method for a `LineElement`.
 
 ## Properties
 $(PROPSDOC(UniversalParams))
@@ -309,9 +265,7 @@ function Base.show(io::IO, a::UniversalParams)
   width = maximum(length, String.(fields))
   println(io, nameof(typeof(a)))
   for field in fields
-    if field == :ignore_parameters && isempty(getproperty(a, field))
-      continue # Only show the ignored parameter groups if there are any
-    elseif field == :tracking_method
+    if field == :tracking_method
       tm = getproperty(a, field)
       println(io, " ", rpad(String(field), width), " = ", param_repr(typeof(tm)), "(")
       subfields = fieldnames(typeof(tm))
@@ -329,7 +283,6 @@ end
 
 function Base.isapprox(a::UniversalParams, b::UniversalParams)
   return a.tracking_method == b.tracking_method &&
-         issetequal(a.ignore_parameters, b.ignore_parameters) &&
          a.L               ≈  b.L
          # Only compare things that affect the physics
          #a.kind           == b.kind &&
@@ -433,10 +386,9 @@ end
 function Base.setproperty!(ele::LineElement, key::Symbol, value)
   pdict = getfield(ele, :pdict)
   context = haskey(pdict, BeamlineParams) ? ((pdict[BeamlineParams]::BeamlineParams).beamline.context) : (NULL_CONTEXT)
-  # The ignore_parameters list is stored in the UniversalParams parameter group, and so is
-  # set like any other property. Only the value needs to be converted and checked first.
-  if key == :ignore_parameters
-    value = ignore_parameters_list(value)
+  # The ignore_params list is set like any other property, but is converted and checked first
+  if key == :ignore_params
+    value = ignore_params_list(value)
   end
   if haskey(PARAMS_MAP, key) # Setting whole parameter struct
     if is_protected(pdict, key)

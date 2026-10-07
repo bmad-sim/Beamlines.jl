@@ -12,8 +12,9 @@ R_to_v(species::Species, R) = abs(chargeof(species))*C_LIGHT / sqrt(1+(massof(sp
 param_repr(thing) = repr("text/plain", thing)
 param_repr(thing::Enum) = "$(nameof(parentmodule(typeof(thing)))).$(repr(thing; context=:compact=>true))"
 param_repr(thing::Symbol) = String(thing)
-# One line, and parseable by `eval`, e.g. for the `ignore_parameters` list
-param_repr(thing::AbstractVector{Symbol}) = repr(thing)
+# One line, and parseable by `eval`, e.g. `[AlignmentParams, BMultipoleParams]` for the
+# `ignore_params` list
+param_repr(thing::AbstractVector{<:Type}) = "[" * join(string.(thing), ", ") * "]"
 
 # Properties doc
 function PROPSDOC(::Type{T}) where {T}

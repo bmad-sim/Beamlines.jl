@@ -11,7 +11,7 @@ end
 function writebl(io::IO, bl::Beamline)
   c = bl.context
   pgs = [ :UniversalParams, :InitialBeamlineParams, :AlignmentParams, :BendParams, :BMultipoleParams, 
-          :PatchParams, :ApertureParams, :MapParams, :RFParams, :FourPotentialParams, :EMultipoleParams]
+          :PatchParams, :ApertureParams, :MapParams, :RFParams, :FourPotentialParams, :EMultipoleParams, :IgnoreParams]
   println(io, "Beamline([")
   for ele in bl.line
     print(io, " LineElement(")
@@ -39,11 +39,7 @@ end
 function writeparam(io::IO, a::UniversalParams)
   fields = fieldnames(typeof(a))
   for field in fields
-    if field == :ignore_parameters
-      if !isempty(getproperty(a, field))
-        print(io, String(field), "=", param_repr(getproperty(a, field)), ",")
-      end
-    elseif field == :tracking_method
+    if field == :tracking_method
       tm = getproperty(a, field)
       print(io, String(field), "=", typeof(tm), "(")
       subfields = fieldnames(typeof(tm))
