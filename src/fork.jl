@@ -71,22 +71,33 @@ function Base.show(io::IO, a::ForkParams)
   return
 end
 
+# `(branch, index)` of `ele` in the `Branch` it is in (as in `branch[index]`), or `nothing` if 
+# `ele` is not in a `Branch`.
+function _branch_and_index(ele::LineElement)
+  pdict = getfield(ele, :pdict)
+  haskey(pdict, BeamlineParams) || return nothing
+  bp = pdict[BeamlineParams]::BeamlineParams
+  bl = bp.beamline
+  bl_index = getfield(bl, :branch_index)
+  bl_index == -1 && return nothing
+  branch = getfield(bl, :branch)
+  index = sum(i -> length(branch.beamlines[i].line), 1:bl_index-1; init=0) + bp.beamline_index
+  return (branch, index)
+end
+
 # Short description of an element: kind (if set), name, and location. E.g. `Quadrupole "q7" (branch "b2", index 1)`.
 # The index is the index of the element in the Branch (as in `branch[index]`) if the element 
 # is in a Branch, else the index in its Beamline.
 function _ele_location_repr(ele::LineElement)
   kind = ele.kind
   str = kind == "" ? repr(ele.name) : "$kind $(repr(ele.name))"
-  pdict = getfield(ele, :pdict)
-  haskey(pdict, BeamlineParams) || return str
-  bp = pdict[BeamlineParams]::BeamlineParams
-  bl = bp.beamline
-  bl_index = getfield(bl, :branch_index)
-  if bl_index == -1
-    return str * " (beamline index $(bp.beamline_index))"
+  loc = _branch_and_index(ele)
+  if isnothing(loc)
+    pdict = getfield(ele, :pdict)
+    haskey(pdict, BeamlineParams) || return str
+    return str * " (beamline index $((pdict[BeamlineParams]::BeamlineParams).beamline_index))"
   end
-  branch = getfield(bl, :branch)
-  index = sum(i -> length(branch.beamlines[i].line), 1:bl_index-1; init=0) + bp.beamline_index
+  branch, index = loc
   branch_str = branch.name == "" ? "unnamed branch" : "branch $(repr(branch.name))"
   return str * " ($branch_str, index $index)"
 end

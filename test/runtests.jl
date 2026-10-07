@@ -1863,6 +1863,58 @@ using ForwardDiff, GTPSA, ReverseDiff
     @test lat.branches[1].beamlines[1].line[3].fork_connect_element === lat.branches[2].beamlines[1].line[1]
     @test lat.branches[2].beamlines[1].line[1].fork_connect_element === lat.branches[1].beamlines[1].line[3]
 
+    # writebl round trip of forks
+    function writebl_roundtrip(lat)
+      m = Module()
+      Core.eval(m, :(using Beamlines))
+      return include_string(m, sprint(Beamlines.writebl, lat))
+    end
+    lat = Lattice([ring]; name="LAT")
+    str = sprint(Beamlines.writebl, lat)
+    @test occursin("b1[3].fork_connect_element = b2[1]", str)
+    @test !occursin("b2[1].fork_connect_element", str)  # Pointed back by the Lattice constructor
+    lat2 = writebl_roundtrip(lat)
+    @test lat2.name == "LAT"
+    @test [b.name for b in lat2.branches] == ["ring", "extraction"]
+    @test lat2.branches[1][3].fork_connect_element === lat2.branches[2][1]
+    @test lat2.branches[2][1].fork_connect_element === lat2.branches[1][3]
+    @test lat2.branches[1][3].fork_orientation == ForkOrientation.ANTI_TANGENT
+    @test !lat2.branches[2][1].fork_propagate_reference
+    @test lat2.branches[2][2].L == 3
+    # Non-Fork element connected to a Fork that has its own fork_connect_element
+    x_br = Branch([Marker(name="x")]; name="x_br")
+    f_br = Branch([Fork(name="f", fork_connect_element=x_br[1])]; name="f_br")
+    lat = Lattice([Branch([Marker(name="m", fork_connect_element=f_br[1])]; name="m_br")])
+    lat2 = writebl_roundtrip(lat)
+    @test lat2.branches[1][1].fork_connect_element === lat2.branches[2][1]
+    @test lat2.branches[2][1].fork_connect_element === lat2.branches[3][1]
+    @test lat2.branches[3][1].fork_connect_element === lat2.branches[2][1]
+    # Mutual Forks with different settings write both connections
+    a_fork = Fork(name="a_fork")
+    b_fork = Fork(name="b_fork", fork_orientation=ForkOrientation.ANTI_TANGENT)
+    br_a = Branch([a_fork]; name="A")
+    br_b = Branch([b_fork]; name="B")
+    a_fork.fork_connect_element = br_b[1]
+    b_fork.fork_connect_element = br_a[1]
+    lat = Lattice([br_a])
+    str = sprint(Beamlines.writebl, lat)
+    @test occursin("b1[1].fork_connect_element = b2[1]", str)
+    @test occursin("b2[1].fork_connect_element = b1[1]", str)
+    lat2 = writebl_roundtrip(lat)
+    @test lat2.branches[1][1].fork_orientation == ForkOrientation.TANGENT
+    @test lat2.branches[2][1].fork_orientation == ForkOrientation.ANTI_TANGENT
+    @test lat2.branches[2][1].fork_connect_element === lat2.branches[1][1]
+    # Self forks in duplicated branches
+    lat2 = writebl_roundtrip(Lattice([self_br, self_br]))
+    for b in lat2.branches
+      @test b[3].fork_connect_element === b[1]
+      @test b[1].fork_connect_element === b[3]
+    end
+    # Beamline: fork_orientation and fork_propagate_reference are written, fork_connect_element is not
+    str = sprint(Beamlines.writebl, Beamline([Fork(fork_connect_element=ext_start, fork_propagate_reference=false)]))
+    @test occursin("fork_orientation=ForkOrientation.TANGENT,fork_propagate_reference=false,", str)
+    @test !occursin("fork_connect_element", str)
+
     # SciBmadStandard fields
     ele = LineElement()
     @test !ele.tracking_method.radiation_damping_on
