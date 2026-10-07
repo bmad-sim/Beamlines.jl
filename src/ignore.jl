@@ -39,10 +39,6 @@ share the `IgnoreParams` of the original element, as with any other parameter gr
 Setting `ignore_params` on the original element, or on any of its instances in a
 `Beamline`, affects every instance.
 
-Tracking code handles the list when unpacking an element: each parameter group in
-`ignore_params` is replaced with `nothing` before tracking, exactly as if the element did
-not have that parameter group.
-
 ## Properties
 $(PROPSDOC(IgnoreParams))
 """

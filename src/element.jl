@@ -8,9 +8,7 @@ is always `false`. By default a parameter group is active, however some paramete
 define their own criteria, e.g. `RFParams` is only active if `voltage != 0`, and
 `ApertureParams` is only active if `aperture_active == true`.
 
-`isactive` does not check the `ignore_params` list of a `LineElement`. Tracking code
-instead replaces a parameter group in `ignore_params` with `nothing` before tracking.
-See the documentation for `IgnoreParams` for details.
+The `isactive` function does not check the `ignore_params` list.
 """
 isactive(::AbstractParams) = true
 isactive(::Nothing) = false
