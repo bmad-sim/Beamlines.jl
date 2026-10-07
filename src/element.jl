@@ -171,8 +171,8 @@ Same as `isapprox(a, b)` except that the parameter groups `ignore` are also not 
 `BeamlineParams` and `MetaParams` are never compared, and an `IgnoreParams` with an empty 
 list is treated as no `IgnoreParams`. 
 
-This only affects the comparison: it is unrelated to the `ignore_params` of `IgnoreParams`, 
-which switches parameter groups off in tracking.
+This only affects the comparison: it is unrelated to the `ignore_params` list of 
+`IgnoreParams`.
 """
 function isapprox_ignoring(a::LineElement, b::LineElement, ignore::Type{<:AbstractParams}...)
   l = flattened_pdict(a)
