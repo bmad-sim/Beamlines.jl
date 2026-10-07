@@ -2483,4 +2483,106 @@ using ForwardDiff, GTPSA, ReverseDiff
         @test occursin(r"1\s+b1\s+0\s+0", slat0)
         @test occursin(r"2\s+b2\s+2\s+3\.0", slat0)
     end
+
+    @testset "survey" begin
+        _qrot = Beamlines._qrot
+        _qmul = Beamlines._qmul
+
+        # A ring of four 90 degree bends closes
+        sv = survey(Branch([SBend(L=2, g_ref=pi/4) for _ in 1:4]))
+        @test sv isa BranchSurvey{Float64}
+        @test length(sv) == 4
+        @test sv[1].branch_exit.x ≈ -4/pi
+        @test sv[1].branch_exit.z ≈ 4/pi
+        @test sv[1].branch_exit.theta ≈ -pi/2
+        @test isapprox(sv[end].branch_exit, FloorCoords(); atol=1e-14)
+        @test sv[end].s_downstream ≈ 8
+        @test [e.index for e in sv] == 1:4
+        @test all(e -> e.body_entrance == e.branch_entrance && e.body_exit == e.branch_exit, sv)
+
+        # Starting floor position and orientation
+        f0 = FloorCoords((1.0, 2.0, 3.0), 0.1, 0.2, 0.3)
+        @test all((f0.theta, f0.phi, f0.psi) .≈ (0.1, 0.2, 0.3))
+        sv = survey(Branch([Drift(name="d", L=2)]); floor0=f0)
+        @test sv[1].name == "d"
+        @test sv[1].kind == "Drift"
+        @test sv[1].branch_entrance == f0
+        @test sv[1].branch_exit.r ≈ f0.r + _qrot(f0.q, (0, 0, 2))
+        @test sv[1].branch_exit.q ≈ f0.q
+
+        # Patch: offsets in the entrance frame, rotation Ry(dy_rot) * Rx(dx_rot) * Rz(dz_rot)
+        sv = survey(Branch([Patch(dx=1, dy=0.5, dz=2, dy_rot=0.2)]))
+        @test sv[1].branch_exit.r ≈ [1, 0.5, 2]
+        @test sv[1].branch_exit.theta ≈ 0.2
+        sv = survey(Branch([Patch(dx_rot=0.1, dy_rot=0.2, dz_rot=0.3)]))
+        f = sv[1].branch_exit
+        @test all((f.theta, f.phi, f.psi) .≈ (0.2, 0.1, 0.3))
+        @test sv[1].body_exit == sv[1].branch_exit
+
+        # Straight element misalignment: about the element center
+        q = Quadrupole(L=2, x_offset=1e-3, y_offset=2e-3, z_offset=0.1, x_rot=0.01, y_rot=0.02, tilt=0.3)
+        e = survey(Branch([Drift(L=1), q]))[2]
+        @test e.s == 1
+        @test e.s_downstream == 3
+        @test (e.body_entrance.r + e.body_exit.r)/2 ≈ [1e-3, 2e-3, 2.1]
+        @test e.body_exit.r - e.body_entrance.r ≈ _qrot(e.body_entrance.q, (0, 0, 2))
+        @test isapprox(e.body_entrance.q, FloorCoords((0, 0, 0), 0.02, 0.01, 0.3).q)
+
+        # Bend with tilt_ref and no misalignment: body = branch rotated by tilt_ref
+        e = survey(Branch([SBend(L=2, g_ref=0.3, tilt_ref=0.4)]))[1]
+        rz = [cos(0.2), 0, 0, sin(0.2)]
+        for (br, bo) in ((e.branch_entrance, e.body_entrance), (e.branch_exit, e.body_exit))
+            @test bo.r ≈ br.r atol=1e-14
+            @test bo.q ≈ _qmul(br.q, rz)
+        end
+
+        # Bend misalignment: the chord center moves by the offsets, independent of the rotations
+        for (g, tr) in ((0.3, 0.4), (-0.7, 2.0))
+            b = SBend(L=2, g_ref=g, tilt_ref=tr, x_offset=1e-2, y_offset=2e-2, z_offset=0.03, x_rot=0.1, y_rot=0.2, tilt=0.3)
+            e = survey(Branch([b]))[1]
+            qmid = [cos(g/2), sin(tr)*sin(g/2), -cos(tr)*sin(g/2), 0]  # Branch frame at the arc center
+            d = (e.body_entrance.r + e.body_exit.r)/2 - (e.branch_entrance.r + e.branch_exit.r)/2
+            @test d ≈ _qrot(qmid, (1e-2, 2e-2, 0.03))
+            # The body frame goes along an arc in the body x-z plane
+            ba = e.body_exit.r - e.body_entrance.r
+            @test ba ≈ _qrot(e.body_entrance.q, (2*(cos(2g)-1)/(2g), 0, 2*sin(2g)/(2g)))
+        end
+
+        # Lattice: fork to the beginning of a branch places that branch
+        ext = Branch([Marker(name="ext_start"), Drift(L=3)]; name="extraction")
+        ring = Branch([Drift(L=1), SBend(L=2, g_ref=0.5), Fork(name="f", fork_connect_element=ext[1]), 
+                       Drift(L=1)]; name="ring")
+        other = Branch([Drift(L=4)]; name="other")
+        lat = Lattice([ring, other]; name="lat")
+        ls = survey(lat; floor0=f0)
+        @test ls isa LatticeSurvey{Float64}
+        @test ls.name == "lat"
+        @test [b.name for b in ls] == ["ring", "other", "extraction"]
+        @test [b.lattice_index for b in ls] == 1:3
+        @test ls["extraction"] === ls[3]
+        @test_throws ErrorException ls["nope"]
+        @test ls[1][1].branch_entrance == f0
+        @test ls[2][1].branch_entrance == f0
+        @test ls["extraction"][1].branch_entrance == ls["ring"][3].branch_exit
+        @test ls["extraction"][1].s == 0
+        # The connected element may itself point at the fork (here a fork back to the ring)
+        ext2 = Branch([Fork(name="back"), Drift(L=3)]; name="ext2")
+        ring2 = Branch([Drift(L=1), SBend(L=2, g_ref=0.5), Marker(name="m"), Drift(L=1)]; name="ring2")
+        ext2[1].fork_connect_element = ring2[3]
+        ls = survey(Lattice([ring2, ext2]))
+        @test ls[2][1].branch_entrance == ls[1][3].branch_exit
+        # A Branch in a Lattice surveyed by itself starts at floor0
+        @test survey(lat.branches[3])[1].branch_entrance == FloorCoords()
+        @test survey(lat.branches[3]).lattice_index == 3
+
+        # Derivatives
+        f(L) = survey(Branch([SBend(L=L, g_ref=0.5), Drift(L=1)]))[end].branch_exit.x
+        @test ForwardDiff.derivative(f, 2.0) ≈ (f(2.0 + 1e-6) - f(2.0 - 1e-6))/2e-6 rtol=1e-6
+
+        # show
+        @test occursin("BranchSurvey", sprint(show, survey(ring)))
+        @test occursin("extraction", sprint(show, survey(lat)))
+        @test occursin("ElementSurvey", sprint(show, survey(ring)[1]))
+        @test occursin("FloorCoords", sprint(show, FloorCoords()))
+    end
 end
