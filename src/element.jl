@@ -406,10 +406,6 @@ end
 function Base.setproperty!(ele::LineElement, key::Symbol, value)
   pdict = getfield(ele, :pdict)
   context = haskey(pdict, BeamlineParams) ? ((pdict[BeamlineParams]::BeamlineParams).beamline.context) : (NULL_CONTEXT)
-  # The ignore_params list is set like any other property, but is converted and checked first
-  if key == :ignore_params
-    value = ignore_params_list(value)
-  end
   if haskey(PARAMS_MAP, key) # Setting whole parameter struct
     if is_protected(pdict, key)
       error("Cannot set $(PARAMS_MAP[key]): parameter group is protected by ProtectParams. This can be unsafely-overridden using `unsafe_getparams`")
