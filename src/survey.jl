@@ -28,8 +28,9 @@ coordinate system.
 ## Properties
 Besides the fields, these properties can be read:
 - `x`, `y`, `z`: Components of `r` [m]
-- `theta`, `phi`, `psi`: The PALS (and Bmad) floor orientation angles (azimuth, pitch, roll) [rad].
-  The orientation is `Ry(theta) * Rx(phi) * Rz(psi)`.
+- `theta`, `phi`, `psi`: The floor orientation angles (azimuth, pitch, roll) [rad], with the
+  same convention as Bmad and PALS. The orientation is `Ry(theta) * Rx(-phi) * Rz(psi)`, so a 
+  positive `phi` tilts the z-axis toward `+Y`.
 
 ---
 
@@ -117,28 +118,34 @@ _qrotx(a) = SVector(cos(a/2), sin(a/2), zero(a), zero(a))
 _qroty(a) = SVector(cos(a/2), zero(a), sin(a/2), zero(a))
 _qrotz(a) = SVector(cos(a/2), zero(a), zero(a), sin(a/2))
 
-# Ry(y_rot) * Rx(x_rot) * Rz(z_rot): the rotation convention of the floor angles, patches, and
-# misalignments.
+# Ry(y_rot) * Rx(x_rot) * Rz(z_rot): the rotation convention of patches and misalignments.
 _qrot_yxz(x_rot, y_rot, z_rot) = _qmul(_qroty(y_rot), _qmul(_qrotx(x_rot), _qrotz(z_rot)))
 
-_quat_from_floor_angles(theta, phi, psi) = _qrot_yxz(phi, theta, psi)
+# Floor angles use the Bmad convention: the orientation is Ry(theta) * Rx(-phi) * Rz(psi), so a 
+# positive phi tilts the z-axis toward +Y.
+_quat_from_floor_angles(theta, phi, psi) = _qrot_yxz(-phi, theta, psi)
 
-# Floor angles (theta, phi, psi) of the orientation `q`. At the phi = ±π/2 singularity, psi is
-# taken to be zero.
+# Floor angles (theta, phi, psi) of the orientation `q`, as in Bmad's `floor_w_mat_to_angles`. 
+# At the phi = ±π/2 singularity, theta is taken to be zero.
 function _floor_angles(q)
   w, x, y, z = _qnormalize(q)
-  r02 = 2*(x*z + w*y)
-  r12 = 2*(y*z - w*x)
-  r22 = 1 - 2*(x*x + y*y)
-  cos_phi = sqrt(r02*r02 + r22*r22)
-  phi = atan(-r12, cos_phi)
-  if cos_phi > 1e-12
-    theta = atan(r02, r22)
-    psi = atan(2*(x*y + w*z), 1 - 2*(x*x + z*z))
-  else
-    theta = atan(-2*(x*z - w*y), 1 - 2*(y*y + z*z))
-    psi = zero(theta)
+  # Elements of the orientation matrix W
+  w13 = 2*(x*z + w*y)
+  w23 = 2*(y*z - w*x)
+  w33 = 1 - 2*(x*x + y*y)
+  if abs(w13) + abs(w33) < 1e-12
+    w11 = 1 - 2*(y*y + z*z)
+    w31 = 2*(x*z - w*y)
+    theta = zero(w11)
+    if w23 > 0
+      return (theta = theta, phi = oftype(theta, pi/2), psi = atan(-w31, w11))
+    else
+      return (theta = theta, phi = oftype(theta, -pi/2), psi = atan(w31, w11))
+    end
   end
+  theta = atan(w13, w33)
+  phi = atan(w23, sqrt(w13*w13 + w33*w33))
+  psi = atan(2*(x*y + w*z), 1 - 2*(x*x + z*z))
   return (theta = theta, phi = phi, psi = psi)
 end
 

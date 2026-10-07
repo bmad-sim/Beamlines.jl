@@ -2510,13 +2510,21 @@ using ForwardDiff, GTPSA, ReverseDiff
         @test sv[1].branch_exit.r ≈ f0.r + _qrot(f0.q, (0, 0, 2))
         @test sv[1].branch_exit.q ≈ f0.q
 
+        # Floor angles: Bmad convention, a positive phi tilts the z-axis toward +Y
+        f = FloorCoords((0, 0, 0), 0.0, 0.3, 0.0)
+        @test _qrot(f.q, (0, 0, 1)) ≈ [0, sin(0.3), cos(0.3)]
+        for (th, ph, ps) in ((0.1, 0.2, 0.3), (-2.5, -1.2, 2.9), (0.0, pi/2, 0.4), (0.0, -pi/2, -0.7))
+            f = FloorCoords((0, 0, 0), th, ph, ps)
+            @test all((f.theta, f.phi, f.psi) .≈ (th, ph, ps))
+        end
+
         # Patch: offsets in the entrance frame, rotation Ry(dy_rot) * Rx(dx_rot) * Rz(dz_rot)
         sv = survey(Branch([Patch(dx=1, dy=0.5, dz=2, dy_rot=0.2)]))
         @test sv[1].branch_exit.r ≈ [1, 0.5, 2]
         @test sv[1].branch_exit.theta ≈ 0.2
         sv = survey(Branch([Patch(dx_rot=0.1, dy_rot=0.2, dz_rot=0.3)]))
         f = sv[1].branch_exit
-        @test all((f.theta, f.phi, f.psi) .≈ (0.2, 0.1, 0.3))
+        @test all((f.theta, f.phi, f.psi) .≈ (0.2, -0.1, 0.3))  # Bmad convention: phi = -x_rot
         @test sv[1].body_exit == sv[1].branch_exit
 
         # Straight element misalignment: about the element center
@@ -2526,7 +2534,7 @@ using ForwardDiff, GTPSA, ReverseDiff
         @test e.s_downstream == 3
         @test (e.body_entrance.r + e.body_exit.r)/2 ≈ [1e-3, 2e-3, 2.1]
         @test e.body_exit.r - e.body_entrance.r ≈ _qrot(e.body_entrance.q, (0, 0, 2))
-        @test isapprox(e.body_entrance.q, FloorCoords((0, 0, 0), 0.02, 0.01, 0.3).q)
+        @test isapprox(e.body_entrance.q, FloorCoords((0, 0, 0), 0.02, -0.01, 0.3).q)
 
         # Bend with tilt_ref and no misalignment: body = branch rotated by tilt_ref
         e = survey(Branch([SBend(L=2, g_ref=0.3, tilt_ref=0.4)]))[1]
