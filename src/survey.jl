@@ -425,7 +425,7 @@ end
 
 #---------------------------------------------------------------------------------------------------
 
-_survey_repr(x::AbstractFloat) = round(x; sigdigits=8)
+_survey_repr(x::AbstractFloat) = round(x; sigdigits=8) + zero(x)  # + zero(x) turns -0.0 into 0.0
 _survey_repr(x) = x
 
 function Base.show(io::IO, b::BranchSurvey)
