@@ -111,6 +111,8 @@ const PROPERTIES_MAP = Dict{Symbol,Type{<:AbstractParams}}(
   :alias => MetaParams,
   :label => MetaParams,
   :description => MetaParams,
+
+  :ignore_params => IgnoreParams,
 )
 
 const PARAMS_MAP = Dict{Symbol,Type{<:AbstractParams}}(
@@ -127,5 +129,6 @@ const PARAMS_MAP = Dict{Symbol,Type{<:AbstractParams}}(
   :FourPotentialParams => FourPotentialParams,
   :EMFieldParams => EMFieldParams,
   :MetaParams => MetaParams,
+  :IgnoreParams => IgnoreParams,
   :InitialBeamlineParams => InitialBeamlineParams
 )
