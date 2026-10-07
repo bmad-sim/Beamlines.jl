@@ -86,17 +86,17 @@ julia> d(c1)
 3
 ```
 
-A deferred expression built from a legible lambda (made with `@λ`) displays as its
-source, and so do the expressions built from it with operators. The display never shows
-a value, since the value a deferred expression evaluates to depends on the `Context`:
+A deferred expression made with `@DefExpr` displays as its source, and so do the
+expressions built from it with operators. The display never shows a value, since the
+value a deferred expression evaluates to depends on the `Context`:
 ```jldoctest
-julia> d = DefExpr(@λ c -> c.a + c.b)
+julia> d = @DefExpr c -> c.a + c.b
 DefExpr{Any}(c -> c.a + c.b)
 
 julia> 2d + 1
 DefExpr{Any}(c -> 2 * (c.a + c.b) + 1)
 
-julia> DefExpr(() -> 1.0) # no @λ, so the source is unknown
+julia> DefExpr(() -> 1.0) # not made with @DefExpr, so the source is unknown
 DefExpr{Float64}(…)
 ```
 
@@ -164,6 +164,40 @@ end
 
 DefExpr(f, ex=nothing) = DefExpr{defexpr_return_type(f)}(f, ex)
 DefExpr(f::LegibleLambda) = DefExpr{defexpr_return_type(f.λ)}(f)
+
+"""
+    @DefExpr args -> body
+    @DefExpr T args -> body
+
+Create a deferred expression that displays as its source. `@DefExpr f` is the same as
+`DefExpr(@λ f)`, and `@DefExpr T f` is the same as `DefExpr{T}(@λ f)`.
+
+## Examples
+```jldoctest
+julia> d = @DefExpr c -> c.a + c.b
+DefExpr{Any}(c -> c.a + c.b)
+
+julia> d(Context(a = 1, b = 2))
+3
+
+julia> @DefExpr Float64 c -> c.k1
+DefExpr{Float64}(c -> c.k1)
+
+julia> scaled(k) = @DefExpr c -> k * c.a; # captured local variables are shown by value
+
+julia> scaled(2.0)
+DefExpr{Any}(c -> 2.0 * c.a)
+```
+"""
+macro DefExpr(args...)
+  length(args) in (1, 2) ||
+    throw(ArgumentError("@DefExpr takes an anonymous function, optionally preceded by a type"))
+  ex = args[end]
+  Meta.isexpr(ex, :->) ||
+    throw(ArgumentError("@DefExpr must be applied to an anonymous function `args -> body`"))
+  f = :(LegibleLambda($(QuoteNode(ex)), $(esc(ex))))
+  return length(args) == 1 ? :(DefExpr($f)) : :(DefExpr{$(esc(args[1]))}($f))
+end
 
 function Base.show(io::IO, d::DefExpr{T}) where {T}
   print(io, "DefExpr{", T, "}(")

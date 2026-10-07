@@ -191,8 +191,19 @@ println(dd())
 
 One can really "go crazy" with deferred expressions if they want to. They can be infinitely nested, and you can write any function that the programming language allows, for example file I/O, or even control system gets/puts with a real accelerator for a digital twin.
 
+A deferred expression made with `DefExpr` displays only its type. One made with the `@DefExpr` macro also displays its source, and so do the deferred expressions built from it. A type can be given before the function to fix the return type:
+
+```@example
+using Beamlines # hide
+d = @DefExpr c -> c.a + c.b
+println(d)
+println(2d + 1)
+println(@DefExpr Float64 c -> c.k1)
+```
+
 ```@docs; canonical=false
 DefExpr
+@DefExpr
 ```
 
 ## Contexts
