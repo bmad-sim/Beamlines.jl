@@ -61,6 +61,8 @@ export AbstractParams,
        scalarize!,
 
        findchildren,
+       findelements,
+       findbranches,
 
        GLOBAL_CONTEXTS
 
@@ -114,6 +116,7 @@ include("misc.jl")
 include("keymaps.jl")
 include("element-name-handling.jl")
 include("search.jl")
+include("name-matching.jl")
 include("element-doc.jl")
 include("io.jl")
 
