@@ -2006,14 +2006,6 @@ using ForwardDiff, GTPSA, ReverseDiff
     @test_throws MethodError ele.ignore_params = [Int]
     @test_throws MethodError Quadrupole(ignore_params=[:Foo])
     @test ele.ignore_params == [BMultipoleParams]
-    # check_ignore_params (used by tracking)
-    @test_throws ErrorException Beamlines.check_ignore_params([:BendParams])
-    @test Beamlines.check_ignore_params([BendParams]) == [BendParams]
-    @test Beamlines.check_ignore_params([UniversalParams, MetaParams, EMFieldParams]) ==
-          [UniversalParams, MetaParams, EMFieldParams]
-    @test_throws ErrorException Beamlines.check_ignore_params([BeamlineParams])
-    @test_throws ErrorException Beamlines.check_ignore_params([InitialBeamlineParams])
-    @test_throws ErrorException Beamlines.check_ignore_params([IgnoreParams])
     # Show
     @test !occursin("ignore_params", sprint(show, Quadrupole(L=0.5)))
     ele.ignore_params = [BMultipoleParams, AlignmentParams]

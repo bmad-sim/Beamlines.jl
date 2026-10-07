@@ -32,24 +32,3 @@ IgnoreParams
 
 # The order of the list does not matter
 Base.isapprox(a::IgnoreParams, b::IgnoreParams) = issetequal(a.ignore_params, b.ignore_params)
-
-# Parameter groups that are always needed and so cannot be ignored
-const NOT_IGNORABLE_PARAMS = (BeamlineParams, InitialBeamlineParams, IgnoreParams)
-
-"""
-    check_ignore_params(ignore_params)
-
-Throws an error if any entry in `ignore_params` is not a parameter group type in `PARAMS_MAP`,
-or is one of the parameter groups that are always needed (`BeamlineParams`,
-`InitialBeamlineParams`, and `IgnoreParams`). Otherwise returns `ignore_params`.
-"""
-function check_ignore_params(ignore_params)
-  for pg in ignore_params
-    if !any(==(pg), values(PARAMS_MAP)) || any(==(pg), NOT_IGNORABLE_PARAMS)
-      valid = sort!([string(v) for v in values(PARAMS_MAP) if !any(==(v), NOT_IGNORABLE_PARAMS)])
-      error("Invalid entry $(repr(pg)) in `ignore_params`. Valid entries are the parameter " *
-            "group types: " * join(valid, ", "))
-    end
-  end
-  return ignore_params
-end
