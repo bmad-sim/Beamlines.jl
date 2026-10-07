@@ -11,7 +11,7 @@ end
 function writebl(io::IO, bl::Beamline)
   c = bl.context
   pgs = [ :UniversalParams, :InitialBeamlineParams, :AlignmentParams, :BendParams, :BMultipoleParams, 
-          :PatchParams, :ApertureParams, :MapParams, :RFParams, :FourPotentialParams, :EMultipoleParams]
+          :PatchParams, :ApertureParams, :MapParams, :RFParams, :FourPotentialParams, :EMultipoleParams, :IgnoreParams]
   println(io, "Beamline([")
   for ele in bl.line
     print(io, " LineElement(")

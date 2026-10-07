@@ -1,4 +1,15 @@
 abstract type AbstractParams end
+
+"""
+    isactive(p) -> Bool
+
+Returns `true` if the parameter group `p` should be used in tracking. `isactive(nothing)`
+is always `false`. By default a parameter group is active, however some parameter groups
+define their own criteria, e.g. `RFParams` is only active if `voltage != 0`, and
+`ApertureParams` is only active if `aperture_active == true`.
+
+The `isactive` function does not check the `ignore_params` list.
+"""
 isactive(::AbstractParams) = true
 isactive(::Nothing) = false
 
@@ -110,6 +121,9 @@ function Base.show(io::IO, ele::LineElement)
   end
 
   for v in vs[idxs]
+    if v isa IgnoreParams && isempty(v.ignore_params)
+      continue # An empty IgnoreParams has no effect, and may have been created just by reading
+    end
     if !(v in pgs)
       pgs[idx] = v
       idx += 1
@@ -148,15 +162,31 @@ function flattened_pdict(ele::LineElement, p=ParamDict())
   return p
 end
 
-function Base.isapprox(a::LineElement, b::LineElement)
+Base.isapprox(a::LineElement, b::LineElement) = isapprox_ignoring(a, b)
+
+"""
+    isapprox_ignoring(a::LineElement, b::LineElement, ignore::Type{<:AbstractParams}...)
+
+Same as `isapprox(a, b)` except that the parameter groups `ignore` are also not compared. 
+`BeamlineParams` and `MetaParams` are never compared, and an `IgnoreParams` with an empty 
+list is treated as no `IgnoreParams`. 
+
+This only affects the comparison: it is unrelated to the `ignore_params` list of 
+`IgnoreParams`.
+"""
+function isapprox_ignoring(a::LineElement, b::LineElement, ignore::Type{<:AbstractParams}...)
   l = flattened_pdict(a)
   r = flattened_pdict(b)
-  L_l = length(l) - (haskey(l, BeamlineParams) ? 1 : 0) - (haskey(l, MetaParams) ? 1 : 0)
-  L_r = length(r) - (haskey(r, BeamlineParams) ? 1 : 0) - (haskey(r, MetaParams) ? 1 : 0)
+  # BeamlineParams and MetaParams do not affect the physics, and an IgnoreParams with an empty
+  # list is the same as no IgnoreParams
+  skip(k, v) = k == BeamlineParams || k == MetaParams || k in ignore || 
+               (v isa IgnoreParams && isempty(v.ignore_params))
+  L_l = count(pair -> !skip(pair...), l)
+  L_r = count(pair -> !skip(pair...), r)
   L_l != L_r && return false
   anymissing = false
   for pair in l
-      if pair[1] == BeamlineParams || pair[1] == MetaParams
+      if skip(pair...)
         continue
       end
 
@@ -349,7 +379,13 @@ function _getproperty(ele::LineElement, key::Symbol, context::Context)
       # Default value will be done by constructing the parameter group 
       # and then just extracting the particular property.
       # This ensures that if a default is changed elsewhere, it is handled properly
-      if PROPERTIES_MAP[key] == BeamlineParams
+      if PROPERTIES_MAP[key] == IgnoreParams
+        # Create IgnoreParams on first access, so that the list returned is stored in the
+        # element and e.g. `push!(ele.ignore_params, BendParams)` works
+        p = IgnoreParams()
+        setindex!(pdict, p, IgnoreParams)
+        return p.ignore_params
+      elseif PROPERTIES_MAP[key] == BeamlineParams
         error("""
           Unable to get key $key from LineElement: element is not in a Beamline. 
           If you placed this element in a Beamline, use `findchildren` to find 
