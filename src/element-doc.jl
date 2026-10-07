@@ -73,16 +73,5 @@ ele.rf_frequency = 1e6
 For detailed descriptions of properties in a given parameter group, see the documentation 
 for that parameter group.
 
-## Ignoring parameter groups with `ignore_params`
-
-Parameter groups can be ignored in tracking, without removing them from the element, by
-listing them in the `ignore_params` property of the `IgnoreParams` parameter group:
-
-```julia
-ele = Quadrupole(L=0.5, Kn1=0.3, x_offset=1e-3)
-ele.ignore_params = [AlignmentParams] # Track as if the quadrupole were not misaligned
-```
-
-See the documentation for `IgnoreParams` for details.
 """
 LineElement
