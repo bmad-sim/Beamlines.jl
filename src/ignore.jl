@@ -25,16 +25,6 @@ ele.ignore_params = []                 # Use all parameter groups again
 group may be given without a list, e.g. `ele.ignore_params = AlignmentParams`.
 
 
-An element without `IgnoreParams` ignores nothing. Reading `ele.ignore_params` from an
-element without `IgnoreParams` adds an `IgnoreParams` with an empty list to the element, so
-that e.g. `push!(ele.ignore_params, BendParams)` always works. An `IgnoreParams` with an empty
-list is not shown when the element is printed, and is equal (`≈`) to no `IgnoreParams`.
-
-When an element is placed in a `Beamline`, all instances of that element in the `Beamline`
-share the `IgnoreParams` of the original element, as with any other parameter group.
-Setting `ignore_params` on the original element, or on any of its instances in a
-`Beamline`, affects every instance.
-
 ## Properties
 $(PROPSDOC(IgnoreParams))
 """
