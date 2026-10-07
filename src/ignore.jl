@@ -24,10 +24,6 @@ ele.ignore_params = []                 # Use all parameter groups again
 `Quadrupole(L=0.5, Kn1=0.3, ignore_params=[BMultipoleParams])`, and a single parameter
 group may be given without a list, e.g. `ele.ignore_params = AlignmentParams`.
 
-Only parameter group types (e.g. `BMultipoleParams`, not `:BMultipoleParams`) are allowed in
-`ignore_params`. `BeamlineParams`, `InitialBeamlineParams`, and `IgnoreParams` are not
-allowed, since they are always needed. The list is checked when it is set, and again at the
-start of tracking through each element, which catches invalid entries added with e.g. `push!`.
 
 An element without `IgnoreParams` ignores nothing. Reading `ele.ignore_params` from an
 element without `IgnoreParams` adds an `IgnoreParams` with an empty list to the element, so
