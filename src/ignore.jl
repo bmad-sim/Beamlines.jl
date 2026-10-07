@@ -21,8 +21,8 @@ ele.ignore_params = []                 # Use all parameter groups again
 ```
 
 `ignore_params` can also be set as a keyword argument, e.g.
-`Quadrupole(L=0.5, Kn1=0.3, ignore_params=[BMultipoleParams])`, and a single parameter
-group may be given without a list, e.g. `ele.ignore_params = AlignmentParams`.
+`Quadrupole(L=0.5, Kn1=0.3, ignore_params=[BMultipoleParams])`. The value must be a vector,
+even for a single parameter group, e.g. `ele.ignore_params = [AlignmentParams]`.
 
 
 ## Properties
@@ -52,21 +52,4 @@ function check_ignore_params(ignore_params)
     end
   end
   return ignore_params
-end
-
-"""
-    ignore_params_list(value) -> Vector{Type{<:AbstractParams}}
-
-Converts `value`, which may be a parameter group type or an iterable of parameter group
-types, into a new list with any duplicates removed, and checks it with `check_ignore_params`.
-Used when setting the `ignore_params` property of a `LineElement`.
-"""
-function ignore_params_list(value)
-  # Always construct a new vector so that e.g. `ele.ignore_params = ele.ignore_params` is safe
-  items = value isa Type ? (value,) : value
-  list = Type{<:AbstractParams}[]
-  for pg in check_ignore_params(items)
-    any(==(pg), list) || push!(list, pg)
-  end
-  return list
 end

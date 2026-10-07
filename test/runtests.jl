@@ -1980,10 +1980,12 @@ using ForwardDiff, GTPSA, ReverseDiff
     @test isactive(ele.AlignmentParams) # isactive does not check ignore_params
     push!(ele.ignore_params, BMultipoleParams)
     @test ele.ignore_params == [AlignmentParams, BMultipoleParams]
-    # Single type, duplicates, parametric types, and aliasing
-    ele.ignore_params = ApertureParams
+    # Only vectors of parameter group types are allowed, and parametric types
+    ele.ignore_params = [ApertureParams]
+    @test_throws MethodError ele.ignore_params = BendParams
+    @test_throws MethodError ele.ignore_params = (BendParams,)
     @test ele.ignore_params == [ApertureParams]
-    ele.ignore_params = (BendParams, BendParams, RFParams, MapParams)
+    ele.ignore_params = [BendParams, RFParams, MapParams]
     @test ele.ignore_params == [BendParams, RFParams, MapParams]
     ele.ignore_params = ele.ignore_params
     @test ele.ignore_params == [BendParams, RFParams, MapParams]
@@ -1998,20 +2000,20 @@ using ForwardDiff, GTPSA, ReverseDiff
     # Keyword argument
     ele = Quadrupole(L=0.5, Kn1=0.3, ignore_params=[BMultipoleParams])
     @test ele.ignore_params == [BMultipoleParams]
-    # Invalid entries throw and leave the list unchanged
-    @test_throws ErrorException ele.ignore_params = [:BMultipoleParams] # Symbols not allowed
-    @test_throws ErrorException ele.ignore_params = "BMultipoleParams"
-    @test_throws ErrorException ele.ignore_params = [Int]
-    @test_throws ErrorException Quadrupole(ignore_params=[:Foo])
+    # Entries that are not parameter group types throw and leave the list unchanged
+    @test_throws MethodError ele.ignore_params = [:BMultipoleParams] # Symbols not allowed
+    @test_throws MethodError ele.ignore_params = "BMultipoleParams"
+    @test_throws MethodError ele.ignore_params = [Int]
+    @test_throws MethodError Quadrupole(ignore_params=[:Foo])
     @test ele.ignore_params == [BMultipoleParams]
+    # check_ignore_params (used by tracking)
     @test_throws ErrorException Beamlines.check_ignore_params([:BendParams])
     @test Beamlines.check_ignore_params([BendParams]) == [BendParams]
-    # Any parameter group is allowed, except those always needed
-    ele.ignore_params = [UniversalParams, MetaParams, EMFieldParams]
-    @test ele.ignore_params == [UniversalParams, MetaParams, EMFieldParams]
-    @test_throws ErrorException ele.ignore_params = [BeamlineParams]
-    @test_throws ErrorException ele.ignore_params = [InitialBeamlineParams]
-    @test_throws ErrorException ele.ignore_params = [IgnoreParams]
+    @test Beamlines.check_ignore_params([UniversalParams, MetaParams, EMFieldParams]) ==
+          [UniversalParams, MetaParams, EMFieldParams]
+    @test_throws ErrorException Beamlines.check_ignore_params([BeamlineParams])
+    @test_throws ErrorException Beamlines.check_ignore_params([InitialBeamlineParams])
+    @test_throws ErrorException Beamlines.check_ignore_params([IgnoreParams])
     # Show
     @test !occursin("ignore_params", sprint(show, Quadrupole(L=0.5)))
     ele.ignore_params = [BMultipoleParams, AlignmentParams]
