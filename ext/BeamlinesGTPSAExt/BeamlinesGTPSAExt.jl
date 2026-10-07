@@ -1,6 +1,6 @@
 module BeamlinesGTPSAExt
 using GTPSA
-using Beamlines: Species, massof, chargeof, C_LIGHT, DefExpr
+using Beamlines: Species, massof, chargeof, C_LIGHT, DefExpr, NULL_CONTEXT, defexpr_call_expr
 import Beamlines: R_to_E, E_to_R, pc_to_R, R_to_pc, E_to_pc, pc_to_E, R_to_v, scalarize
 
 # Overrides for TPSA:
@@ -16,7 +16,7 @@ R_to_v(species::Species, R::TPS) = @FastGTPSA abs(chargeof(species))*C_LIGHT / s
 for t = (:unit, :sincu, :sinhc, :sinhcu, :asinc, :asincu, :asinhc, :asinhcu, :erf, 
          :erfc, :erfcx, :erfi, :wf, :rect)
 @eval begin
-GTPSA.$t(d::DefExpr) = DefExpr(()-> ($t)(d()))
+GTPSA.$t(d::DefExpr) = DefExpr((c=NULL_CONTEXT)-> ($t)(d(c)), defexpr_call_expr($(QuoteNode(t)), d))
 end
 end
 
