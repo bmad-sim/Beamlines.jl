@@ -16,6 +16,11 @@ mutable struct _Lattice{B<:_AbstractBranch}
     # Context merged below is the same either way.
     sources  = collect(branches)
     branches = _adopt ? collect(branches) : B[copy(br) for br in branches]
+    # Name before connecting forks so error messages show the names. Appended Branches are 
+    # named by `_connect_forks!`.
+    for (i, br) in enumerate(branches)
+      if br.name == ""; br.name = "b$i"; end
+    end
     # Add Branches forked to that are not in `branches`, and connect forks to the Lattice elements
     _connect_forks!(branches, sources)
 
@@ -25,7 +30,6 @@ mutable struct _Lattice{B<:_AbstractBranch}
       setfield!(br, :lattice, lattice)
       setfield!(br, :lattice_index, i)
       setfield!(br, :context, NULL_CONTEXT) # The Context is stored only in the Lattice
-      if br.name == ""; br.name = "b$i"; end
     end
 
     setfield!(lattice, :context, context)
@@ -51,7 +55,6 @@ mutable struct _Branch{T<:_AbstractBeamline} <: _AbstractBranch
   const beamlines::ReadOnlyVector{T,Vector{T}}
   lattice::_Lattice{_Branch{T}} # This should be HARD to change, not allowed easily
   lattice_index::Int            # This should be HARD to change, not allowed easily
-  from_fork_element::Union{LineElement,Nothing} # Fork element that caused the Branch to be added to the Lattice
   context::Context 
   function _Branch{T}(beamlines::Vector{T}; name::String = "", context=Context(), 
                       _adopt::Bool = false) where {T<:_AbstractBeamline}
@@ -62,7 +65,7 @@ mutable struct _Branch{T<:_AbstractBeamline} <: _AbstractBranch
     # Context merged below is the same either way.
     beamlines = _adopt ? beamlines : T[copy(bl) for bl in beamlines]
 
-    branch = new(name, ReadOnlyVector(beamlines), NULL_LATTICE, -1, nothing, context)
+    branch = new(name, ReadOnlyVector(beamlines), NULL_LATTICE, -1, context)
     for (i, bl) in enumerate(beamlines)
       context = merge(bl.context, context)
       setfield!(bl, :branch, branch)

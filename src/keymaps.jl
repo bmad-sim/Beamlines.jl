@@ -80,8 +80,8 @@ const PROPERTIES_MAP = Dict{Symbol,Type{<:AbstractParams}}(
   :dy_rot => PatchParams,
   :dz_rot => PatchParams,
 
-  :fork_to_element          => ForkParams,
-  :fork_direction           => ForkParams,
+  :fork_connect_element     => ForkParams,
+  :fork_orientation         => ForkParams,
   :fork_propagate_reference => ForkParams,
 
   :x1_limit         => ApertureParams,

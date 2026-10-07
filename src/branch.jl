@@ -12,8 +12,6 @@ one after the other.
 - `beamlines`: Vector of the beamlines in the `Branch`
 - `lattice`: `Lattice` that the branch is placed in, if any
 - `lattice_index`: Index of the branch in the `Lattice`, if in a `Lattice`
-- `from_fork_element`: The fork element (in the `Lattice`) whose fork caused the `Branch`
-  to be added to the `Lattice`. `nothing` if the `Branch` was not added due to a fork
 - `context`: `Context` shared by the `Branch` and all of its `Beamline`s, and by the whole
     `Lattice` if the `Branch` is in one. Setting the `context` of any of them sets it for
     all of them.
@@ -47,42 +45,89 @@ Internal: used by the `Lattice` constructor. `branches` are the `Branch`es of th
 and `sources[i]` is the `Branch` that `branches[i]` was copied from (or `branches[i]` itself 
 if it was not copied).
 
-For each element in `branches` with a `fork_to_element`, the destination `Branch` is found:
-- If the destination element is in the source of the fork's own `Branch`, the fork connects 
+For each fork element (element with a `fork_connect_element`) in `branches`, the 
+destination `Branch` containing the connected element is found. The fork element and the 
+connected element must both have zero length, and at least one of them must have kind 
+`"Fork"`:
+- If the connected element is in the source of the fork's own `Branch`, the fork connects 
   within that `Branch`.
-- Else if the destination is in a `Branch` (or the source of a `Branch`) of the `Lattice`, 
-  the fork connects to that `Branch`.
-- Else a copy of the destination `Branch` is appended to `branches`, with `from_fork_element`
-  set to the fork element. Forks in the appended `Branch` are processed in turn.
+- Else if the connected element is in a `Branch` (or the source of a `Branch`) of the 
+  `Lattice`, the fork connects to that `Branch`.
+- Else a copy of the destination `Branch` is appended to `branches`. Forks in the appended 
+  `Branch` are processed in turn.
 
-The fork element in the `Lattice` is then given its own `ForkParams` whose `fork_to_element` 
-is the corresponding element in the `Lattice`. The elements the `Lattice` was constructed
-from are not modified.
+The fork element in the `Lattice` is then given its own `ForkParams` whose 
+`fork_connect_element` is the corresponding connected element in the `Lattice`. After all 
+forks are connected, each connected element in the `Lattice` that is not itself a fork 
+element is given its own `ForkParams` whose `fork_connect_element` is the fork element. 
+It is an error for more than one fork element to connect to the same non-fork element. 
+The elements the `Lattice` was constructed from are not modified.
 """
 function _connect_forks!(branches::AbstractVector{B}, sources::AbstractVector{B}) where {B<:_AbstractBranch}
+  forks = Tuple{LineElement,LineElement}[]  # (fork element, connected element) in the Lattice
   i = 1
   while i <= length(branches)  # `branches` may grow as forks add new Branches
     for bl in branches[i].beamlines, ele in bl.line
       fp = ele.ForkParams
-      (isnothing(fp) || isnothing(fp.fork_to_element)) && continue
-      dest = fp.fork_to_element
+      (isnothing(fp) || isnothing(fp.fork_connect_element)) && continue
+      if !iszero(ele.L)
+        error("""
+          Unable to connect fork element $(_ele_location_repr(ele)): 
+          the fork element has non-zero length L = $(ele.L). A fork element must have zero length.
+        """)
+      end
+      dest = fp.fork_connect_element
       dest_pdict = getfield(dest, :pdict)
       if !haskey(dest_pdict, BeamlineParams) || getfield((dest_pdict[BeamlineParams]::BeamlineParams).beamline, :branch_index) == -1
         error("""
-          Unable to connect fork element $(repr(ele.name)) in branch $(repr(branches[i].name)): 
-          fork_to_element $(repr(dest.name)) is not in a Branch. The fork_to_element must be an 
-          element in a Branch, e.g. found using `findchildren`.
+          Unable to connect fork element $(_ele_location_repr(ele)): 
+          fork_connect_element $(_ele_location_repr(dest)) is not in a Branch. The fork_connect_element 
+          must be an element in a Branch, e.g. found using `findchildren`.
         """)
       end
       dest_bp = dest_pdict[BeamlineParams]::BeamlineParams
       dest_bl = dest_bp.beamline
       j = _fork_branch_index(branches, sources, i, getfield(dest_bl, :branch), ele)
       target = branches[j].beamlines[getfield(dest_bl, :branch_index)].line[dest_bp.beamline_index]
+      if ele.kind != "Fork" && target.kind != "Fork"
+        error("""
+          Unable to connect fork element $(_ele_location_repr(ele)): neither it nor the 
+          fork_connect_element $(_ele_location_repr(target)) is a Fork element. At least one 
+          element of a connected pair must have kind "Fork".
+        """)
+      end
+      if !iszero(target.L)
+        error("""
+          Unable to connect fork element $(_ele_location_repr(ele)): 
+          fork_connect_element $(_ele_location_repr(target)) has non-zero length L = $(target.L). 
+          The fork_connect_element must have zero length.
+        """)
+      end
       # Set in the fork element's own pdict: setting the property would write through 
       # InheritParams to the element the Lattice was constructed from.
-      getfield(ele, :pdict)[ForkParams] = ForkParams(target, fp.fork_direction, fp.fork_propagate_reference)
+      getfield(ele, :pdict)[ForkParams] = ForkParams(target, fp.fork_orientation, fp.fork_propagate_reference)
+      push!(forks, (ele, target))
     end
     i += 1
+  end
+
+  # Point each connected element back to its fork element. This is done after all forks are 
+  # connected so that a connected element that is itself a fork element keeps its own 
+  # fork_connect_element.
+  fork_eles = Base.IdSet{LineElement}(first.(forks))
+  connected_from = IdDict{LineElement,LineElement}()
+  for (ele, target) in forks
+    target in fork_eles && continue
+    if haskey(connected_from, target)
+      error("""
+        Unable to connect fork element $(_ele_location_repr(ele)): connected element $(_ele_location_repr(target)) 
+        is already connected to by fork element $(_ele_location_repr(connected_from[target])). Only one 
+        fork element may connect to an element that is not itself a fork element.
+      """)
+    end
+    connected_from[target] = ele
+    fp = getfield(ele, :pdict)[ForkParams]::ForkParams
+    getfield(target, :pdict)[ForkParams] = ForkParams(ele, fp.fork_orientation, fp.fork_propagate_reference)
   end
   return branches
 end
@@ -96,8 +141,8 @@ function _fork_branch_index(branches, sources, i, dest_branch, ele)
   js = findall(j -> sources[j] === dest_branch || branches[j] === dest_branch, eachindex(branches))
   if length(js) > 1
     error("""
-      Unable to connect fork element $(repr(ele.name)) in branch $(repr(branches[i].name)): 
-      the Branch containing the fork_to_element appears more than once in the Lattice 
+      Unable to connect fork element $(_ele_location_repr(ele)): 
+      the Branch containing the fork_connect_element appears more than once in the Lattice 
       (at indices $js) so the destination is ambiguous.
     """)
   elseif length(js) == 1
@@ -105,8 +150,8 @@ function _fork_branch_index(branches, sources, i, dest_branch, ele)
   end
   push!(sources, dest_branch)
   new_branch = copy(dest_branch)
-  setfield!(new_branch, :from_fork_element, ele)
   push!(branches, new_branch)
+  if new_branch.name == ""; new_branch.name = "b$(length(branches))"; end
   return length(branches)
 end
 
@@ -147,10 +192,6 @@ function Base.show(io::IO, branch::Branch)
   lattice_index = getfield(branch, :lattice_index)
   if lattice_index != -1
     lines_used += 1; println(io, " lattice_index", " = ", lattice_index)
-  end
-  from_fork_element = getfield(branch, :from_fork_element)
-  if !isnothing(from_fork_element)
-    lines_used += 1; println(io, " from_fork_element", " = ", repr(from_fork_element.name))
   end
 
   offset = 6
@@ -342,7 +383,7 @@ end
 
 #---------------------------------------------------------------------------------------------------
 
-Base.propertynames(::Branch) = (:name, :beamlines, :lattice, :lattice_index, :from_fork_element, :context)
+Base.propertynames(::Branch) = (:name, :beamlines, :lattice, :lattice_index, :context)
 
 function Base.getproperty(branch::Branch, key::Symbol)
   prop = trygetproperty(branch, key)
@@ -355,7 +396,7 @@ end
 function trygetproperty(b::Branch, key::Symbol)
   if key == :context
     return _context(b)
-  elseif key in (:beamlines, :lattice, :lattice_index, :from_fork_element, :name)
+  elseif key in (:beamlines, :lattice, :lattice_index, :name)
     field = getfield(b, key)
     if key in (:lattice, :lattice_index) && (field == -1 || field === NULL_LATTICE)
       return GetError("Unable to get $key: Branch is not in a Lattice")
@@ -376,7 +417,7 @@ function Base.setproperty!(b::Branch, key::Symbol, value)
     else  # The Context is stored only in the Lattice
       setfield!(getfield(b, :lattice), :context, value)
     end
-  elseif key in (:beamlines, :lattice, :lattice_index, :from_fork_element)
+  elseif key in (:beamlines, :lattice, :lattice_index)
     error("Unable to set property $key: this field is protected")
   else
     error("Unable to set property $key of Branch: Branch does not have this property")
@@ -397,11 +438,17 @@ a name are named `"b<i>"`, where `<i>` is the index of the branch. The contexts 
 `Branch`es, and all of their `Beamline`s. Variables in `context` take precedence over those
 in the `Branch`es.
 
-Fork elements (elements with a `ForkParams` whose `fork_to_element` is set) add and connect
-branches. The `fork_to_element` must be an element in a `Branch`. If that `Branch` is not
-in `branches`, a copy of it is appended to the `Lattice` with its `from_fork_element` set to
-the fork element, and any forks in it are processed in turn. Each fork element in the `Lattice` is given its own `ForkParams` whose
-`fork_to_element` is the corresponding element in the `Lattice`. A fork to an element in
+Fork elements (elements with a `ForkParams` whose `fork_connect_element` is set) add and connect
+branches. The fork element must have zero length, and the `fork_connect_element` must be an 
+element in a `Branch` and must have zero length. At least one of the two elements must be a 
+`Fork` element (have kind `"Fork"`): two non-`Fork` elements cannot be connected. If that `Branch` is not
+in `branches`, a copy of it is appended to the `Lattice`, and any forks in it are processed
+in turn. Each fork element in the `Lattice` is given its own `ForkParams` whose
+`fork_connect_element` is the corresponding connected element in the `Lattice`. Each 
+connected element in the `Lattice` that is not itself a fork element is given its own 
+`ForkParams` whose `fork_connect_element` is the fork element, and whose `fork_orientation` 
+and `fork_propagate_reference` are those of the fork element. It is an error for more than 
+one fork element to connect to the same non-fork element. A fork to an element in
 the fork's own `Branch` connects within that `Branch`, even if the `Branch` appears more
 than once in `branches`. Otherwise, it is an error if the destination `Branch` appears more
 than once.
@@ -418,7 +465,7 @@ Forking from a ring to an extraction line:
 ```julia
 extraction = Branch([Marker(name="ext_start"), Drift(L=3)]; name="extraction")
 ring = Branch([Marker(E_ref=10e9, species_ref=Species("electron")), Drift(L=1),
-               Fork(fork_to_element=extraction.beamlines[1].line[1]), Drift(L=1)]; name="ring")
+               Fork(fork_connect_element=extraction.beamlines[1].line[1]), Drift(L=1)]; name="ring")
 
 lattice = Lattice([ring]) # Branches "ring" and "extraction"
 ```
