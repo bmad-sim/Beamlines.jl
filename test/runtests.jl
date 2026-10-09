@@ -1408,8 +1408,8 @@ using ForwardDiff, GTPSA, ReverseDiff
     ele2a = LineElement()
     ele2b = LineElement()
     branch = Branch([ele1, ele1a, ele2, ele2a, ele2b])
-    @test all(isapprox_ignoring.(branch.beamlines[1].line, [ele1, ele1a], InitialBeamlineParams))
-    @test all(isapprox_ignoring.(branch.beamlines[2].line, [ele2, ele2a, ele2b], InitialBeamlineParams))
+    @test all(branch.beamlines[1].line .≈ [ele1, ele1a])
+    @test all(branch.beamlines[2].line .≈ [ele2, ele2a, ele2b])
     bl1 = branch.beamlines[1]
     bl2 = branch.beamlines[2]
     @test bl2.E_ref == 7e9
