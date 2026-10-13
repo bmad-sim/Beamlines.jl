@@ -19,24 +19,26 @@ must both have zero length.
 
 A `Fork` element (kind `"Fork"`) marks where particles can leave a branch and travel to 
 another branch. At least one element of a connected pair must be a `Fork` element: two 
-non-`Fork` elements cannot be connected to each other.
+non-`Fork` elements cannot be connected to each other. Each element may be in only one 
+connected pair: if elements A and B are connected, no other element can connect to A or B.
 
 When a `Lattice` is constructed, the connected element in the `Lattice` is given a 
 `ForkParams` whose `fork_connect_element` is the fork element, with the same 
 `fork_propagate_reference` as the fork element. This is not done if 
 the connected element is itself a fork element. See `Lattice`.
 
-If `fork_propagate_reference` is `true` and the connected element is the beginning (first) 
-element of its `Branch`, the reference species and energy of the fork element are propagated 
-to that `Branch`: wherever the reference species or energy of the `Branch` is not set, it is 
-that at the fork element. If the first `Beamline` of the `Branch` sets a relative energy 
-(e.g. `dE_ref`), it is relative to the energy at the fork element. The values are looked up 
-when they are read, so changes upstream of the fork element are seen in the `Branch`. 
-Nothing is propagated if the connected element is not the beginning element of its `Branch`.
+In a `Lattice`, if the beginning (first) element of a `Branch` is connected to a `Fork` 
+element whose `fork_propagate_reference` is `true`, the reference species and energy at the 
+`Fork` element are propagated to that `Branch`: wherever the reference species or energy of 
+the `Branch` is not set, it is that at the `Fork` element. The beginning element may itself 
+be a `Fork` element. If the first `Beamline` of the `Branch` sets a relative energy (e.g. 
+`dE_ref`), it is relative to the energy at the `Fork` element. The values are looked up when 
+they are read, so changes upstream of the `Fork` element are seen in the `Branch`. Nothing is 
+propagated to a `Branch` whose beginning element is not connected to a `Fork` element.
 
-Forks are uni-directional: particles can travel from the fork element to the connected 
-element, but not in reverse. A bi-directional link requires two fork elements, each having 
-the other as its connected element.
+Particles travel from a `Fork` element to the element it is connected to, but not in reverse 
+unless that element is also a `Fork` element. A bi-directional link is two `Fork` elements 
+connected to each other.
 
 `fork_connect_element` is stored by reference: copying a `ForkParams` (including via 
 `deepcopy`) does not copy the connected element.
@@ -114,14 +116,16 @@ function _try_get_upstream_ref(beamline::Beamline, key::Symbol)
   return GetError("Unable to get $key: $key is not set nor inferrable")
 end
 
-# The fork element whose reference propagates to the beginning element `ele` of a Branch, else 
-# `nothing`. This is the case if `ele` and the fork element are connected to each other and 
-# the fork element has `fork_propagate_reference` set. In a `Lattice`, the beginning element 
-# of a Branch forked to points back to the fork element (see `_connect_forks!`).
+# The Fork element whose reference propagates to the beginning element `ele` of a Branch, else 
+# `nothing`. This is the case if `ele` and a Fork element (kind "Fork") are connected to each 
+# other and the Fork element has `fork_propagate_reference` set. In a `Lattice`, the two 
+# elements of a connected pair point at each other (see `_connect_forks!`), and since an 
+# element is in at most one pair, the partner is unique. `ele` may itself be a Fork element.
 function _propagating_fork(ele::LineElement)
   fp = ele.ForkParams
   (isnothing(fp) || isnothing(fp.fork_connect_element)) && return nothing
   fork = fp.fork_connect_element
+  fork.kind == "Fork" || return nothing  # Particles do not enter the Branch through `ele`
   fork_fp = fork.ForkParams
   if isnothing(fork_fp) || fork_fp.fork_connect_element !== ele || !fork_fp.fork_propagate_reference
     return nothing

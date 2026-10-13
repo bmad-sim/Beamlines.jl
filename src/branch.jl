@@ -60,8 +60,8 @@ The fork element in the `Lattice` is then given its own `ForkParams` whose
 `fork_connect_element` is the corresponding connected element in the `Lattice`. After all 
 forks are connected, each connected element in the `Lattice` that is not itself a fork 
 element is given its own `ForkParams` whose `fork_connect_element` is the fork element. 
-It is an error for more than one fork element to connect to the same non-fork element. 
-The elements the `Lattice` was constructed from are not modified.
+Each element may be in only one connected pair: it is an error for an element to be fork 
+connected to more than one other element. The elements the `Lattice` was constructed from are not modified.
 """
 function _connect_forks!(branches::AbstractVector{B}, sources::AbstractVector{B}) where {B<:_AbstractBranch}
   forks = Tuple{LineElement,LineElement}[]  # (fork element, connected element) in the Lattice
@@ -111,21 +111,25 @@ function _connect_forks!(branches::AbstractVector{B}, sources::AbstractVector{B}
     i += 1
   end
 
-  # Point each connected element back to its fork element. This is done after all forks are 
-  # connected so that a connected element that is itself a fork element keeps its own 
-  # fork_connect_element.
-  fork_eles = Base.IdSet{LineElement}(first.(forks))
-  connected_from = IdDict{LineElement,LineElement}()
-  for (ele, target) in forks
-    target in fork_eles && continue
-    if haskey(connected_from, target)
+  # Each element may be in only one connected pair. Two elements pointing at each other are 
+  # the same pair.
+  partner = IdDict{LineElement,LineElement}()
+  for (ele, target) in forks, (a, b) in ((ele, target), (target, ele))
+    if haskey(partner, a) && partner[a] !== b
       error("""
-        Unable to connect fork element $(_ele_location_repr(ele)): connected element $(_ele_location_repr(target)) 
-        is already connected to by fork element $(_ele_location_repr(connected_from[target])). Only one 
-        fork element may connect to an element that is not itself a fork element.
+        Unable to connect fork element $(_ele_location_repr(ele)) to $(_ele_location_repr(target)): 
+        $(_ele_location_repr(a)) is already connected to $(_ele_location_repr(partner[a])). 
+        An element may be fork connected to only one other element.
       """)
     end
-    connected_from[target] = ele
+    partner[a] = b
+  end
+
+  # Point each connected element back to its fork element. A connected element that is itself 
+  # a fork element already points back, so keeps its own ForkParams.
+  fork_eles = Base.IdSet{LineElement}(first.(forks))
+  for (ele, target) in forks
+    target in fork_eles && continue
     fp = getfield(ele, :pdict)[ForkParams]::ForkParams
     getfield(target, :pdict)[ForkParams] = ForkParams(ele, fp.fork_propagate_reference)
   end
@@ -447,8 +451,9 @@ in turn. Each fork element in the `Lattice` is given its own `ForkParams` whose
 `fork_connect_element` is the corresponding connected element in the `Lattice`. Each 
 connected element in the `Lattice` that is not itself a fork element is given its own 
 `ForkParams` whose `fork_connect_element` is the fork element, and whose 
-`fork_propagate_reference` is that of the fork element. It is an error for more than 
-one fork element to connect to the same non-fork element. A fork to an element in
+`fork_propagate_reference` is that of the fork element. Each element may be in only one 
+connected pair: if elements A and B are connected, no other element can connect to A or B. 
+A fork to an element in
 the fork's own `Branch` connects within that `Branch`, even if the `Branch` appears more
 than once in `branches`. Otherwise, it is an error if the destination `Branch` appears more
 than once.

@@ -1817,8 +1817,13 @@ using ForwardDiff, GTPSA, ReverseDiff
     end
     # Ambiguous destination
     @test_throws ErrorException Lattice([Branch([Fork(fork_connect_element=ext_start)]), ext, ext])
-    # More than one fork connecting to the same non-fork element
-    @test_throws ErrorException Lattice([Branch([Fork(fork_connect_element=ext_start), Fork(fork_connect_element=ext_start)])])
+    # An element may be in only one connected pair
+    @test_throws "only one other element" Lattice([Branch([Fork(fork_connect_element=ext_start), Fork(fork_connect_element=ext_start)])])
+    two_br = Branch([Fork(name="p"), Fork(name="q")])
+    @test_throws "only one other element" Lattice([Branch([Fork(fork_connect_element=two_br[1])]), 
+                                                   Branch([Fork(fork_connect_element=two_br[1])])])
+    chain_br = Branch([Fork(name="r", fork_connect_element=ext_start)])
+    @test_throws "only one other element" Lattice([Branch([Fork(fork_connect_element=chain_br[1])])])
     # Connected element with non-zero length
     ext_len = Branch([Drift(name="d", L=1.5)])
     @test_throws "non-zero length" Lattice([Branch([Fork(fork_connect_element=ext_len.beamlines[1].line[1])])])
@@ -1914,6 +1919,25 @@ using ForwardDiff, GTPSA, ReverseDiff
     @test lat.branches[2][2].E_ref == 3e9
     @test lat.branches[2][2].species_ref == Species("electron")
 
+    # Beginning element that is a Fork, connected to by a Fork: propagated
+    ext_f = Branch([Fork(name="ext_fork"), Drift(L=1)])
+    lat = Lattice([Branch([Marker(species_ref=Species("electron"), E_ref=1e9), Fork(fork_connect_element=ext_f[1])])])
+    @test lat.branches[2][1].fork_connect_element === lat.branches[1][2]
+    @test lat.branches[2][2].E_ref == 1e9
+    @test lat.branches[2][2].species_ref == Species("electron")
+    # Beginning Fork element connecting to a Fork element (bi-directional): propagated
+    ring_f = Branch([Marker(species_ref=Species("electron"), E_ref=1e9), Fork(name="ring_fork")]; name="ring_f")
+    ext_f2 = Branch([Fork(name="ext_fork2", fork_connect_element=ring_f[2]), Drift(L=1)])
+    lat = Lattice([ring_f, ext_f2])
+    @test lat.branches[2][2].E_ref == 1e9
+    # Beginning Fork element connecting to a non-Fork element: particles leave the branch 
+    # there, so nothing is propagated into it
+    ring_m = Branch([Marker(species_ref=Species("electron"), E_ref=1e9), Marker(name="ring_marker")]; name="ring_m")
+    ext_f3 = Branch([Fork(name="exit_fork", fork_connect_element=ring_m[2]), Drift(L=1)])
+    lat = Lattice([ring_m, ext_f3])
+    @test lat.branches[1][2].fork_connect_element === lat.branches[2][1]
+    @test_throws ErrorException lat.branches[2][2].E_ref
+
     # writebl round trip of forks
     function writebl_roundtrip(lat)
       m = Module()
@@ -1932,14 +1956,12 @@ using ForwardDiff, GTPSA, ReverseDiff
     @test !lat2.branches[1][3].fork_propagate_reference
     @test !lat2.branches[2][1].fork_propagate_reference
     @test lat2.branches[2][2].L == 3
-    # Non-Fork element connected to a Fork that has its own fork_connect_element
-    x_br = Branch([Marker(name="x")]; name="x_br")
-    f_br = Branch([Fork(name="f", fork_connect_element=x_br[1])]; name="f_br")
+    # Non-Fork element connected to a Fork
+    f_br = Branch([Fork(name="f")]; name="f_br")
     lat = Lattice([Branch([Marker(name="m", fork_connect_element=f_br[1])]; name="m_br")])
     lat2 = writebl_roundtrip(lat)
     @test lat2.branches[1][1].fork_connect_element === lat2.branches[2][1]
-    @test lat2.branches[2][1].fork_connect_element === lat2.branches[3][1]
-    @test lat2.branches[3][1].fork_connect_element === lat2.branches[2][1]
+    @test lat2.branches[2][1].fork_connect_element === lat2.branches[1][1]
     # Mutual Forks with different settings write both connections
     a_fork = Fork(name="a_fork")
     b_fork = Fork(name="b_fork", fork_propagate_reference=false)
