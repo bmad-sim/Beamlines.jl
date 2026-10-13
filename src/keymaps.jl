@@ -87,7 +87,6 @@ const PROPERTIES_MAP = Dict{Symbol,Type{<:AbstractParams}}(
   :aperture_shape   => ApertureParams,
   :aperture_at      => ApertureParams,
   :aperture_shifts_with_body => ApertureParams,
-  :aperture_active  => ApertureParams,
 
   :voltage => RFParams,
   :phi0 => RFParams,
