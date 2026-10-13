@@ -249,6 +249,22 @@ bl[qf][1].Kn1 # Index the beamline with the `qf` to get all child `qf`s
 Context
 ```
 
+## Survey
+
+`survey` computes the floor (global) positions and orientations of the branch and element body coordinate systems at the ends of every element of a `Branch` or `Lattice`. The result is a separate data structure: a `LatticeSurvey` holds a `BranchSurvey` for each branch, which holds an `ElementSurvey` for each element. It is not stored in the lattice and is not updated when the lattice changes.
+
+```@repl survey
+using Beamlines # hide
+ring = Branch([SBend(L=2, g_ref=pi/4), Quadrupole(L=0.5, x_offset=1e-3), SBend(L=2, g_ref=pi/4)]; name="ring");
+sv = survey(Lattice([ring]))
+e = sv["ring"][2];
+e.body_exit.r - e.branch_exit.r  # x_offset in the body frame
+e.branch_exit.theta
+```
+```@docs; canonical=false
+survey
+```
+
 ## Parameters
 
 `Beamlines.jl` supports a continually-growing list of parameters to define accelerator elements. To see a full list of the parameters you can set, look at the docstring for the `LineElement` type. This can be retrieved in a Julia session using `Doc.docs(LineElement)`.
