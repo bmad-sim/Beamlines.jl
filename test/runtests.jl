@@ -1737,16 +1737,15 @@ using ForwardDiff, GTPSA, ReverseDiff
     ele = LineElement()
     @test isnothing(ele.ForkParams)
     @test isnothing(ele.fork_connect_element)
-    @test ele.fork_orientation == ForkOrientation.TANGENT
     @test ele.fork_propagate_reference
     dest = Marker(name="dest")
-    fork = Fork(fork_connect_element=dest, fork_orientation=ForkOrientation.ANTI_TANGENT, fork_propagate_reference=false)
+    fork = Fork(fork_connect_element=dest, fork_propagate_reference=false)
     @test fork.kind == "Fork"
     @test fork.fork_connect_element === dest
-    @test fork.fork_orientation == ForkOrientation.ANTI_TANGENT
     @test !fork.fork_propagate_reference
-    @test fork.ForkParams ≈ ForkParams(dest, ForkOrientation.ANTI_TANGENT, false)
-    @test !(fork.ForkParams ≈ ForkParams(Marker(name="dest"), ForkOrientation.ANTI_TANGENT, false))
+    @test fork.ForkParams ≈ ForkParams(dest, false)
+    @test !(fork.ForkParams ≈ ForkParams(Marker(name="dest"), false))
+    @test !(fork.ForkParams ≈ ForkParams(dest, true))
     @test Beamlines.deval(fork.ForkParams).fork_connect_element === dest
     @test scalarize(fork.ForkParams).fork_connect_element === dest
     # Copying a fork element does not copy the destination element
@@ -1763,19 +1762,17 @@ using ForwardDiff, GTPSA, ReverseDiff
     # Lattice construction adds and connects forked-to branches
     ext = Branch([Marker(name="ext_start"), Drift(L=3)]; name="extraction")
     ext_start = ext.beamlines[1].line[1]
-    rfork = Fork(name="to_ext", fork_connect_element=ext_start, fork_orientation=ForkOrientation.ANTI_TANGENT, fork_propagate_reference=false)
+    rfork = Fork(name="to_ext", fork_connect_element=ext_start, fork_propagate_reference=false)
     ring = Branch([Marker(name="start"), Drift(L=1), rfork, Drift(L=1)]; name="ring")
     lat = Lattice([ring])
     @test length(lat.branches) == 2
     @test lat.branches[2].name == "extraction"
     lfork = lat.branches[1].beamlines[1].line[3]
     @test lfork.fork_connect_element === lat.branches[2].beamlines[1].line[1]
-    @test lfork.fork_orientation == ForkOrientation.ANTI_TANGENT
     @test !lfork.fork_propagate_reference
     # The connected element points back to the fork element
     lconn = lat.branches[2].beamlines[1].line[1]
     @test lconn.fork_connect_element === lfork
-    @test lconn.fork_orientation == ForkOrientation.ANTI_TANGENT
     @test !lconn.fork_propagate_reference
     @test occursin("Marker \"ext_start\" (branch \"extraction\", index 1)", sprint(show, lfork.ForkParams))
     @test occursin("Fork \"to_ext\" (branch \"ring\", index 3)", sprint(show, lconn.ForkParams))
@@ -1878,7 +1875,7 @@ using ForwardDiff, GTPSA, ReverseDiff
     @test [b.name for b in lat2.branches] == ["ring", "extraction"]
     @test lat2.branches[1][3].fork_connect_element === lat2.branches[2][1]
     @test lat2.branches[2][1].fork_connect_element === lat2.branches[1][3]
-    @test lat2.branches[1][3].fork_orientation == ForkOrientation.ANTI_TANGENT
+    @test !lat2.branches[1][3].fork_propagate_reference
     @test !lat2.branches[2][1].fork_propagate_reference
     @test lat2.branches[2][2].L == 3
     # Non-Fork element connected to a Fork that has its own fork_connect_element
@@ -1891,7 +1888,7 @@ using ForwardDiff, GTPSA, ReverseDiff
     @test lat2.branches[3][1].fork_connect_element === lat2.branches[2][1]
     # Mutual Forks with different settings write both connections
     a_fork = Fork(name="a_fork")
-    b_fork = Fork(name="b_fork", fork_orientation=ForkOrientation.ANTI_TANGENT)
+    b_fork = Fork(name="b_fork", fork_propagate_reference=false)
     br_a = Branch([a_fork]; name="A")
     br_b = Branch([b_fork]; name="B")
     a_fork.fork_connect_element = br_b[1]
@@ -1901,8 +1898,8 @@ using ForwardDiff, GTPSA, ReverseDiff
     @test occursin("b1[1].fork_connect_element = b2[1]", str)
     @test occursin("b2[1].fork_connect_element = b1[1]", str)
     lat2 = writebl_roundtrip(lat)
-    @test lat2.branches[1][1].fork_orientation == ForkOrientation.TANGENT
-    @test lat2.branches[2][1].fork_orientation == ForkOrientation.ANTI_TANGENT
+    @test lat2.branches[1][1].fork_propagate_reference
+    @test !lat2.branches[2][1].fork_propagate_reference
     @test lat2.branches[2][1].fork_connect_element === lat2.branches[1][1]
     # Self forks in duplicated branches
     lat2 = writebl_roundtrip(Lattice([self_br, self_br]))
@@ -1910,9 +1907,9 @@ using ForwardDiff, GTPSA, ReverseDiff
       @test b[3].fork_connect_element === b[1]
       @test b[1].fork_connect_element === b[3]
     end
-    # Beamline: fork_orientation and fork_propagate_reference are written, fork_connect_element is not
+    # Beamline: fork_propagate_reference is written, fork_connect_element is not
     str = sprint(Beamlines.writebl, Beamline([Fork(fork_connect_element=ext_start, fork_propagate_reference=false)]))
-    @test occursin("fork_orientation=ForkOrientation.TANGENT,fork_propagate_reference=false,", str)
+    @test occursin("fork_propagate_reference=false,", str)
     @test !occursin("fork_connect_element", str)
 
     # SciBmadStandard fields

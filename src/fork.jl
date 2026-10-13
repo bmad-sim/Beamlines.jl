@@ -1,21 +1,10 @@
-"""
-    @enumx ForkOrientation::Int8 TANGENT=1 ANTI_TANGENT=-1
-
-Orientation of the connected branch relative to the direction of travel of particles that 
-go through the fork. With `TANGENT`, particles travel in the downstream (`+s`) direction in 
-the connected branch. With `ANTI_TANGENT`, particles travel in the upstream (`-s`) direction.
-"""
-@enumx ForkOrientation::Int8 TANGENT=1 ANTI_TANGENT=-1
-
 @kwdef mutable struct ForkParams <: AbstractParams
   fork_connect_element::Union{LineElement,Nothing} = nothing
-  fork_orientation::ForkOrientation.T              = ForkOrientation.TANGENT
   fork_propagate_reference::Bool                   = true
 end
 
 PROPS(::Type{ForkParams}) = OrderedDict{String,String}(
   "fork_connect_element"     => "For a fork element, the connected `LineElement` in a `Branch` that is forked to. For a connected element in a `Lattice`, the fork element that connects to it. Default is `nothing`",
-  "fork_orientation"         => "Orientation of the connected branch, see `ForkOrientation`. Default is `ForkOrientation.TANGENT`",
   "fork_propagate_reference" => "`true` if the reference species and energy are propagated from the fork element to the connected element. Default is `true`",
 )
 
@@ -34,7 +23,7 @@ non-`Fork` elements cannot be connected to each other.
 
 When a `Lattice` is constructed, the connected element in the `Lattice` is given a 
 `ForkParams` whose `fork_connect_element` is the fork element, with the same 
-`fork_orientation` and `fork_propagate_reference` as the fork element. This is not done if 
+`fork_propagate_reference` as the fork element. This is not done if 
 the connected element is itself a fork element. See `Lattice`.
 
 Forks are uni-directional: particles can travel from the fork element to the connected 
@@ -51,12 +40,11 @@ ForkParams
 
 # The connected element is a reference, not owned by the element, so it is never copied.
 function Base.deepcopy_internal(fp::ForkParams, stackdict::IdDict)
-  return get!(()->ForkParams(fp.fork_connect_element, fp.fork_orientation, fp.fork_propagate_reference), stackdict, fp)::ForkParams
+  return get!(()->ForkParams(fp.fork_connect_element, fp.fork_propagate_reference), stackdict, fp)::ForkParams
 end
 
 function Base.isapprox(a::ForkParams, b::ForkParams)
   return a.fork_connect_element     === b.fork_connect_element &&
-         a.fork_orientation         ==  b.fork_orientation     &&
          a.fork_propagate_reference ==  b.fork_propagate_reference
 end
 
@@ -66,7 +54,6 @@ function Base.show(io::IO, a::ForkParams)
   println(io, "ForkParams")
   ele = a.fork_connect_element
   println(io, " fork_connect_element     = ", isnothing(ele) ? "nothing" : _ele_location_repr(ele))
-  println(io, " fork_orientation         = ", param_repr(a.fork_orientation))
   println(io, " fork_propagate_reference = ", a.fork_propagate_reference)
   return
 end

@@ -105,7 +105,7 @@ function _connect_forks!(branches::AbstractVector{B}, sources::AbstractVector{B}
       end
       # Set in the fork element's own pdict: setting the property would write through 
       # InheritParams to the element the Lattice was constructed from.
-      getfield(ele, :pdict)[ForkParams] = ForkParams(target, fp.fork_orientation, fp.fork_propagate_reference)
+      getfield(ele, :pdict)[ForkParams] = ForkParams(target, fp.fork_propagate_reference)
       push!(forks, (ele, target))
     end
     i += 1
@@ -127,7 +127,7 @@ function _connect_forks!(branches::AbstractVector{B}, sources::AbstractVector{B}
     end
     connected_from[target] = ele
     fp = getfield(ele, :pdict)[ForkParams]::ForkParams
-    getfield(target, :pdict)[ForkParams] = ForkParams(ele, fp.fork_orientation, fp.fork_propagate_reference)
+    getfield(target, :pdict)[ForkParams] = ForkParams(ele, fp.fork_propagate_reference)
   end
   return branches
 end
@@ -446,8 +446,8 @@ in `branches`, a copy of it is appended to the `Lattice`, and any forks in it ar
 in turn. Each fork element in the `Lattice` is given its own `ForkParams` whose
 `fork_connect_element` is the corresponding connected element in the `Lattice`. Each 
 connected element in the `Lattice` that is not itself a fork element is given its own 
-`ForkParams` whose `fork_connect_element` is the fork element, and whose `fork_orientation` 
-and `fork_propagate_reference` are those of the fork element. It is an error for more than 
+`ForkParams` whose `fork_connect_element` is the fork element, and whose 
+`fork_propagate_reference` is that of the fork element. It is an error for more than 
 one fork element to connect to the same non-fork element. A fork to an element in
 the fork's own `Branch` connects within that `Branch`, even if the `Branch` appears more
 than once in `branches`. Otherwise, it is an error if the destination `Branch` appears more

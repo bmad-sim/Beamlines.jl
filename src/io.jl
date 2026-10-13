@@ -5,9 +5,8 @@ General users should NOT use it yet.
     writebl(fname_or_io, bl::Beamline)
     writebl(fname_or_io, lat::Lattice)
 
-Writes Julia code that reconstructs `bl` or `lat`. For a `Beamline`, the `fork_orientation` 
-and `fork_propagate_reference` of any `ForkParams` are written but `fork_connect_element` is 
-not. For a `Lattice`, each `Branch` is written as a variable `b<i>`, followed by the fork 
+Writes Julia code that reconstructs `bl` or `lat`. For a `Beamline`, the `fork_propagate_reference` 
+of any `ForkParams` is written but `fork_connect_element` is not. For a `Lattice`, each `Branch` is written as a variable `b<i>`, followed by the fork 
 connections (e.g. `b1[2].fork_connect_element = b2[1]`), followed by the `Lattice` 
 constructor, so the forks are reconstructed.
 """
@@ -45,7 +44,7 @@ end
 function writebl(io::IO, lat::Lattice)
   # Fork connections to write, as (element, connected element). Each element of a Lattice 
   # with a fork_connect_element is in a connected pair. If the two elements point at each 
-  # other with the same fork_orientation and fork_propagate_reference, only one connection 
+  # other with the same fork_propagate_reference, only one connection 
   # is written (from the Fork element if only one is a Fork): when the Lattice is 
   # reconstructed, the other element is pointed back by the Lattice constructor.
   connections = Tuple{LineElement,LineElement}[]
@@ -55,7 +54,6 @@ function writebl(io::IO, lat::Lattice)
     target = fp.fork_connect_element
     tfp = target.ForkParams
     if !isnothing(tfp) && tfp.fork_connect_element === ele && 
-          tfp.fork_orientation == fp.fork_orientation && 
           tfp.fork_propagate_reference == fp.fork_propagate_reference
       ele_is_fork = ele.kind == "Fork"
       target_is_fork = target.kind == "Fork"
@@ -195,7 +193,6 @@ end
 # fork_connect_element is a reference to another element, so it is written separately by
 # `writebl(::IO, ::Lattice)`.
 function writeparam(io::IO, a::ForkParams)
-  print(io, "fork_orientation=", param_repr(a.fork_orientation), ",")
   print(io, "fork_propagate_reference=", param_repr(a.fork_propagate_reference), ",")
   return
 end
