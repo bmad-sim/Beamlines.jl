@@ -445,12 +445,7 @@ function trygetproperty(b::Beamline, key::Symbol)
 
   elseif key in (:E_ref, :pc_ref, :p_over_q_ref, :dE_ref, :dpc_ref, :dp_over_q_ref, :species_ref)
     if length(b.line) < 1
-      branch_index = getfield(b, :branch_index)
-      if branch_index == -1 || branch_index == 1
-        return GetError("Unable to get $key: $key of the Beamline is not set nor inferrable")
-      else
-        return trygetproperty(getfield(b, :branch).beamlines[branch_index-1], key)
-      end
+      return _try_get_upstream_ref(b, key)
     else
       return try_get_bl_params(first(b.line), key, _context(b))
     end

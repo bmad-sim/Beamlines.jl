@@ -1860,6 +1860,60 @@ using ForwardDiff, GTPSA, ReverseDiff
     @test lat.branches[1].beamlines[1].line[3].fork_connect_element === lat.branches[2].beamlines[1].line[1]
     @test lat.branches[2].beamlines[1].line[1].fork_connect_element === lat.branches[1].beamlines[1].line[3]
 
+    # fork_propagate_reference propagates the reference species and energy to a branch beginning
+    ext_p = Branch([Marker(name="ext_start"), Drift(L=3)]; name="ext_p")
+    ring_p = Branch([Marker(species_ref=Species("electron"), E_ref=1e9), Drift(L=1), 
+                     Fork(fork_connect_element=ext_p[1]), Drift(L=1)]; name="ring_p")
+    lat = Lattice([ring_p])
+    bp = lat.branches[2]
+    @test bp.beamlines[1].species_ref == Species("electron")
+    @test bp.beamlines[1].E_ref == 1e9
+    @test bp[2].E_ref == 1e9
+    @test bp[2].pc_ref ≈ lat.branches[1][3].pc_ref
+    @test bp[2].p_over_q_ref ≈ lat.branches[1][3].p_over_q_ref
+    # Values are looked up when read
+    lat.branches[1].beamlines[1].E_ref = 2e9
+    @test bp[2].E_ref == 2e9
+    # Later Beamlines of the branch follow
+    ext_p2 = Branch([Beamline([Marker(), Drift(L=1)]), Beamline([Drift(L=2)])])
+    lat = Lattice([Branch([Marker(species_ref=Species("proton"), pc_ref=5e9), Fork(fork_connect_element=ext_p2[1])])])
+    @test lat.branches[2].beamlines[2].species_ref == Species("proton")
+    @test lat.branches[2].beamlines[2].pc_ref ≈ 5e9
+    # A relative energy in the first Beamline is relative to the energy at the fork
+    ext_d = Branch([Marker(dE_ref=1e8), Drift(L=1)])
+    lat = Lattice([Branch([Marker(species_ref=Species("electron"), E_ref=1e9), Fork(fork_connect_element=ext_d[1])])])
+    @test lat.branches[2].beamlines[1].E_ref ≈ 1.1e9
+    @test lat.branches[2].beamlines[1].species_ref == Species("electron")
+    # A branch that sets its own reference keeps it; species not set is still propagated
+    ext_own = Branch([Marker(E_ref=5e9), Drift(L=1)])
+    lat = Lattice([Branch([Marker(species_ref=Species("electron"), E_ref=1e9), Fork(fork_connect_element=ext_own[1])])])
+    @test lat.branches[2].beamlines[1].E_ref == 5e9
+    @test lat.branches[2].beamlines[1].species_ref == Species("electron")
+    # No propagation if fork_propagate_reference is false
+    lat = Lattice([Branch([Marker(species_ref=Species("electron"), E_ref=1e9), 
+                           Fork(fork_connect_element=ext_p[1], fork_propagate_reference=false)])])
+    @test_throws ErrorException lat.branches[2].beamlines[1].E_ref
+    @test_throws ErrorException lat.branches[2].beamlines[1].species_ref
+    # No propagation if the connected element is not the beginning element
+    ext_mid = Branch([Drift(L=1), Marker(name="mid")])
+    lat = Lattice([Branch([Marker(species_ref=Species("electron"), E_ref=1e9), Fork(fork_connect_element=ext_mid[2])])])
+    @test_throws ErrorException lat.branches[2].beamlines[1].E_ref
+    # Forks at branch beginnings pointing at each other with no reference set: error, not a loop
+    c_a = Fork(name="c_a")
+    c_b = Fork(name="c_b")
+    br_ca = Branch([c_a, Drift(L=1)])
+    br_cb = Branch([c_b, Drift(L=1)])
+    c_a.fork_connect_element = br_cb[1]
+    c_b.fork_connect_element = br_ca[1]
+    lat = Lattice([br_ca])
+    @test_throws ErrorException lat.branches[1].beamlines[1].E_ref
+    @test_throws ErrorException lat.branches[2][2].species_ref
+    # ... and with the reference set in one branch, it propagates to the other
+    lat.branches[1].beamlines[1].species_ref = Species("electron")
+    lat.branches[1].beamlines[1].E_ref = 3e9
+    @test lat.branches[2][2].E_ref == 3e9
+    @test lat.branches[2][2].species_ref == Species("electron")
+
     # writebl round trip of forks
     function writebl_roundtrip(lat)
       m = Module()

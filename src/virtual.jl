@@ -665,33 +665,18 @@ function try_get_bl_params(ele::LineElement, key::Symbol, context::Context)
     beamline = (pdict[BeamlineParams]::BeamlineParams).beamline
     ibp = first(beamline.line).InitialBeamlineParams
     if isnothing(ibp) # If first element does not have InitialBeamlineParams, then it is inferred from previous
-      branch_index = getfield(beamline, :branch_index)
-      if branch_index == -1 || branch_index == 1
-        return GetError("Unable to get $key: $key is not set nor inferrable")
-      else
-        return trygetproperty(getfield(beamline, :branch).beamlines[branch_index-1], key)
-      end
+      return _try_get_upstream_ref(beamline, key)
     elseif key == :species_ref # Species
       field = getfield(ibp, :species_ref) 
       if isnullspecies(field)
-        branch_index = getfield(beamline, :branch_index)
-        if branch_index == -1 || branch_index == 1
-          return GetError("Unable to get $key: $key is not set nor inferrable")
-        else
-          return trygetproperty(getfield(beamline, :branch).beamlines[branch_index-1], key)
-        end
+        return _try_get_upstream_ref(beamline, key)
       else
         return field
       end
     else # key in (:E_ref, :pc_ref, :p_over_q_ref, :dE_ref, :dpc_ref, :dp_over_q_ref)
       ref = deval(getfield(ibp, :ref), context)
       if isnothing(ref)
-        branch_index = getfield(beamline, :branch_index)
-        if branch_index == -1 || branch_index == 1
-          return GetError("Unable to get $key: $key is not set nor inferrable")
-        else
-          return trygetproperty(getfield(beamline, :branch).beamlines[branch_index-1], key)
-        end
+        return _try_get_upstream_ref(beamline, key)
       end
       ref_meaning = refmeaning_to_sym(getfield(ibp, :ref_meaning))
       if key == ref_meaning
@@ -720,7 +705,9 @@ function try_get_bl_params(ele::LineElement, key::Symbol, context::Context)
                 the Beamline is not in a Branch.
               ")
             elseif branch_index == 1
-              return ref # Basically just assume zero for all "before" if first Beamline (out of thin air)
+              # Relative to the reference propagated by a fork, if any, else to zero ("out of thin air")
+              up = _try_get_fork_ref(getfield(beamline, :branch), key)
+              return isnothing(up) ? ref : (up isa GetError ? up : ref + up)
             else
               return ref + trygetproperty(getfield(beamline, :branch).beamlines[branch_index-1], key)
             end
