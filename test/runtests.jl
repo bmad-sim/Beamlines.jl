@@ -1032,7 +1032,7 @@ using ForwardDiff, GTPSA, ReverseDiff
     ele.x1_limit = 12*im
     @test eltype(ele.ApertureParams) == ComplexF32
     @test eltype(typeof(ele.ApertureParams)) == ComplexF32
-    @test ele.ApertureParams ≈ ApertureParams(12*im, 456, 789, 012, ApertureShape.Elliptical, ApertureAt.Exit, false, true)
+    @test ele.ApertureParams ≈ ApertureParams(12*im, 456, 789, 012, ApertureShape.Elliptical, ApertureAt.Exit, false)
     @test ele.x1_limit == 12*im
     @test ele.x1_limit == ComplexF32(12*im)
     @test ele.x2_limit == ComplexF32(456)
@@ -1185,7 +1185,7 @@ using ForwardDiff, GTPSA, ReverseDiff
 
     bo = 2.34
     @test Beamlines.deval(ele.AlignmentParams) ≈ AlignmentParams(bo, bo + 1, bo + 2, bo + 3, bo + 4, bo + 5)
-    @test Beamlines.deval(ele.ApertureParams ) ≈ ApertureParams(bo + 6, bo + 7, bo + 8, bo + 9, ApertureShape.Elliptical, ApertureAt.Entrance, true, true)
+    @test Beamlines.deval(ele.ApertureParams ) ≈ ApertureParams(bo + 6, bo + 7, bo + 8, bo + 9, ApertureShape.Elliptical, ApertureAt.Entrance, true)
     @test Beamlines.deval(ele.BendParams) ≈ BendParams(bo + 13, bo + 14, bo + 15, bo + 16, bo + 30, bo + 31)
     n = Beamlines.SizedVector{3}([bo+17, bo+18, 0])
     s = zero(n)
