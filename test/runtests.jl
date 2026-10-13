@@ -1018,8 +1018,7 @@ using ForwardDiff, GTPSA, ReverseDiff
                       y2_limit=012, 
                       aperture_shape=ApertureShape.Elliptical, 
                       aperture_at=ApertureAt.Exit, 
-                      aperture_shifts_with_body=false,
-                      aperture_active=true)
+                      aperture_shifts_with_body=false)
     @test isactive(ele.ApertureParams)
     @test ele.x1_limit == 123
     @test ele.x1_limit == 123
@@ -1029,7 +1028,6 @@ using ForwardDiff, GTPSA, ReverseDiff
     @test ele.aperture_shape == ApertureShape.Elliptical
     @test ele.aperture_at == ApertureAt.Exit 
     @test ele.aperture_shifts_with_body == false
-    @test ele.aperture_active == true
     
     ele.x1_limit = 12*im
     @test eltype(ele.ApertureParams) == ComplexF32
@@ -1043,7 +1041,6 @@ using ForwardDiff, GTPSA, ReverseDiff
     @test ele.aperture_shape == ApertureShape.Elliptical
     @test ele.aperture_at == ApertureAt.Exit 
     @test ele.aperture_shifts_with_body == false
-    @test ele.aperture_active == true  
 
     # RFParams tests
     @test !isactive(qf.RFParams)

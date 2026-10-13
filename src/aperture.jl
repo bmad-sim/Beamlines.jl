@@ -21,10 +21,9 @@ Defines at which ends of the element the aperture should be applied
   aperture_shape::ApertureShape.T = ApertureShape.Elliptical
   aperture_at::ApertureAt.T       = ApertureAt.Entrance
   aperture_shifts_with_body::Bool = true
-  aperture_active::Bool           = true
 
-  function ApertureParams(x1_limit, x2_limit, y1_limit, y2_limit, aperture_shape, aperture_at, aperture_shifts_with_body, aperture_active)
-    return new{promote_type(typeof(x1_limit),typeof(x2_limit),typeof(y1_limit),typeof(y2_limit))}(x1_limit, x2_limit, y1_limit, y2_limit, aperture_shape, aperture_at, aperture_shifts_with_body, aperture_active)
+  function ApertureParams(x1_limit, x2_limit, y1_limit, y2_limit, aperture_shape, aperture_at, aperture_shifts_with_body)
+    return new{promote_type(typeof(x1_limit),typeof(x2_limit),typeof(y1_limit),typeof(y2_limit))}(x1_limit, x2_limit, y1_limit, y2_limit, aperture_shape, aperture_at, aperture_shifts_with_body)
   end
 end
 
@@ -36,7 +35,6 @@ PROPS(::Type{ApertureParams}) = OrderedDict{String,String}(
   "aperture_shape" => "Shape of the aperture, see `ApertureShape`",
   "aperture_at" => "Longitudinal aperture location(s), see `ApertureAt`",
   "aperture_shifts_with_body" => "`true` if the aperture position moves with element alignment, `false` otherwise. Default is `true`",
-  "aperture_active" => "`true` if particles are collimated by aperture, `false` otherwise. Default is `true`",
 )
 
 """
@@ -59,8 +57,5 @@ function Base.isapprox(a::ApertureParams, b::ApertureParams)
          a.y2_limit                  ≈  b.y2_limit        &&
          a.aperture_shape            ==  b.aperture_shape &&
          a.aperture_at               ==  b.aperture_at    &&
-         a.aperture_shifts_with_body ==  b.aperture_shifts_with_body &&
-         a.aperture_active           ==  b.aperture_active
+         a.aperture_shifts_with_body ==  b.aperture_shifts_with_body
 end
-
-isactive(ap::ApertureParams) = ap.aperture_active

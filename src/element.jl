@@ -5,8 +5,7 @@ abstract type AbstractParams end
 
 Returns `true` if the parameter group `p` should be used in tracking. `isactive(nothing)`
 is always `false`. By default a parameter group is active, however some parameter groups
-define their own criteria, e.g. `RFParams` is only active if `voltage != 0`, and
-`ApertureParams` is only active if `aperture_active == true`.
+define their own criteria, e.g. `RFParams` is only active if `voltage != 0`.
 
 The `isactive` function does not check the `ignore_params` list.
 """
