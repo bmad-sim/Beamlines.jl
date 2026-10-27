@@ -40,6 +40,11 @@ ForkParams
 FourPotentialParams 
 ```
 
+## IgnoreParams
+```@docs; canonical=false
+IgnoreParams
+```
+
 ## InitialBeamlineParams  
 ```@docs; canonical=false
 InitialBeamlineParams

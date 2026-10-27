@@ -1,5 +1,5 @@
 using Beamlines
-using Beamlines: isactive
+using Beamlines: isactive, isapprox_ignoring
 using Test
 using ForwardDiff, GTPSA, ReverseDiff
 
@@ -1018,8 +1018,7 @@ using ForwardDiff, GTPSA, ReverseDiff
                       y2_limit=012, 
                       aperture_shape=ApertureShape.Elliptical, 
                       aperture_at=ApertureAt.Exit, 
-                      aperture_shifts_with_body=false,
-                      aperture_active=true)
+                      aperture_shifts_with_body=false)
     @test isactive(ele.ApertureParams)
     @test ele.x1_limit == 123
     @test ele.x1_limit == 123
@@ -1029,12 +1028,11 @@ using ForwardDiff, GTPSA, ReverseDiff
     @test ele.aperture_shape == ApertureShape.Elliptical
     @test ele.aperture_at == ApertureAt.Exit 
     @test ele.aperture_shifts_with_body == false
-    @test ele.aperture_active == true
     
     ele.x1_limit = 12*im
     @test eltype(ele.ApertureParams) == ComplexF32
     @test eltype(typeof(ele.ApertureParams)) == ComplexF32
-    @test ele.ApertureParams ≈ ApertureParams(12*im, 456, 789, 012, ApertureShape.Elliptical, ApertureAt.Exit, false, true)
+    @test ele.ApertureParams ≈ ApertureParams(12*im, 456, 789, 012, ApertureShape.Elliptical, ApertureAt.Exit, false)
     @test ele.x1_limit == 12*im
     @test ele.x1_limit == ComplexF32(12*im)
     @test ele.x2_limit == ComplexF32(456)
@@ -1043,7 +1041,6 @@ using ForwardDiff, GTPSA, ReverseDiff
     @test ele.aperture_shape == ApertureShape.Elliptical
     @test ele.aperture_at == ApertureAt.Exit 
     @test ele.aperture_shifts_with_body == false
-    @test ele.aperture_active == true  
 
     # RFParams tests
     @test !isactive(qf.RFParams)
@@ -1188,7 +1185,7 @@ using ForwardDiff, GTPSA, ReverseDiff
 
     bo = 2.34
     @test Beamlines.deval(ele.AlignmentParams) ≈ AlignmentParams(bo, bo + 1, bo + 2, bo + 3, bo + 4, bo + 5)
-    @test Beamlines.deval(ele.ApertureParams ) ≈ ApertureParams(bo + 6, bo + 7, bo + 8, bo + 9, ApertureShape.Elliptical, ApertureAt.Entrance, true, true)
+    @test Beamlines.deval(ele.ApertureParams ) ≈ ApertureParams(bo + 6, bo + 7, bo + 8, bo + 9, ApertureShape.Elliptical, ApertureAt.Entrance, true)
     @test Beamlines.deval(ele.BendParams) ≈ BendParams(bo + 13, bo + 14, bo + 15, bo + 16, bo + 30, bo + 31)
     n = Beamlines.SizedVector{3}([bo+17, bo+18, 0])
     s = zero(n)
@@ -1444,7 +1441,7 @@ using ForwardDiff, GTPSA, ReverseDiff
     ele1 = LineElement(E_ref=10e9, species_ref=Species("electron"))
     ele1a = LineElement()
     branch = Branch([ele1, ele1a]; species_ref0=Species("proton"), E_ref0=20e9)
-    @test all(branch.beamlines[1].line .≈ [ele1, ele1a])
+    @test all(isapprox_ignoring.(branch.beamlines[1].line, [ele1, ele1a], InitialBeamlineParams))
     bl1 = branch.beamlines[1]
     @test bl1.E_ref == 20e9
     @test bl1.species_ref == Species("proton")
@@ -1455,7 +1452,7 @@ using ForwardDiff, GTPSA, ReverseDiff
     ele2a = LineElement()
     ele2b = LineElement()
     branch = Branch([ele1, ele1a, ele2, ele2a, ele2b]; species_ref0=Species("proton"), E_ref0=20e9)
-    @test all(branch.beamlines[1].line .≈ [ele1, ele1a])
+    @test all(isapprox_ignoring.(branch.beamlines[1].line, [ele1, ele1a], InitialBeamlineParams))
     @test all(branch.beamlines[2].line .≈ [ele2, ele2a, ele2b])
     bl1 = branch.beamlines[1]
     bl2 = branch.beamlines[2]
@@ -1988,6 +1985,13 @@ using ForwardDiff, GTPSA, ReverseDiff
     @test occursin("fork_propagate_reference=false,", str)
     @test !occursin("fork_connect_element", str)
 
+    # InheritParams show: short description of the parent
+    parent = Quadrupole(name="qp")
+    @test occursin("parent = LineElement(name = \"qp\", kind = \"Quadrupole\")", 
+                   sprint(show, InheritParams(parent)))
+    @test occursin("parent = LineElement with no UniversalParams", 
+                   sprint(show, InheritParams(LineElement(Beamlines.ParamDict()))))
+
     # SciBmadStandard fields
     ele = LineElement()
     @test !ele.tracking_method.radiation_damping_on
@@ -2212,6 +2216,109 @@ using ForwardDiff, GTPSA, ReverseDiff
     qq = Quadrupole(Kn1=-DefExpr(c -> c.k1), L=0.5)
     blq = Beamline([qq], context=Context(k1 = 0.36))
     @test blq[qq][1].Kn1 ≈ -0.36
+
+    # IgnoreParams / ignore_params
+    ele = Quadrupole(L=0.5, Kn1=0.3, x_offset=1e-3)
+    @test isnothing(ele.IgnoreParams)
+    @test isempty(ele.ignore_params)
+    @test ele.IgnoreParams isa IgnoreParams # Created on first access
+    @test !occursin("IgnoreParams", sprint(show, ele)) # Empty IgnoreParams are not shown
+    @test ele ≈ Quadrupole(L=0.5, Kn1=0.3, x_offset=1e-3)
+    push!(Quadrupole(L=0.5).ignore_params, BendParams) # push! works without IgnoreParams
+    ele2 = Quadrupole(L=0.5)
+    push!(ele2.ignore_params, BendParams)
+    @test ele2.ignore_params == [BendParams]
+    ele = Quadrupole(L=0.5, Kn1=0.3, x_offset=1e-3)
+    @test :ignore_params in propertynames(ele)
+    @test :IgnoreParams in propertynames(ele)
+    ele.ignore_params = [AlignmentParams]
+    @test ele.IgnoreParams isa IgnoreParams
+    @test ele.IgnoreParams.ignore_params === ele.ignore_params
+    @test ele.ignore_params == [AlignmentParams]
+    @test ele.ignore_params isa Vector{Type{<:AbstractParams}}
+    @test isactive(ele.AlignmentParams) # isactive does not check ignore_params
+    push!(ele.ignore_params, BMultipoleParams)
+    @test ele.ignore_params == [AlignmentParams, BMultipoleParams]
+    # Only vectors of parameter group types are allowed, and parametric types
+    ele.ignore_params = [ApertureParams]
+    @test_throws MethodError ele.ignore_params = BendParams
+    @test_throws MethodError ele.ignore_params = (BendParams,)
+    @test ele.ignore_params == [ApertureParams]
+    ele.ignore_params = [BendParams, RFParams, MapParams]
+    @test ele.ignore_params == [BendParams, RFParams, MapParams]
+    ele.ignore_params = ele.ignore_params
+    @test ele.ignore_params == [BendParams, RFParams, MapParams]
+    ele.ignore_params = []
+    @test isempty(ele.ignore_params)
+    @test ele.IgnoreParams isa IgnoreParams
+    # Setting the whole parameter group
+    ele.IgnoreParams = IgnoreParams(ignore_params=[PatchParams])
+    @test ele.ignore_params == [PatchParams]
+    ele.IgnoreParams = nothing
+    @test isnothing(ele.IgnoreParams)
+    # Keyword argument
+    ele = Quadrupole(L=0.5, Kn1=0.3, ignore_params=[BMultipoleParams])
+    @test ele.ignore_params == [BMultipoleParams]
+    # Entries that are not parameter group types throw and leave the list unchanged
+    @test_throws MethodError ele.ignore_params = [:BMultipoleParams] # Symbols not allowed
+    @test_throws MethodError ele.ignore_params = "BMultipoleParams"
+    @test_throws MethodError ele.ignore_params = [Int]
+    @test_throws MethodError Quadrupole(ignore_params=[:Foo])
+    @test ele.ignore_params == [BMultipoleParams]
+    # Show
+    @test !occursin("ignore_params", sprint(show, Quadrupole(L=0.5)))
+    ele.ignore_params = [BMultipoleParams, AlignmentParams]
+    @test occursin("ignore_params = [BMultipoleParams, AlignmentParams]", sprint(show, ele))
+    # Elements in a Beamline share the IgnoreParams of the parent element
+    ele.ignore_params = [AlignmentParams]
+    bl = Beamline([ele, Drift(L=1.0), ele], species_ref=Species("electron"), E_ref=1e9)
+    @test bl.line[1].ignore_params === ele.ignore_params
+    @test bl.line[3].ignore_params == [AlignmentParams]
+    bl.line[3].ignore_params = [BMultipoleParams]
+    @test ele.ignore_params == [BMultipoleParams]
+    @test bl.line[1].ignore_params == [BMultipoleParams]
+    @test isnothing(bl.line[2].IgnoreParams)
+    @test isempty(bl.line[2].ignore_params) # Creates IgnoreParams in the parent element
+    @test bl.line[2].IgnoreParams === Beamlines.get_parent(getfield(bl.line[2], :pdict)).IgnoreParams
+    push!(bl.line[2].ignore_params, PatchParams)
+    @test Beamlines.get_parent(getfield(bl.line[2], :pdict)).ignore_params == [PatchParams]
+    empty!(bl.line[2].ignore_params)
+    @test occursin("ignore_params = [BMultipoleParams]", sprint(show, bl.line[1]))
+    # Setting ignore_params on an instance whose parent has no IgnoreParams sets the parent
+    d = bl.line[2]
+    bl.line[2].ignore_params = [PatchParams]
+    @test d.ignore_params == [PatchParams]
+    bl.line[2].ignore_params = []
+    # Copying and comparing
+    ele2 = deepcopy(bl.line[3]) # Flattens InheritParams
+    @test ele2.ignore_params == [BMultipoleParams]
+    @test ele2.ignore_params !== ele.ignore_params
+    @test ele2 ≈ ele
+    ele2.ignore_params = []
+    @test !(ele2 ≈ ele)
+    ele2.ignore_params = [AlignmentParams, BMultipoleParams]
+    ele3 = deepcopy(ele2)
+    ele3.ignore_params = [BMultipoleParams, AlignmentParams]
+    @test ele2 ≈ ele3 # Order does not matter
+    # An empty list is the same as no IgnoreParams
+    @test Quadrupole(L=0.5, Kn1=0.3, ignore_params=[]) ≈ Quadrupole(L=0.5, Kn1=0.3)
+    @test Quadrupole(L=0.5, Kn1=0.3) ≈ Quadrupole(L=0.5, Kn1=0.3, ignore_params=[])
+    @test !(Quadrupole(L=0.5, Kn1=0.3) ≈ Quadrupole(L=0.5, Kn1=0.3, ignore_params=[BendParams]))
+    @test !(Quadrupole(L=0.5, Kn1=0.3, ignore_params=[BendParams]) ≈ Quadrupole(L=0.5, Kn1=0.3))
+    # isapprox_ignoring skips the given parameter groups
+    @test !(Quadrupole(L=0.5, Kn1=0.3, x_offset=1e-3) ≈ Quadrupole(L=0.5, Kn1=0.3))
+    @test Beamlines.isapprox_ignoring(Quadrupole(L=0.5, Kn1=0.3, x_offset=1e-3), Quadrupole(L=0.5, Kn1=0.3), AlignmentParams)
+    @test Beamlines.isapprox_ignoring(Quadrupole(L=0.5, Kn1=0.3, x_offset=1e-3, ignore_params=[BendParams]), 
+                                      Quadrupole(L=0.5, Kn1=0.3), AlignmentParams, IgnoreParams)
+    @test !Beamlines.isapprox_ignoring(Quadrupole(L=0.5, Kn1=0.3, x_offset=1e-3), Quadrupole(L=0.5, Kn1=0.4), AlignmentParams)
+    @test Beamlines.isapprox_ignoring(Quadrupole(L=0.5, Kn1=0.3, ignore_params=[]), Quadrupole(L=0.5, Kn1=0.3))
+    # writebl
+    str = sprint(Beamlines.writebl, bl)
+    @test occursin("ignore_params=[BMultipoleParams]", str)
+    bl2 = eval(Meta.parse(str))
+    @test bl2.line[1].ignore_params == [BMultipoleParams]
+    @test bl2.line[3].ignore_params == [BMultipoleParams]
+    @test isempty(bl2.line[2].ignore_params)
 
     # Showing a Context must list every variable, sorted by name, and must not
     # truncate the way the underlying Dict's show does past 10 entries.
@@ -2555,5 +2662,140 @@ using ForwardDiff, GTPSA, ReverseDiff
         slat0 = sprint(show, Lattice([Branch(Beamline[]), brx]))
         @test occursin(r"1\s+b1\s+0\s+0", slat0)
         @test occursin(r"2\s+b2\s+2\s+3\.0", slat0)
+    end
+
+    @testset "Name matching" begin
+        @elements begin
+            m1 = Marker(); q1 = Quadrupole(L=1.0); d = Drift(L=1.0); q2 = Quadrupole(L=1.0)
+            m2 = Marker(); qq = Sextupole(); q10 = Quadrupole(L=1.0)
+        end
+        ring = Branch([m1, q1, d, q2, d, m2, qq, q10]; name="ring")
+        xl = Branch([m1, q1, d, q1]; name="xline")
+        lat = Lattice([ring, xl]; name="L1")
+        br1, br2 = lat.branches
+        names(v) = [e.name for e in v]
+        where_(v) = [(e.branch.name, e.beamline_index) for e in v] # Branch has a single Beamline
+
+        # Wild cards
+        @test names(findelements(lat, "q*")) == ["q1", "q2", "qq", "q10", "q1", "q1"]
+        @test names(findelements(lat, "q%")) == ["q1", "q2", "qq", "q1", "q1"]
+        @test names(findelements(lat, "q%0")) == ["q10"]
+        @test names(findelements(lat, "q?")) == names(findelements(lat, "q%"))  # "?" is the same as "%"
+        @test names(findelements(lat, "q?0")) == ["q10"]
+        @test names(findelements(lat, "?%")) == ["m1", "q1", "q2", "m2", "qq", "m1", "q1", "q1"]
+        @test names(findelements(lat, "*")) == names([br1.beamlines[1].line; br2.beamlines[1].line])
+        @test isempty(findelements(lat, "Q1"))     # Case sensitive
+        @test isempty(findelements(lat, "q"))      # Whole name match
+        @test isempty(findelements(lat, "q."))     # "." is not special in a String
+        # Regex
+        @test names(findelements(lat, r"q.*")) == names(findelements(lat, "q*"))
+        @test names(findelements(lat, r"q.")) == names(findelements(lat, "q%"))
+        @test isempty(findelements(lat, r"q"))     # Whole name match
+        @test isempty(findelements(lat, r"Q"i))
+        @test names(findelements(lat, r"Q1"i)) == ["q1", "q1", "q1"]  # Flags are kept
+        @test names(findelements(lat, r"q2|m1")) == ["m1", "q2", "m1"]  # Anchoring covers alternation
+        @test names(findelements(lat, r"(q|m)[0-9]{1,2}")) == ["m1", "q1", "q2", "m2", "q10", "m1", "q1", "q1"]
+        @test names(findelements(lat, r"[q,m]1")) == ["m1", "q1", "m1", "q1", "q1"]
+        @test names(findelements(lat, r"(?:q)2")) == ["q2"]
+        @test names(findelements(lat, r"[[:alpha:]]2")) == ["q2", "m2"]
+        @test names(findelements(lat, r"\Qq1\E")) == ["q1", "q1", "q1"]
+        # Kind
+        @test names(findelements(lat, "Quadrupole::q*")) == ["q1", "q2", "q10", "q1", "q1"]
+        @test names(findelements(lat, r"Sextupole::q.")) == ["qq"]
+        @test isempty(findelements(lat, "quadrupole::q*"))
+        # Branch qualifier
+        @test where_(findelements(lat, "xline>>q1")) == [("xline", 2), ("xline", 4)]
+        @test where_(findelements(lat, "x*>>q1")) == [("xline", 2), ("xline", 4)]
+        @test where_(findelements(lat, r"x.*>>q1")) == [("xline", 2), ("xline", 4)]
+        @test length(findelements(br1, "ring>>q1")) == 1
+        @test isempty(findelements(br1, "xline>>q1"))
+        # Index and N-th instance
+        @test where_(findelements(lat, "ring>>2")) == [("ring", 2)]
+        @test where_(findelements(lat, "2")) == [("ring", 2), ("xline", 2)]
+        @test where_(findelements(lat, "Quadrupole::3")) == []
+        @test isempty(findelements(lat, "ring>>99"))
+        @test where_(findelements(lat, "q1#2")) == [("xline", 4)]
+        @test where_(findelements(lat, "Quadrupole::*#2")) == [("ring", 4), ("xline", 4)]
+        @test isempty(findelements(lat, "q1#3"))
+        # Ranges
+        @test where_(findelements(lat, "m1:m2")) == [("ring", i) for i in 1:6]
+        @test where_(findelements(lat, "m2:q1")) == [("ring", i) for i in [1, 2, 6, 7, 8]] # Wraps
+        @test where_(findelements(lat, "ring>>2:4")) == [("ring", i) for i in 2:4]
+        @test where_(findelements(lat, "xline>>m1:3")) == [("xline", i) for i in 1:3]
+        @test_throws ErrorException findelements(lat, "m1:d")   # Multiple "d" in ring
+        @test_throws ErrorException findelements(lat, "m1:m2:q1")
+        # Union and intersection
+        @test names(findelements(lat, "q1, q2")) == ["q1", "q2", "q1", "q1"]
+        @test names(findelements(lat, "q2, q1,q2")) == ["q1", "q2", "q1", "q1"] # No duplicates
+        @test names(findelements(lat, "Marker::* & m1:m2")) == ["m1", "m2"]
+        @test names(findelements(lat, "q1, m2 & ring>>*")) == ["q1", "m2"]
+        @test names(findelements(lat, r"q\d+ & Quadrupole::q1, xline>>q2")) == ["q1", "q1", "q1"]
+        # Beamline search
+        bl = br2.beamlines[1]
+        @test where_(findelements(bl, "q1")) == [("xline", 2), ("xline", 4)]
+        @test isempty(findelements(bl, "ring>>q1"))
+        blx = Beamline([m1, q1, d])
+        @test findelements(blx, "q1") == [blx.line[2]]
+        @test findelements(blx, "3") == [blx.line[3]]
+        @test isempty(findelements(blx, "*>>q1"))   # Not in a Branch
+        # Errors
+        @test_throws ErrorException findelements(lat, "")
+        @test_throws ErrorException findelements(lat, "q1, ")
+        @test_throws ErrorException findelements(lat, "Quadrupole::ring>>q1")
+        @test_throws ErrorException findelements(lat, "::q1")
+        @test_throws ErrorException findelements(lat, "q1#x")
+        @test_throws ErrorException findelements(lat, "q1#0")
+        @test_throws ErrorException findelements(lat, "q1>L")
+        @test_throws "Invalid regular expression \"*\"" findelements(lat, r"Quadrupole::*")
+        @test_throws "Invalid regular expression \"+q\"" findelements(lat, r"ring>>+q")
+
+        # Branches
+        bnames(v) = [b.name for b in v]
+        @test findbranches(lat, "ring") == [br1]
+        @test bnames(findbranches(lat, "*")) == ["ring", "xline"]
+        @test bnames(findbranches(lat, "x*, 1")) == ["ring", "xline"]
+        @test bnames(findbranches(lat, r"RING"i)) == ["ring"]
+        @test bnames(findbranches(lat, "* & %line")) == ["xline"]
+        @test bnames(findbranches(lat, "?line")) == ["xline"]
+
+        # getindex
+        @test br1["Quadrupole::q*"] == findelements(br1, "Quadrupole::q*")
+        @test isempty(br1["xline>>q1"])
+        @test br2.beamlines[1]["q1"] == findelements(br2.beamlines[1], "q1")
+        @test br2.beamlines[1]["3"] == [br2[3]]
+        blg = Beamline([Drift(L=1.0, name="dd"), Marker(name="mm")])
+        @test blg["m*"] == [blg.line[2]]
+        @test lat["ring"] == [br1]
+        @test lat["2"] == [br2]
+        @test lat["*line, ring"] == [br1, br2]
+        @test isempty(lat["q1"])                    # Only branches are searched
+        @test_throws "lat[:, \"ring>>2\"]" lat["ring>>2"]  # Element match
+        @test lat[:, "q1"] == findelements(lat, "q1")
+        @test lat[:, "ring>>2"] == [br1[2]]
+        @test lat[:, "Marker::* & m1:m2"] == findelements(lat, "Marker::* & m1:m2")
+        @test lat["ring", "q1"] == [br1[2]]
+        @test lat["*", "q1"] == findelements(lat, "q1")
+        @test lat["xline", "ring>>q1"] == []        # Branch qualifier still applies
+        @test lat[2, "q1"] == [br2[2], br2[4]]
+        @test lat[2, "3"] == [br2[3]]
+        @test_throws BoundsError lat[3, "q1"]
+        @test isempty(lat["nothing_here", "q1"])
+        @test lat[:, "q1"] isa Vector{LineElement} && lat["q1"] isa Vector{Branch}
+        @test br1[r"q\d+"] == findelements(br1, r"q\d+")
+        @test blg[r"M."i] == [blg.line[2]]
+        @test lat[r"RING"i] == [br1]
+        @test isempty(lat[r"q\d"])
+        @test lat[:, r"q\d"] == findelements(lat, r"q\d")
+        @test lat[:, r"x.*>>q1"] == findelements(lat, "xline>>q1")
+        @test lat[r"x.*", r"q\d"] == [br2[2], br2[4]]
+        @test_throws ErrorException lat[r"x.*>>q1"]
+        @test lat[r"[,x]line"] == [br2]             # "," inside [...] is not an operator
+        @test isempty(findbranches(lat, "2 & ring"))
+        @test isempty(findbranches(lat, "r"))
+        @test findbranches(lat, "2") == [br2]
+        @test_throws ErrorException findelements(lat, "L1>>>q1")   # No Lattice qualifier
+        @test_throws ErrorException findbranches(lat, "L1>>>ring")
+        @test_throws ErrorException findbranches(lat, "ring>>q1")
+        @test_throws ErrorException findbranches(lat, "Marker::ring")
     end
 end

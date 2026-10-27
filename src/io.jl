@@ -18,7 +18,7 @@ end
 
 const WRITEBL_PARAMS = [:UniversalParams, :InitialBeamlineParams, :AlignmentParams, :BendParams, 
                         :BMultipoleParams, :PatchParams, :ApertureParams, :MapParams, :RFParams, 
-                        :FourPotentialParams, :EMultipoleParams, :ForkParams]
+                        :FourPotentialParams, :EMultipoleParams, :IgnoreParams, :ForkParams]
 
 writebl(io::IO, bl::Beamline) = _writebl(io, bl, "", ele -> true)
 

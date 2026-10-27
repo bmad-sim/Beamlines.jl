@@ -18,6 +18,7 @@ export AbstractParams,
        FourPotentialParams,
        EMFieldParams,
        MetaParams,
+       IgnoreParams,
        ApertureAt,
        ApertureShape,
        PhaseRef,
@@ -60,6 +61,8 @@ export AbstractParams,
        scalarize!,
 
        findchildren,
+       findelements,
+       findbranches,
 
        GLOBAL_CONTEXTS
 
@@ -110,9 +113,11 @@ include("patch.jl")
 include("fork.jl")
 include("aperture.jl")
 include("misc.jl")
+include("ignore.jl")
 include("keymaps.jl")
 include("element-name-handling.jl")
 include("search.jl")
+include("name-matching.jl")
 include("element-doc.jl")
 include("io.jl")
 
