@@ -14,7 +14,15 @@ mutable struct _Lattice{B<:_AbstractBranch}
     # it says the Branches were just constructed and are referenced nowhere else, so they are 
     # used as-is. A copy has the same Context contents as the Branch it was made from, so the 
     # Context merged below is the same either way.
-    branches = _adopt ? branches : B[copy(br) for br in branches]
+    sources  = collect(branches)
+    branches = _adopt ? collect(branches) : B[copy(br) for br in branches]
+    # Name before connecting forks so error messages show the names. Appended Branches are 
+    # named by `_connect_forks!`.
+    for (i, br) in enumerate(branches)
+      if br.name == ""; br.name = "b$i"; end
+    end
+    # Add Branches forked to that are not in `branches`, and connect forks to the Lattice elements
+    _connect_forks!(branches, sources)
 
     lattice = new(name, ReadOnlyVector(branches), context)
     for (i, br) in enumerate(branches)
@@ -22,7 +30,6 @@ mutable struct _Lattice{B<:_AbstractBranch}
       setfield!(br, :lattice, lattice)
       setfield!(br, :lattice_index, i)
       setfield!(br, :context, NULL_CONTEXT) # The Context is stored only in the Lattice
-      if br.name == ""; br.name = "b$i"; end
     end
 
     setfield!(lattice, :context, context)
@@ -438,12 +445,7 @@ function trygetproperty(b::Beamline, key::Symbol)
 
   elseif key in (:E_ref, :pc_ref, :p_over_q_ref, :dE_ref, :dpc_ref, :dp_over_q_ref, :species_ref)
     if length(b.line) < 1
-      branch_index = getfield(b, :branch_index)
-      if branch_index == -1 || branch_index == 1
-        return GetError("Unable to get $key: $key of the Beamline is not set nor inferrable")
-      else
-        return trygetproperty(getfield(b, :branch).beamlines[branch_index-1], key)
-      end
+      return _try_get_upstream_ref(b, key)
     else
       return try_get_bl_params(first(b.line), key, _context(b))
     end

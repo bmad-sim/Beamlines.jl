@@ -30,6 +30,11 @@ BendParams
 EMultipoleParams 
 ```
 
+## ForkParams 
+```@docs; canonical=false
+ForkParams 
+```
+
 ## FourPotentialParams 
 ```@docs; canonical=false
 FourPotentialParams 
