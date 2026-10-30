@@ -1765,6 +1765,26 @@ using ForwardDiff, GTPSA, ReverseDiff
       @test scalarize(InitialBeamlineParams(ref_meaning=Beamlines.RefMeaning.dp_over_q_ref, ref=adnum)).dp_over_q_ref == num
     end
 
+    @testset "scalarize_all" begin
+      @test scalarize_all(1.5) === 1.5
+      arr = [1.0, 2.0]
+      @test scalarize_all(arr) === arr
+      @test (r = scalarize_all([ForwardDiff.Dual(ForwardDiff.Dual(1.0, 1.0), 2.0), ForwardDiff.Dual(ForwardDiff.Dual(4.0, 1.0), 2.0)]); r == [1.0, 4.0] && eltype(r) == Float64)
+      @test scalarize_all(ReverseDiff.TrackedReal(5.0, 6.0)) === 5.0
+      @test scalarize_all(ReverseDiff.track([1.0, 2.0])) == [1.0, 2.0]
+      dd = ForwardDiff.Dual(ForwardDiff.Dual(2.0, 1.0), 3.0)
+      @test scalarize_all(dd) === 2.0
+      @test scalarize(dd) === ForwardDiff.Dual(2.0, 1.0)
+      ta = TPS(3)
+      ta[1] = 4
+      @test scalarize_all(ta) === 3.0
+      a1, b1 = ForwardDiff.Dual(1.0, 5.0), ForwardDiff.Dual(1.0, 0.0)
+      @test scalar_max(a1, b1) === a1 && scalar_max(b1, a1) === b1
+      @test scalar_min(a1, b1) === a1 && scalar_min(b1, a1) === b1
+      @test scalar_max(1, 2.5) === 2.5
+      @test scalar_min(1, 2.5) === 1.0
+    end
+
     qf = Quadrupole(Kn1=0.36, L=0.5)
     d = Drift(L=5.0)
     qd = Quadrupole(Kn1=-0.36, L=0.5)

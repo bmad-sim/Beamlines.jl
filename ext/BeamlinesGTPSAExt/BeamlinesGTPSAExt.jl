@@ -1,7 +1,7 @@
 module BeamlinesGTPSAExt
 using GTPSA
 using Beamlines: Species, massof, chargeof, C_LIGHT, DefExpr
-import Beamlines: R_to_E, E_to_R, pc_to_R, R_to_pc, E_to_pc, pc_to_E, R_to_v, scalarize
+import Beamlines: R_to_E, E_to_R, pc_to_R, R_to_pc, E_to_pc, pc_to_E, R_to_v, scalarize, scalarize_all
 
 # Overrides for TPSA:
 R_to_E(species_ref::Species, R::TPS) = @FastGTPSA sign(R)*sign(chargeof(species_ref))*sqrt((R*C_LIGHT*chargeof(species_ref))^2 + massof(species_ref)^2)
@@ -22,5 +22,6 @@ end
 
 # Scalarize
 scalarize(t::TPS) = scalar(t)
+scalarize_all(t::TPS) = scalar(t)
 
 end
