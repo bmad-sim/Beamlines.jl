@@ -1769,7 +1769,10 @@ using ForwardDiff, GTPSA, ReverseDiff
       @test scalarize_all(1.5) === 1.5
       arr = [1.0, 2.0]
       @test scalarize_all(arr) === arr
-      @test (r = scalarize_all([ForwardDiff.Dual(ForwardDiff.Dual(1.0, 1.0), 2.0), ForwardDiff.Dual(ForwardDiff.Dual(4.0, 1.0), 2.0)]); r == [1.0, 4.0] && eltype(r) == Float64)
+      @test (r = scalarize_all(
+          [ForwardDiff.Dual(ForwardDiff.Dual(1.0, 1.0), 2.0),
+           ForwardDiff.Dual(ForwardDiff.Dual(4.0, 1.0), 2.0)]);
+        r == [1.0, 4.0] && eltype(r) == Float64)
       @test scalarize_all(ReverseDiff.TrackedReal(5.0, 6.0)) === 5.0
       @test scalarize_all(ReverseDiff.track([1.0, 2.0])) == [1.0, 2.0]
       dd = ForwardDiff.Dual(ForwardDiff.Dual(2.0, 1.0), 3.0)
