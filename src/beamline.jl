@@ -114,81 +114,77 @@ mutable struct Beamline <: _AbstractBeamline
   branch::_Branch{Beamline} # This should be HARD to change, not allowed easily
   branch_index::Int         # This should be HARD to change, not allowed easily
   context::Context 
+  @doc"""
+      Beamline(line; kwargs...)
 
-#---------------------------------------------------------------------------------------------------
+  Constructs a `Beamline` out of the `LineElement`s in the vector `line`. The `LineElement`s 
+  in the `Beamline` will be automatically constructed as children of those `LineElement`s in 
+  `line`, inheriting all of their properties. 
 
-"""
-    Beamline(line; kwargs...)
+  The reference energy of the beamline may be optionally specified using one of the keyword 
+  arguments: `E_ref`, `pc_ref`, `p_over_q_ref`, `dE_ref`, `dpc_ref`, or `dp_over_q_ref`.
+  Whichever of these is specified will be the independent variable. The species of 
+  the beamline may be optionally specified using the `species_ref` keyword argument.
+  Specifying either of these keyword arguments will permanently override both the reference 
+  species and energy defined in the first `LineElement` -- see the warning below.
 
-Constructs a `Beamline` out of the `LineElement`s in the vector `line`. The `LineElement`s 
-in the `Beamline` will be automatically constructed as children of those `LineElement`s in 
-`line`, inheriting all of their properties. 
+  ## Examples
+  ```julia
+  qf = Quadrupole(Kn1=0.36, L=0.5)
+  d = Drift(L=1)
+  qd = Quadrupole(Kn1=-0.36, L=0.5)
 
-The reference energy of the beamline may be optionally specified using one of the keyword 
-arguments: `E_ref`, `pc_ref`, `p_over_q_ref`, `dE_ref`, `dpc_ref`, or `dp_over_q_ref`.
-Whichever of these is specified will be the independent variable. The species of 
-the beamline may be optionally specified using the `species_ref` keyword argument.
-Specifying either of these keyword arguments will permanently override both the reference 
-species and energy defined in the first `LineElement` -- see the warning below.
+  fodo = Beamline([qf, d, qd, d], species_ref=Species("electron"), E_ref=18e9)
+  ```
 
-## Examples
-```julia
-qf = Quadrupole(Kn1=0.36, L=0.5)
-d = Drift(L=1)
-qd = Quadrupole(Kn1=-0.36, L=0.5)
+  Alternatively, one can specify the reference species/energy in the first element:
 
-fodo = Beamline([qf, d, qd, d], species_ref=Species("electron"), E_ref=18e9)
-```
+  ```julia
+  qf = Quadrupole(Kn1=0.36, L=0.5, species_ref=Species("electron"), E_ref=18e9)
+  d = Drift(L=1)
+  qd = Quadrupole(Kn1=-0.36, L=0.5)
 
-Alternatively, one can specify the reference species/energy in the first element:
+  fodo = Beamline([qf, d, qd, d])
+  ```
 
-```julia
-qf = Quadrupole(Kn1=0.36, L=0.5, species_ref=Species("electron"), E_ref=18e9)
-d = Drift(L=1)
-qd = Quadrupole(Kn1=-0.36, L=0.5)
+  ## Keyword arguments
+  - `context`: A `Context` struct containing variables that can be stored in the beamline
+      for convenience. If the `Beamline` is put in a `Branch`, this is merged into the
+      `Context` shared by the whole `Branch` -- see `Branch`.
+  - `species_ref`: Reference species of the beamline. 
+  - `E_ref`: Total reference energy [eV]
+  - `pc_ref`: Reference momentum [eV/c]
+  - `p_over_q_ref`: A *signed* reference magnetic rigidity [T * m]
+  - `dE_ref`: Change in total reference energy w.r.t. the directly-upstream beamline in 
+      units [eV]
+  - `dpc_ref`: Change in reference momentum w.r.t. the directly-upstream beamline in 
+      units [eV/c]
+  - `dp_over_q_ref`: Change in *signed* reference magnetic rigidty w.r.t. the directly 
+      upstream beamline [T * m]
 
-fodo = Beamline([qf, d, qd, d])
-```
+  !!! warning
+      Keyword arguments specified to the `Beamline` constructor will permanently override any 
+      corresponding properties specified in the first `LineElement` of the beamline. E.g., 
+      ```julia
+      beg = Marker(species_ref=Species("electron"), E_ref=18e9)
 
-## Keyword arguments
-- `context`: A `Context` struct containing variables that can be stored in the beamline
-    for convenience. If the `Beamline` is put in a `Branch`, this is merged into the
-    `Context` shared by the whole `Branch` -- see `Branch`.
-- `species_ref`: Reference species of the beamline. 
-- `E_ref`: Total reference energy [eV]
-- `pc_ref`: Reference momentum [eV/c]
-- `p_over_q_ref`: A *signed* reference magnetic rigidity [T * m]
-- `dE_ref`: Change in total reference energy w.r.t. the directly-upstream beamline in 
-    units [eV]
-- `dpc_ref`: Change in reference momentum w.r.t. the directly-upstream beamline in 
-    units [eV/c]
-- `dp_over_q_ref`: Change in *signed* reference magnetic rigidty w.r.t. the directly 
-    upstream beamline [T * m]
+      a = Beamline([beg])
+      b = Beamline([beg], species_ref=Species("proton"), E_ref=1e9)
 
-!!! warning
-    Keyword arguments specified to the `Beamline` constructor will permanently override any 
-    corresponding properties specified in the first `LineElement` of the beamline. E.g., 
-    ```julia
-    beg = Marker(species_ref=Species("electron"), E_ref=18e9)
+      a.E_ref == beg.E_ref == 18e9 # true
+      b.E_ref == 1e9               # true
+      b.E_ref != beg.E_ref         # true
 
-    a = Beamline([beg])
-    b = Beamline([beg], species_ref=Species("proton"), E_ref=1e9)
+      # If `beg` is reset:
+      beg.species_ref = Species("positron")
 
-    a.E_ref == beg.E_ref == 18e9 # true
-    b.E_ref == 1e9               # true
-    b.E_ref != beg.E_ref         # true
-
-    # If `beg` is reset:
-    beg.species_ref = Species("positron")
-
-    # `a` will still inherit it, but `b` will not:
-    a.species_ref == beg.species_ref   # true
-    b.species_ref == Species("proton") # true
-    b.species_ref != beg.species_ref   # true
-    ```
-"""
+      # `a` will still inherit it, but `b` will not:
+      a.species_ref == beg.species_ref   # true
+      b.species_ref == Species("proton") # true
+      b.species_ref != beg.species_ref   # true
+      ```
+  """
   function Beamline(
-#---------------------------------------------------------------------------------------------------
     line;
     species_ref::Union{Species,DefExpr{Species}}=Species(),  
     p_over_q_ref=nothing, 

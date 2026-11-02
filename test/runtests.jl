@@ -1737,12 +1737,9 @@ using ForwardDiff, GTPSA, ReverseDiff
     @test occursin("parent = LineElement with no UniversalParams", 
                    sprint(show, InheritParams(LineElement(Beamlines.ParamDict()))))
 
-    # SciBmadStandard fields
     ele = LineElement()
-    @test !ele.tracking_method.radiation_damping_on
-    @test !ele.tracking_method.radiation_fluctuations_on
-    @test !ele.tracking_method.ibs_damping_on
-    @test !ele.tracking_method.ibs_fluctuations_on
+    @test !ele.rad_damping
+    @test !ele.rad_fluctuations
 
     # Scalarize
     d1 = Descriptor(1,1)

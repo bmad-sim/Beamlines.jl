@@ -7,9 +7,9 @@ symplectic integrator `Yoshida(order=4, num_steps=1)` which chooses an appropria
 for each element.
 
 ## Properties
-- `radiation_damping_on`: `true` if the deterministic effect of synchrotron radiation 
+- `rad_damping`: `true` if the deterministic effect of synchrotron radiation 
     is included, `false` otherwise. Defaults to `false`
-- `radiation_fluctuations_on`: `true` if the stochastic radiation kicks are included, 
+- `rad_fluctuations`: `true` if the stochastic radiation kicks are included, 
     `false` otherwise. Defaults to `false`
 - `ibs_damping_on`: true if the deterministic effect of intrabeam scattering (IBS) is 
     included, `false` otherwise. Defaults to `false`.
@@ -17,25 +17,33 @@ for each element.
     included, `false` otherwise. Defaults to `false`.
 """
 @kwdef struct SciBmadStandard
-  ibs_damping_on::Bool = false
-  ibs_fluctuations_on::Bool = false
 end
 
 @enumx StepMeaning::Int8 DSStep NSteps
 
+"""
+    @enumx Fringe::Int8 NoEnd BothEnds EntranceEnd ExitEnd
+
+Defines which ends fringe field modelling should be included
+"""
+@enumx Fringe::Int8 NoEnd BothEnds EntranceEnd ExitEnd
+
 @kwdef mutable struct UniversalParams <: AbstractParams
   kind            = ""
   name            = ""
-  L               = Float32(0.0)
+  L               = 0f0
   tracking_method = SciBmadStandard()
   n_slices::Int   = 1
   step            = 1  # PROTECTED FROM DIRECT SETS!
   step_meaning::StepMeaning.T = StepMeaning.NSteps # PROTECTED FROM DIRECT SETS!
-  radiation_damping_on::Bool = false
-  radiation_fluctuations_on::Bool = false
+  fringe_at::Fringe.T = Fringe.BothEnds
+  rad_damping::Bool = false
+  rad_fluctuations::Bool = false
 end
 
-Base.propertynames(::UniversalParams) = (:kind, :name, :L, :tracking_method, :n_slices, :n_steps, :ds_step, :radiation_damping_on, :radiation_fluctuations_on)
+param_replace(p::UniversalParams, key::Symbol, value) = (setproperty!(p, key, value); p)
+
+Base.propertynames(::UniversalParams) = (:kind, :name, :L, :tracking_method, :n_slices, :n_steps, :ds_step, :rad_damping, :rad_fluctuations)
 
 function Base.setproperty!(up::UniversalParams, key::Symbol, value)
   if key == :step || key == :step_meaning
@@ -119,11 +127,14 @@ PROPS(::Type{UniversalParams}) = OrderedDict{String,String}(
   "kind" => "String specifing the \"kind\", of an element, e.g. \"Quadrupole\"",
   "name" => "The name of an element as a string",
   "L"    => "Length of the element [m]",
+  "fringe_at" => "A `Fringe` that specifies which, if any, element ends should include fringe field modelling. Default is `Fringe.BothEnds`",
   "n_steps" => "Number of integrator steps to take per element slice, default is 1",
   "ds_step" => "Length of each integrator step to take per element slice, such that `n_steps = ceil(L / ds_step)`",
-  "tracking_method" => "Tracking method for the element, default is `DriftKick` if element kind is not initially specified",
-  "radiation_damping_on" => "`true` if the deterministic effect of synchrotron radiation is included, `false` otherwise. Defaults to `false`",
-  "radiation_fluctuations_on" => "`true` if the stochastic radiation kicks are included, `false` otherwise. Defaults to `false`",
+  "n_slices" => "Number of slices to split the element into in tracking, typically so that collective effects can be applied multiple times 
+  in an element. If no collective effects are included, then prefer to vary `n_steps`/`ds_step` instead for performance.",
+  "tracking_method" => "Tracking method for the element",
+  "rad_damping" => "`true` if the deterministic effect of synchrotron radiation is included, `false` otherwise. Defaults to `false`",
+  "rad_fluctuations" => "`true` if the stochastic radiation kicks are included, `false` otherwise. Defaults to `false`",
 )
 
 """
@@ -141,16 +152,29 @@ function Base.show(io::IO, a::UniversalParams)
   fields = fieldnames(typeof(a))
   width = maximum(length, String.(fields))
   println(io, nameof(typeof(a)))
+
   for field in fields
-    if field == :tracking_method
+    if field == :step || field == :step_meaning
+      continue
+    elseif field == :tracking_method
       tm = getproperty(a, field)
-      println(io, " ", rpad(String(field), width), " = ", param_repr(typeof(tm)), "(")
+      print(io, " ", rpad(String(field), width), " = ", param_repr(typeof(tm)), "(")
       subfields = fieldnames(typeof(tm))
-      subwidth = maximum(length, String.(subfields))
-      for subfield in subfields
-        println(io, "   ",  rpad(String(subfield), subwidth), " = ", param_repr(getproperty(tm, subfield)), ",")
+      if length(subfields) != 0
+        println(io)
+        subwidth = maximum(length, String.(subfields))
+        for subfield in subfields
+          println(io, "   ",  rpad(String(subfield), subwidth), " = ", param_repr(getproperty(tm, subfield)), ",")
+        end
+        println(io, " )")
+      else
+        println(io, ")")
       end
-      println(io, " )")
+      if a.step_meaning == StepMeaning.NSteps
+        println(io, " ", rpad("n_steps", width), " = ", param_repr(a.n_steps))
+      elseif a.set_meaning == StepMeaning.DSStep
+        println(io, " ", rpad("ds_step", width), " = ", param_repr(a.ds_step))
+      end
     else
       println(io, " ", rpad(String(field), width), " = ", param_repr(getproperty(a, field)))
     end

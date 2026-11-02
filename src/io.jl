@@ -39,7 +39,9 @@ end
 function writeparam(io::IO, a::UniversalParams)
   fields = fieldnames(typeof(a))
   for field in fields
-    if field == :tracking_method
+    if field == :step || field == :step_meaning
+      continue
+    elseif field == :tracking_method
       tm = getproperty(a, field)
       print(io, String(field), "=", typeof(tm), "(")
       subfields = fieldnames(typeof(tm))
@@ -47,6 +49,11 @@ function writeparam(io::IO, a::UniversalParams)
         print(io, String(subfield), "=", param_repr(getproperty(tm, subfield)), ",")
       end
       print(io, "),")
+      if a.step_meaning == StepMeaning.NSteps
+        print(io, "n_steps", "=", param_repr(a.n_steps), ",")
+      elseif a.set_meaning == StepMeaning.DSStep
+        print(io, "ds_step", "=", param_repr(a.ds_step), ",")
+      end
     else
       print(io, String(field), "=", param_repr(getproperty(a, field)), ",")
     end

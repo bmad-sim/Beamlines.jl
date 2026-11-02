@@ -18,6 +18,7 @@ export AbstractParams,
        EMFieldParams,
        MetaParams,
        IgnoreParams,
+       IBSParams,
        ApertureAt,
        ApertureShape,
        PhaseRef,
@@ -39,11 +40,13 @@ export AbstractParams,
        VKicker,
        RFCavity,
        CrabCavity,
+       BeamBeam,
        BPM,
+       Map,
+       Patch,
        Beamline,
        Context,
        Controller,
-       Patch,
        set!,
        Branch,
        Lattice,
@@ -62,9 +65,17 @@ export AbstractParams,
        findelements,
        findbranches,
 
-       GLOBAL_CONTEXTS
+       GLOBAL_CONTEXTS,
 
-using Accessors, 
+       Fringe,
+       IBSModel,
+
+       DriftKick, MatrixKick, BendKick, SolenoidKick, Implicit, Exact, 
+        SaganCavity, RK4
+
+
+using AcceleratorSimUtils,
+      Accessors, 
       AtomicAndPhysicalConstants,
       StaticArrays, 
       OrderedCollections,
@@ -99,6 +110,7 @@ include("defexpr.jl")
 include("abstractparams.jl")
 include("universal.jl")
 include("element.jl")
+include("element_kinds.jl")
 include("beamline.jl")
 include("branch.jl")
 include("scalarize.jl")
@@ -111,13 +123,14 @@ include("control.jl")
 include("alignment.jl")
 include("patch.jl")
 include("aperture.jl")
+include("ibs.jl")
 include("misc.jl")
 include("ignore.jl")
 include("keymaps.jl")
-include("element-name-handling.jl")
+include("element_name_handling.jl")
 include("search.jl")
-include("name-matching.jl")
-include("element-doc.jl")
+include("name_matching.jl")
+include("element_doc.jl")
 include("io.jl")
 
 # BitsBeamline is no longer supported

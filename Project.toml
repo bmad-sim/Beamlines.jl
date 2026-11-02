@@ -4,6 +4,7 @@ authors = ["Matt Signorelli <mgs255@cornell.edu> and contributors"]
 version = "0.11.0"
 
 [deps]
+AcceleratorSimUtils = "8b14b3b2-39c5-4be4-bdc0-0b322e577224"
 Accessors = "7d9f7c33-5ae7-4f3b-8dc6-eff91059b697"
 AtomicAndPhysicalConstants = "5c0d271c-5419-4163-b387-496237733d8b"
 DataStructures = "864edb3b-99cc-5e75-8d2d-829cb0a9cfe8"
@@ -29,6 +30,7 @@ BeamlinesPythonCallExt = "PythonCall"
 BeamlinesReverseDiffExt = "ReverseDiff"
 
 [compat]
+AcceleratorSimUtils = "0.5"
 Accessors = "0.1.42"
 AtomicAndPhysicalConstants = "0.11"
 DataStructures = "0.19"

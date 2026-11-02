@@ -1,24 +1,6 @@
 #---------------------------------------------------------------------------------------------------
 
-"""
-    Branch
-
-Structure containing a vector of `Beamline`s, where currently each follows in-order, 
-one after the other. 
-
-## Properties
-- `name`: Name of the `Branch`. Default is `""` if not in a lattice and if in a lattice,
-  the default is `"bN"` where `N` is the index of the branch in `lattice.branches`
-- `beamlines`: Vector of the beamlines in the `Branch`
-- `lattice`: `Lattice` that the branch is placed in, if any
-- `lattice_index`: Index of the branch in the `Lattice`, if in a `Lattice`
-- `context`: `Context` shared by the `Branch` and all of its `Beamline`s, and by the whole
-    `Lattice` if the `Branch` is in one. Setting the `context` of any of them sets it for
-    all of them.
-"""
 const Branch = _Branch{Beamline}
-
-#---------------------------------------------------------------------------------------------------
 
 """
     Lattice
@@ -127,6 +109,23 @@ Base.copy(branch::Branch) = Branch(collect(branch.beamlines); name = branch.name
 #---------------------------------------------------------------------------------------------------
 
 """
+    Branch
+
+Structure containing a vector of `Beamline`s, where currently each follows in-order, 
+one after the other. 
+
+## Properties
+- `name`: Name of the `Branch`. Default is `""` if not in a lattice and if in a lattice,
+  the default is `"bN"` where `N` is the index of the branch in `lattice.branches`
+- `beamlines`: Vector of the beamlines in the `Branch`
+- `lattice`: `Lattice` that the branch is placed in, if any
+- `lattice_index`: Index of the branch in the `Lattice`, if in a `Lattice`
+- `context`: `Context` shared by the `Branch` and all of its `Beamline`s, and by the whole
+    `Lattice` if the `Branch` is in one. Setting the `context` of any of them sets it for
+    all of them.
+
+---
+
     Branch(beamlines; name = "", context = Context())
 
 Constructs a `Branch` given the vector of beamlines `beamlines`. The `Branch` holds copies 
@@ -179,8 +178,8 @@ cell = Branch([Quadrupole(L=0.5), Drift(L=1.0)])
 branch2 = Branch([beginning, arc, cell, cell, Marker()]) # 5 `Beamline`s
 ```
 """
-# Defined for `_Branch{T}` rather than `Branch` so the inner constructor 
-# `_Branch{T}(::Vector{T})` is more specific and `Branch(::Vector{Beamline})` is not ambiguous.
+Branch
+
 function _Branch{T}(
   elements::AbstractVector;
   species_ref0::Species=Species(),
@@ -190,6 +189,8 @@ function _Branch{T}(
   name::String = "",
   context = Context(),
 ) where {T<:_AbstractBeamline}
+  # Defined for `_Branch{T}` rather than `Branch` so the inner constructor 
+  # `_Branch{T}(::Vector{T})` is more specific and `Branch(::Vector{Beamline})` is not ambiguous.
   kwargs = (p_over_q_ref0, E_ref0, pc_ref0)
   kwarg_syms = (:p_over_q_ref, :E_ref, :pc_ref)
   c = count(t->!isnothing(t), kwargs)

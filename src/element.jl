@@ -145,30 +145,6 @@ function isapprox_ignoring(a::LineElement, b::LineElement, ignore::Type{<:Abstra
   return anymissing ? missing : true
 end
 
-# Common kind choices
-# Copy docstring to all aliases
-for kind in (:Solenoid, :SBend, :Quadrupole, :Sextupole, :Drift, :Octupole, :Multipole, 
-              :Marker, :Kicker, :HKicker, :VKicker, :RFCavity, :Patch, :BPM
-  )
-  @eval begin
-    """
-        $($kind)(; kwargs...) = LineElement(; kind="$($kind)", kwargs...)
-    
-    See the documentation for `LineElement`
-    """
-    $kind(; kwargs...) = LineElement(; kind="$($kind)", kwargs...)
-  end
-end
-
-# Right now CrabCavity is treated differently
-"""
-    $CrabCavity(; kwargs...) = LineElement(; kind="CrabCavity", is_crabcavity = true, kwargs...)
-
-See the documentation for `LineElement`
-"""
-CrabCavity(; kwargs...) = LineElement(; kind="CrabCavity", is_crabcavity = true, kwargs...)
-
-
 struct InheritParams <: AbstractParams
   parent::LineElement
 end
