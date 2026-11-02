@@ -72,13 +72,20 @@ function Base.setproperty!(up::UniversalParams, key::Symbol, value)
     end
   elseif key == :n_slices
     if !isinteger(value)
-        error("Cannot set n_slices to be non-integer value: $value")
+      error("Cannot set n_slices to be non-integer value: $value")
     elseif value < 1
-        error("Cannot set n_slices to be < 1")
+      error("Cannot set n_slices to be < 1")
     elseif up.L == 0 && value != 1
-        @warn "Ignoring n_slices set: n_slices for zero length element must be 1"
+      @warn "Ignoring n_slices set: n_slices for zero length element must be 1"
     else
-        setfield!(up, :n_slices, Int(value))
+      old_n_slices = up.n_slices
+      setfield!(up, :n_slices, Int(value))
+      if up.step_meaning == StepMeaning.DSStep
+        # Keep ratio of n_slices/ds_step = old_n_slices/old_ds_step the same
+        # ds_step = old_ds_step * n_slices / old_n_slices
+        @info "Setting ds_step to keep n_slices / ds_step constant"
+        setfield!(up, :step, up.ds_step * Int(value) / old_n_slices)
+      end
     end
   elseif key == :L
     if value == 0
@@ -110,7 +117,7 @@ function Base.getproperty(up::UniversalParams, key::Symbol)
     if up.step_meaning == StepMeaning.NSteps
       return getfield(up, :step)
     else
-      return iszero(up.L) ? 1 : max(ceil(Int, abs(up.L) / getfield(up, :step)), 1)
+      return iszero(up.L) ? 1 : max(ceil(Int, abs(up.L) / up.n_slices / getfield(up, :step)), 1)
     end
   elseif key == :ds_step
     if up.step_meaning == StepMeaning.DSStep
@@ -129,7 +136,7 @@ PROPS(::Type{UniversalParams}) = OrderedDict{String,String}(
   "L"    => "Length of the element [m]",
   "fringe_at" => "A `Fringe` that specifies which, if any, element ends should include fringe field modelling. Default is `Fringe.BothEnds`",
   "n_steps" => "Number of integrator steps to take per element slice, default is 1",
-  "ds_step" => "Length of each integrator step to take per element slice, such that `n_steps = ceil(L / ds_step)`",
+  "ds_step" => "Length of each integrator step to take per element slice, such that `n_steps = ceil(L / n_slices / ds_step)`",
   "n_slices" => "Number of slices to split the element into in tracking, typically so that collective effects can be applied multiple times 
   in an element. If no collective effects are included, then prefer to vary `n_steps`/`ds_step` instead for performance.",
   "tracking_method" => "Tracking method for the element",
@@ -172,7 +179,7 @@ function Base.show(io::IO, a::UniversalParams)
       end
       if a.step_meaning == StepMeaning.NSteps
         println(io, " ", rpad("n_steps", width), " = ", param_repr(a.n_steps))
-      elseif a.set_meaning == StepMeaning.DSStep
+      elseif a.step_meaning == StepMeaning.DSStep
         println(io, " ", rpad("ds_step", width), " = ", param_repr(a.ds_step))
       end
     else
