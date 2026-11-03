@@ -74,8 +74,7 @@ export AbstractParams,
         SaganCavity, RK4
 
 
-using AcceleratorSimUtils,
-      Accessors, 
+using Accessors, 
       AtomicAndPhysicalConstants,
       StaticArrays, 
       OrderedCollections,
@@ -105,6 +104,7 @@ using FunctionWrappers: FunctionWrapper
 # struct as one can sum the lengths of each preceding element in the Beamline.
 
 include("utils.jl")
+include("energy.jl")
 include("tracking_methods.jl")
 include("context.jl")
 include("defexpr.jl")

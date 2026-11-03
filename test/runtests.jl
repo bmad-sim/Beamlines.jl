@@ -2543,6 +2543,8 @@ using ForwardDiff, GTPSA, ReverseDiff
     end
 end
 
+include("energy_test.jl")
+
 @testset "Reference params: standalone Beamline (not in a Branch)" begin
   # Stored absolute: absolute keys work (given species), all relative keys need an upstream Beamline
   bl = Beamline([Marker()]; E_ref=10e9, species_ref=Species("proton"))

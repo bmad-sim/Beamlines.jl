@@ -51,7 +51,7 @@ function writeparam(io::IO, a::UniversalParams)
       print(io, "),")
       if a.step_meaning == StepMeaning.NSteps
         print(io, "n_steps", "=", param_repr(a.n_steps), ",")
-      elseif a.set_meaning == StepMeaning.DSStep
+      elseif a.step_meaning == StepMeaning.DSStep
         print(io, "ds_step", "=", param_repr(a.ds_step), ",")
       end
     else

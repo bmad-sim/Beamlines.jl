@@ -668,65 +668,7 @@ function inherit_from_upstream(beamline, key)
   end
 end
 
-# species_ref, or a GetError saying that computing key needs it
-function try_get_species_for(ele::LineElement, key::Symbol, ref_meaning::Symbol, context::Context)
-  species_ref = try_get_bl_params(ele, :species_ref, context)
-  if species_ref isa GetError
-    # Make it more informative:
-    return GetError("
-      Unable to get $key: stored is $ref_meaning and computing $key requires a species_ref,
-      which has not been set nor is inferrable.
-    ")
-  end
-  return species_ref
-end
-
-# Absolute value of var_abs at the START of this Beamline (the end of the upstream Beamline).
-# If this is the first Beamline in a Branch, the particle is assumed to start at rest 
-# (out of thin air): pc = 0, p_over_q = 0, E = massof(species_ref).
-# Returns a GetError if the upstream value is not inferrable.
-function upstream_ref(beamline, branch_index, var_abs, species_ref)
-  if branch_index == 1
-    if var_abs == :E_ref
-      return massof(species_ref)
-    else
-      return 0
-    end
-  else
-    return trygetproperty(getfield(beamline, :branch).beamlines[branch_index-1], var_abs)
-  end
-end
-
  # species_ref, or a GetError saying that computing key needs it
-function try_get_species_for(ele::LineElement, key::Symbol, ref_meaning::Symbol, context::Context)
-  species_ref = try_get_bl_params(ele, :species_ref, context)
-  if species_ref isa GetError
-    # Make it more informative:
-    return GetError("
-      Unable to get $key: stored is $ref_meaning and computing $key requires a species_ref,
-      which has not been set nor is inferrable.
-    ")
-  end
-  return species_ref
-end
- 
-# Absolute value of var_abs at the START of this Beamline (the end of the upstream Beamline).
-# If this is the first Beamline in a Branch, the particle is assumed to start at rest 
-# (out of thin air): pc = 0, p_over_q = 0, E = massof(species_ref).
-# Returns a GetError if the upstream value is not inferrable.
-function upstream_ref(beamline, branch_index, var_abs, species_ref)
-  if branch_index == 1
-    if var_abs == :E_ref
-      return massof(species_ref)
-    else
-      return 0
-    end
-  else
-    return trygetproperty(getfield(beamline, :branch).beamlines[branch_index-1], var_abs)
-  end
-end
- 
-# species_ref, or a GetError saying that computing key needs it
 function try_get_species_for(ele::LineElement, key::Symbol, ref_meaning::Symbol, context::Context)
   species_ref = try_get_bl_params(ele, :species_ref, context)
   if species_ref isa GetError
