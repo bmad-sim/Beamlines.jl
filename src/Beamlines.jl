@@ -105,6 +105,7 @@ using FunctionWrappers: FunctionWrapper
 # struct as one can sum the lengths of each preceding element in the Beamline.
 
 include("utils.jl")
+include("tracking_methods.jl")
 include("context.jl")
 include("defexpr.jl")
 include("abstractparams.jl")
