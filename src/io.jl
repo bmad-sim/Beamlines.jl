@@ -43,7 +43,7 @@ function writeparam(io::IO, a::UniversalParams)
       continue
     elseif field == :tracking_method
       tm = getproperty(a, field)
-      print(io, String(field), "=", typeof(tm), "(")
+      print(io, String(field), "=", Base.typename(typeof(tm)).wrapper, "(")
       subfields = fieldnames(typeof(tm))
       for subfield in subfields
         print(io, String(subfield), "=", param_repr(getproperty(tm, subfield)), ",")

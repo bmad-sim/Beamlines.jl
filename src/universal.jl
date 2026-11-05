@@ -141,7 +141,7 @@ function Base.show(io::IO, a::UniversalParams)
       continue
     elseif field == :tracking_method
       tm = getproperty(a, field)
-      print(io, " ", rpad(String(field), width), " = ", param_repr(typeof(tm)), "(")
+      print(io, " ", rpad(String(field), width), " = ", param_repr(Base.typename(typeof(tm)).wrapper), "(")
       subfields = fieldnames(typeof(tm))
       if length(subfields) != 0
         println(io)

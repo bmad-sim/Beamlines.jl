@@ -2,18 +2,23 @@
 # ========== Symplectic ===========================
 abstract type AbstractSymplectic end
 
+# order and opt_scheme are also type parameters, and getproperty returns those, so that they
+# are known to the compiler in tracking (e.g. the integrator chosen by order is type stable)
 for name in (:DriftKick, :MatrixKick, :BendKick, :SolenoidKick)
 @eval begin
-  Base.@kwdef struct $name <: AbstractSymplectic
-    order::Int = 4
-    opt_scheme::Bool = true
+  struct $name{O,S} <: AbstractSymplectic
+    order::Int
+    opt_scheme::Bool
     function $name(order, opt_scheme) 
       if !(order in (2, 4, 6, 8, 10))
         error("$($name) only supports orders 2, 4, 6, 8, and 10")
       end
-      return new(order, opt_scheme)
+      return new{Int(order),Bool(opt_scheme)}(order, opt_scheme)
     end
   end
+  $name(; order=4, opt_scheme=true) = $name(order, opt_scheme)
+  Base.getproperty(tm::$name{O,S}, key::Symbol) where {O,S} = key === :order ? O : key === :opt_scheme ? S : getfield(tm, key)
+  Base.show(io::IO, tm::$name) = print(io, $(string(name)), "(", tm.order, ", ", tm.opt_scheme, ")")
 end
 end
 
@@ -73,17 +78,20 @@ Implicit symplectic integrator for arbitrary electromagnetic potentials.
 $(PROPSDOC(Implicit))
 - `use_newton`: If `true`, Newton's method is used to solve the implicit step, else fixed point iteration is used. Default is `false`
 """
-Base.@kwdef struct Implicit <: AbstractSymplectic
-  order::Int = 4
-  opt_scheme::Bool = true
-  use_newton::Bool = false
+struct Implicit{O,S,N} <: AbstractSymplectic
+  order::Int
+  opt_scheme::Bool
+  use_newton::Bool
   function Implicit(order, opt_scheme, use_newton) 
     if !(order in (2, 4, 6, 8, 10))
       error("Implicit only supports orders 2, 4, 6, 8, and 10")
     end
-    return new(order, opt_scheme, use_newton)
+    return new{Int(order),Bool(opt_scheme),Bool(use_newton)}(order, opt_scheme, use_newton)
   end
 end
+Implicit(; order=4, opt_scheme=true, use_newton=false) = Implicit(order, opt_scheme, use_newton)
+Base.getproperty(tm::Implicit{O,S,N}, key::Symbol) where {O,S,N} = key === :order ? O : key === :opt_scheme ? S : key === :use_newton ? N : getfield(tm, key)
+Base.show(io::IO, tm::Implicit) = print(io, "Implicit(", tm.order, ", ", tm.opt_scheme, ", ", tm.use_newton, ")")
 
 
 # ========== Exact ===========================
