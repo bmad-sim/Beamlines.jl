@@ -15,7 +15,7 @@ using ForwardDiff, GTPSA, ReverseDiff
     @test up.name == "Test123"
     @test typeof(up.L) == typeof(L)
     @test up.L == L
-    @test up.tracking_method == SciBmadStandard()
+    @test up.tracking_method == DriftKick()
     @test ele.kind == up.kind
     @test ele.name == up.name
     @test ele.L == up.L
@@ -25,7 +25,7 @@ using ForwardDiff, GTPSA, ReverseDiff
     @test !(ele2 === ele)
     @test ele2 ≈ ele 
 
-    up_new = UniversalParams(tracking_method=SciBmadStandard(), L=10.0, name="NewTest", kind="NewTest123")
+    up_new = UniversalParams(tracking_method=DriftKick(), L=10.0, name="NewTest", kind="NewTest123")
     ele.UniversalParams = up_new
     @test ele.UniversalParams === up_new
     @test ele.kind == up_new.kind

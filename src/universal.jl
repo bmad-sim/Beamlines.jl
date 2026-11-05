@@ -1,24 +1,3 @@
-# Default tracking method:
-"""
-    SciBmadStandard
-
-Default tracking method that uses exact transport maps when solvable, else uses the 
-symplectic integrator `Yoshida(order=4, num_steps=1)` which chooses an appropriate split 
-for each element.
-
-## Properties
-- `rad_damping`: `true` if the deterministic effect of synchrotron radiation 
-    is included, `false` otherwise. Defaults to `false`
-- `rad_fluctuations`: `true` if the stochastic radiation kicks are included, 
-    `false` otherwise. Defaults to `false`
-- `ibs_damping_on`: true if the deterministic effect of intrabeam scattering (IBS) is 
-    included, `false` otherwise. Defaults to `false`.
-- `ibs_fluctuations_on`: true if the stochastic kicks of intrabeam scattering (IBS) is 
-    included, `false` otherwise. Defaults to `false`.
-"""
-@kwdef struct SciBmadStandard
-end
-
 @enumx StepMeaning::Int8 DSStep NSteps
 
 """
@@ -32,7 +11,7 @@ Defines which ends fringe field modelling should be included
   kind            = ""
   name            = ""
   L               = 0f0
-  tracking_method = SciBmadStandard()
+  tracking_method = nothing
   n_slices::Int   = 1
   step            = 1  # PROTECTED FROM DIRECT SETS!
   step_meaning::StepMeaning.T = StepMeaning.NSteps # PROTECTED FROM DIRECT SETS!
@@ -43,7 +22,7 @@ end
 
 param_replace(p::UniversalParams, key::Symbol, value) = (setproperty!(p, key, value); p)
 
-Base.propertynames(::UniversalParams) = (:kind, :name, :L, :tracking_method, :n_slices, :n_steps, :ds_step, :rad_damping, :rad_fluctuations)
+Base.propertynames(::UniversalParams) = (:kind, :name, :L, :tracking_method, :n_slices, :n_steps, :ds_step, :fringe_at, :rad_damping, :rad_fluctuations)
 
 function Base.setproperty!(up::UniversalParams, key::Symbol, value)
   if key == :step || key == :step_meaning
@@ -78,14 +57,7 @@ function Base.setproperty!(up::UniversalParams, key::Symbol, value)
     elseif up.L == 0 && value != 1
       @warn "Ignoring n_slices set: n_slices for zero length element must be 1"
     else
-      old_n_slices = up.n_slices
       setfield!(up, :n_slices, Int(value))
-      if up.step_meaning == StepMeaning.DSStep
-        # Keep ratio of n_slices/ds_step = old_n_slices/old_ds_step the same
-        # ds_step = old_ds_step * n_slices / old_n_slices
-        @info "Setting ds_step to keep n_slices / ds_step constant"
-        setfield!(up, :step, up.ds_step * Int(value) / old_n_slices)
-      end
     end
   elseif key == :L
     if value == 0
@@ -125,9 +97,9 @@ function Base.getproperty(up::UniversalParams, key::Symbol)
     end
   elseif key == :ds_step
     if up.step_meaning == StepMeaning.DSStep
-        return getfield(up, :step)
+      return getfield(up, :step)
     else
-        return abs(up.L) / up.n_steps
+      return abs(up.L) / up.n_slices / up.n_steps
     end
   else
     return getfield(up, key)
@@ -194,9 +166,11 @@ function Base.show(io::IO, a::UniversalParams)
 end
 
 function Base.isapprox(a::UniversalParams, b::UniversalParams)
-  return a.tracking_method == b.tracking_method &&
-         a.L               ≈  b.L
-         # Only compare things that affect the physics
-         #a.kind           == b.kind &&
-         #a.name            
+  return a.tracking_method  == b.tracking_method &&
+        a.L                ≈  b.L &&
+        a.n_slices         == b.n_slices &&
+        a.n_steps          == b.n_steps &&
+        a.fringe_at        == b.fringe_at &&
+        a.rad_damping      == b.rad_damping &&
+        a.rad_fluctuations == b.rad_fluctuations
 end

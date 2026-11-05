@@ -52,8 +52,6 @@ export AbstractParams,
        Lattice,
 
        deepcopy_no_beamline,
-
-       SciBmadStandard,
        
        @elements, 
        elements,
