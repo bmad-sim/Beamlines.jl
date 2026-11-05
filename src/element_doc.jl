@@ -48,15 +48,15 @@ end
 
 
 """
-    LineElement
+    LatElement
     
 The basic building block which makes up a `Beamline`. May be something physical like a 
 quadrupole magnet, or something non-physical like a point in the accelerator you want 
-to mark. A `LineElement` may define a region in space distinguished by the presence of 
+to mark. A `LatElement` may define a region in space distinguished by the presence of 
 (possibly time-varying) electromagnetic fields, materials, apertures and other possible 
 properties.
 
-`LineElement` properties are split into "parameter groups" for convenient organization:
+`LatElement` properties are split into "parameter groups" for convenient organization:
 ~~~text
 $(_param_table_str())
 ~~~
@@ -64,7 +64,7 @@ $(_param_table_str())
 To set a property, use the natural syntax:
 
 ```julia
-ele = LineElement()
+ele = LatElement()
 ele.L = 1   # Length 
 ele.Kn1 = 2 # Normal quadrupole strength
 ele.rf_frequency = 1e6 
@@ -74,4 +74,4 @@ For detailed descriptions of properties in a given parameter group, see the docu
 for that parameter group.
 
 """
-LineElement
+LatElement

@@ -1,18 +1,18 @@
 module BeamlinesPythonCallExt
 using PythonCall
-using Beamlines: LineElement, Beamline
+using Beamlines: LatElement, Beamline
 import Beamlines: defconvert, Branch
 
 # Python objects are always converted to numbers
 defconvert(::Type{T}, f::Py) where {T} = pyconvert(Number, f)
 function Branch(lbl::PyList)
   lbl = collect(vec(lbl))
-  if all(t->t isa LineElement, lbl)
-    return Branch(convert(Vector{LineElement}, lbl))
+  if all(t->t isa LatElement, lbl)
+    return Branch(convert(Vector{LatElement}, lbl))
   elseif all(t->t isa Beamline, lbl)
     return Branch(convert(Vector{Beamline}, lbl))
   else
-    error("Branch array must only contain ONE of Either LineElement or Beamline types")
+    error("Branch array must only contain ONE of Either LatElement or Beamline types")
   end
 end
 

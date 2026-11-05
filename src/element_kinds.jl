@@ -1,8 +1,8 @@
 function create_element(kind, tm, L, kwargs)
   if L != 0
-    return LineElement(; L=L, kind=kind, tracking_method=tm, kwargs...)
+    return LatElement(; L=L, kind=kind, tracking_method=tm, kwargs...)
   else
-    return LineElement(; kind=kind, tracking_method=Exact(), kwargs...)
+    return LatElement(; kind=kind, tracking_method=Exact(), kwargs...)
   end
 end
 
@@ -26,4 +26,4 @@ RFCavity(; L=0f0, kwargs...) = create_element("RFCavity", SolenoidKick(), L, kwa
 
 CrabCavity(; L=0f0, kwargs...) = create_element("CrabCavity", SolenoidKick(), L, (; is_crabcavity=true, kwargs...))
 
-BeamBeam(; L=0f0, kwargs...) = LineElement(; L=L, kind="BeamBeam", tracking_method=Implicit(), kwargs...) #create_element("BeamBeam", Implicit(), L, kwargs)
+BeamBeam(; L=0f0, kwargs...) = LatElement(; L=L, kind="BeamBeam", tracking_method=Implicit(), kwargs...) #create_element("BeamBeam", Implicit(), L, kwargs)

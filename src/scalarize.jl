@@ -4,14 +4,14 @@ scalarize(t::AbstractArray) = scalarize.(t)
 # See element.jl for scalarize function acting on parameter groups
 
 """
-    scalarize!(ele::LineElement)
+    scalarize!(ele::LatElement)
 
-Modifies the `LineElement` so all element-level parameters are regular number types. 
+Modifies the `LatElement` so all element-level parameters are regular number types. 
 This may be needed after optimizing the element's parameters using e.g. `ForwardDiff`, 
 `ReverseDiff`, or `GTPSA`, which will set the parameter equal to a special number type 
 that propagates the gradients.
 """
-function scalarize!(ele::LineElement)
+function scalarize!(ele::LatElement)
   pdict = getfield(ele, :pdict)
   for (key, p) in pdict
     if key == InheritParams
@@ -26,7 +26,7 @@ end
 """
     scalarize!(bl::Beamline)
 
-Modifies the `Beamline` and its `LineElement`s so all parameters are regular number types. 
+Modifies the `Beamline` and its `LatElement`s so all parameters are regular number types. 
 This may be needed after optimizing the element's parameters using e.g. `ForwardDiff`, 
 `ReverseDiff`, or `GTPSA`, which will set the parameter equal to a special number type 
 that propagates the gradients.
@@ -45,7 +45,7 @@ end
 """
     scalarize!(branch::Branch)
 
-Modifies all `Beamline`s and their `LineElement`s in the `Branch` so all parameters are 
+Modifies all `Beamline`s and their `LatElement`s in the `Branch` so all parameters are 
 regular number types. This may be needed after optimizing the element's parameters using 
 e.g. `ForwardDiff`, `ReverseDiff`, or `GTPSA`, which will set the parameter equal to a 
 special number type that propagates the gradients.

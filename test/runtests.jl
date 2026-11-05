@@ -1,11 +1,11 @@
 using Beamlines
-using Beamlines: isactive, isapprox_ignoring
+using Beamlines: isactive, isapprox_ignoring, LatElement
 using Test
 using ForwardDiff, GTPSA, ReverseDiff
 
 @testset "Beamlines.jl" begin
     L = 5.0f0
-    ele = LineElement(kind="Test", name="Test123", L=L)
+    ele = LatElement(kind="Test", name="Test123", L=L)
 
     @test getfield(ele, :pdict)[UniversalParams] === ele.UniversalParams
 
@@ -266,7 +266,7 @@ using ForwardDiff, GTPSA, ReverseDiff
     @test b4.Kn0 == pi/2/b4.L
 
     # Basic beamline:
-    a = LineElement(L=0.5f0, Bn1=2.0f0)
+    a = LatElement(L=0.5f0, Bn1=2.0f0)
     ele.Bn2L = 1.2
     ele.Kn1 = 0.36
     ele.L = 2.0
@@ -1003,16 +1003,16 @@ using ForwardDiff, GTPSA, ReverseDiff
       @test (+DefExpr(()->L))() == +L
       @test (-DefExpr(()->L))() == -L
       m = Marker()
-      bl = Beamline(LineElement[m], species_ref=Species("proton"), p_over_q_ref=DefExpr(() -> 123))
+      bl = Beamline(LatElement[m], species_ref=Species("proton"), p_over_q_ref=DefExpr(() -> 123))
       @test bl.p_over_q_ref == 123
 
-      ele = LineElement(Kn1L = DefExpr(()->1))
+      ele = LatElement(Kn1L = DefExpr(()->1))
       @test ele.Kn2L == 0
       @test one(DefExpr(()->2))() == 1
       @test abs(DefExpr(()->-L))() == abs(L)
       @test abs(DefExpr(()->L))() == abs(L)
     end
-    ele = LineElement(x1_limit=123,
+    ele = LatElement(x1_limit=123,
                       x2_limit=456,
                       y1_limit=789, 
                       y2_limit=012, 
@@ -1140,7 +1140,7 @@ using ForwardDiff, GTPSA, ReverseDiff
     @test rf0.rf_frequency ≈ 0.2118107321845737E+08
     @test rf0.harmon ≈ 20
 
-    @test LineElement(harmon_master=true).harmon_master == true
+    @test LatElement(harmon_master=true).harmon_master == true
     @test_throws ErrorException RFParams(harmon_master=false, rate_meaning=RateMeaning.Harmon)
 
     # RFParams bug check
@@ -1151,7 +1151,7 @@ using ForwardDiff, GTPSA, ReverseDiff
     bo = 1.23
     dbo = DefExpr(()->bo)
 
-    ele = LineElement(
+    ele = LatElement(
       x_offset = dbo,
       y_offset = dbo + 1,
       z_offset = dbo + 2,
@@ -1198,19 +1198,19 @@ using ForwardDiff, GTPSA, ReverseDiff
     @test Beamlines.deval(ele.RFParams) ≈ RFParams(bo + 27, bo + 28, bo + 29, RateMeaning.RFFrequency, PhaseRef.Accelerating, false, false)
 
     # Species addition
-    bl = Beamline([LineElement(), LineElement()]; p_over_q_ref=-59.52872449027632, species_ref=Species("electron"))
+    bl = Beamline([LatElement(), LatElement()]; p_over_q_ref=-59.52872449027632, species_ref=Species("electron"))
     @test bl.species_ref == Species("electron")
     @test bl.p_over_q_ref == -59.52872449027632
     @test bl.pc_ref ≈ 1.7846262612447e10
     @test bl.E_ref ≈ 1.784626264386055e10
     @test sqrt(bl.E_ref^2-bl.pc_ref^2) ≈ Beamlines.massof(bl.species_ref)
-    bl = Beamline([LineElement(), LineElement()]; pc_ref=1.7846262612447e10, species_ref=Species("electron"))
+    bl = Beamline([LatElement(), LatElement()]; pc_ref=1.7846262612447e10, species_ref=Species("electron"))
     @test bl.species_ref == Species("electron")
     @test bl.p_over_q_ref ≈ -59.52872449027632
     @test bl.pc_ref ≈ 1.7846262612447e10
     @test bl.E_ref ≈ 1.784626264386055e10
     @test sqrt(bl.E_ref^2-bl.pc_ref^2) ≈ Beamlines.massof(bl.species_ref)
-    bl = Beamline([LineElement(), LineElement()]; E_ref=1.784626264386055e10, species_ref=Species("electron"))
+    bl = Beamline([LatElement(), LatElement()]; E_ref=1.784626264386055e10, species_ref=Species("electron"))
     @test bl.species_ref == Species("electron")
     @test bl.p_over_q_ref ≈ -59.52872449027632
     @test bl.pc_ref ≈ 1.7846262612447e10
@@ -1228,7 +1228,7 @@ using ForwardDiff, GTPSA, ReverseDiff
     @test bl.line[2].pc_ref == bl.pc_ref
 
     @test Beamline([Marker()], species_ref=Species("electron"), p_over_q_ref = 10).p_over_q_ref == -10
-    ele = LineElement()
+    ele = LatElement()
     bl1 = Beamline([ele])
     bl = Beamline([Marker()], species_ref=Species("electron"), p_over_q_ref = 10)
     @test bl.p_over_q_ref == -10
@@ -1240,7 +1240,7 @@ using ForwardDiff, GTPSA, ReverseDiff
     @test_throws ErrorException Beamline([Marker()]).species_ref
 
     # Get write-only property
-    @test_throws ErrorException LineElement(angle=1.0).angle
+    @test_throws ErrorException LatElement(angle=1.0).angle
 
     # Test dR etc
     bl = Beamline([Marker()]; dp_over_q_ref=-59.52872449027632, species_ref=Species("electron"))
@@ -1269,9 +1269,9 @@ using ForwardDiff, GTPSA, ReverseDiff
     @test_throws ErrorException bl.pc_ref
 
     # InitialBeamlineParams
-    ele = LineElement(species_ref=Species("electron"))
+    ele = LatElement(species_ref=Species("electron"))
     @test Beamline([ele]).species_ref == Species("electron")
-    ele = LineElement(species_ref=Species("electron"), dp_over_q_ref=-59.52872449027632)
+    ele = LatElement(species_ref=Species("electron"), dp_over_q_ref=-59.52872449027632)
     @test ele.dp_over_q_ref == -59.52872449027632
     @test_throws ErrorException ele.dpc_ref
     @test_throws ErrorException ele.dE_ref 
@@ -1304,13 +1304,13 @@ using ForwardDiff, GTPSA, ReverseDiff
     @test ele.E_ref ≈ 1.784626264386055e10
 
     # Get before setting anything
-    @test_throws ErrorException LineElement().E_ref
-    @test_throws ErrorException LineElement().species_ref
-    @test_throws ErrorException LineElement(E_ref=18e9).species_ref
-    @test_throws ErrorException LineElement(species_ref=Species("electron")).p_over_q_ref
+    @test_throws ErrorException LatElement().E_ref
+    @test_throws ErrorException LatElement().species_ref
+    @test_throws ErrorException LatElement(E_ref=18e9).species_ref
+    @test_throws ErrorException LatElement(species_ref=Species("electron")).p_over_q_ref
 
      # Only valid at first element
-    bl = Beamline([LineElement(), LineElement()], E_ref=10e9, species_ref=Species("electron"))
+    bl = Beamline([LatElement(), LatElement()], E_ref=10e9, species_ref=Species("electron"))
     @test_throws ErrorException bl.line[2].E_ref = 2e9
     bl.line[1].E_ref = 2e9
     @test bl.line[1].E_ref == 2e9
@@ -1324,12 +1324,12 @@ using ForwardDiff, GTPSA, ReverseDiff
     @test_throws ErrorException bl.dp_over_q_ref
     @test_throws ErrorException bl.dE_ref
     @test_throws ErrorException bl.dpc_ref
-    @test_throws ErrorException Beamline([LineElement(), LineElement(species_ref=Species("electron"))])
-    @test_throws ErrorException Beamline([LineElement(), LineElement(p_over_q_ref=-39.)])
-    @test_throws ErrorException Beamline([LineElement(), LineElement(E_ref=10e9, species_ref=Species("electron"))])
+    @test_throws ErrorException Beamline([LatElement(), LatElement(species_ref=Species("electron"))])
+    @test_throws ErrorException Beamline([LatElement(), LatElement(p_over_q_ref=-39.)])
+    @test_throws ErrorException Beamline([LatElement(), LatElement(E_ref=10e9, species_ref=Species("electron"))])
 
     # Overriding InitialBeamlineParams at Beamline level
-    ele = LineElement(species_ref=Species("electron"), pc_ref=1.0)
+    ele = LatElement(species_ref=Species("electron"), pc_ref=1.0)
     bl = Beamline([ele]; species_ref=Species("proton"), pc_ref=2.0)
     @test ele.species_ref == Species("electron")
     @test bl.line[1].species_ref == Species("proton")
@@ -1398,12 +1398,12 @@ using ForwardDiff, GTPSA, ReverseDiff
 
     @test Branch([Beamline([Marker()]; dp_over_q_ref=10.)]).beamlines[1].p_over_q_ref == 10.
 
-    # Branch LineElement ctor:
-    ele1 = LineElement(E_ref=10e9, species_ref=Species("electron"))
-    ele1a = LineElement()
-    ele2 = LineElement(dE_ref=-3e9, species_ref=Species("proton"))
-    ele2a = LineElement()
-    ele2b = LineElement()
+    # Branch LatElement ctor:
+    ele1 = LatElement(E_ref=10e9, species_ref=Species("electron"))
+    ele1a = LatElement()
+    ele2 = LatElement(dE_ref=-3e9, species_ref=Species("proton"))
+    ele2a = LatElement()
+    ele2b = LatElement()
     branch = Branch([ele1, ele1a, ele2, ele2a, ele2b])
     @test all(branch.beamlines[1].line .≈ [ele1, ele1a])
     @test all(branch.beamlines[2].line .≈ [ele2, ele2a, ele2b])
@@ -1438,19 +1438,19 @@ using ForwardDiff, GTPSA, ReverseDiff
 
 
     # Check that InitialBeamlineParams is overridden:
-    ele1 = LineElement(E_ref=10e9, species_ref=Species("electron"))
-    ele1a = LineElement()
+    ele1 = LatElement(E_ref=10e9, species_ref=Species("electron"))
+    ele1a = LatElement()
     branch = Branch([ele1, ele1a]; species_ref0=Species("proton"), E_ref0=20e9)
     @test all(isapprox_ignoring.(branch.beamlines[1].line, [ele1, ele1a], InitialBeamlineParams))
     bl1 = branch.beamlines[1]
     @test bl1.E_ref == 20e9
     @test bl1.species_ref == Species("proton")
 
-    ele1 = LineElement(E_ref=10e9, species_ref=Species("electron"))
-    ele1a = LineElement()
-    ele2 = LineElement(dE_ref=-3e9, species_ref=Species("proton"))
-    ele2a = LineElement()
-    ele2b = LineElement()
+    ele1 = LatElement(E_ref=10e9, species_ref=Species("electron"))
+    ele1a = LatElement()
+    ele2 = LatElement(dE_ref=-3e9, species_ref=Species("proton"))
+    ele2a = LatElement()
+    ele2b = LatElement()
     branch = Branch([ele1, ele1a, ele2, ele2a, ele2b]; species_ref0=Species("proton"), E_ref0=20e9)
     @test all(isapprox_ignoring.(branch.beamlines[1].line, [ele1, ele1a], InitialBeamlineParams))
     @test all(branch.beamlines[2].line .≈ [ele2, ele2a, ele2b])
@@ -1460,11 +1460,11 @@ using ForwardDiff, GTPSA, ReverseDiff
     @test bl1.species_ref == Species("proton")
 
 
-    branch = Branch([LineElement(), LineElement()]; species_ref0=Species("proton"), E_ref0=10e9)
+    branch = Branch([LatElement(), LatElement()]; species_ref0=Species("proton"), E_ref0=10e9)
     @test branch.beamlines[1].E_ref == 10e9
     @test branch.beamlines[1].species_ref == Species("proton")
 
-    ele1 = LineElement()
+    ele1 = LatElement()
     bl1 = Beamline([ele1])
     @test_throws ErrorException Branch([Marker()]; E_ref0=10e9, pc_ref0=3e9)
 
@@ -1474,7 +1474,7 @@ using ForwardDiff, GTPSA, ReverseDiff
     @test length(brk.beamlines) == 2
     @test brk[3].s == 1.0
 
-    # Branch(elements) with a mix of LineElements, Beamlines, and Branches
+    # Branch(elements) with a mix of LatElements, Beamlines, and Branches
     mbeg = Marker(E_ref=10e9, species_ref=Species("electron"))
     arc = Beamline([Drift(L=1.0), SBend(L=2.0)]; context=Context(a=1))
     qcell = Quadrupole(L=0.5)
@@ -1558,28 +1558,28 @@ using ForwardDiff, GTPSA, ReverseDiff
     @test brLc[1] !== brLc[3]
     @test brLc[3].beamline === brLc.beamlines[2]
 
-    # Branch(elements) with a Beamline repeated three times and a LineElement between
+    # Branch(elements) with a Beamline repeated three times and a LatElement between
     c3r = Beamline([Drift(L=1.0)])
     br3r = Branch(Any[c3r, c3r, Drift(L=5.0), c3r])
     @test [br3r[i].s for i in 1:4] == [0, 1, 2, 7]
     @test length(unique(objectid, [bl.line for bl in br3r.beamlines])) == 4
 
     # Repeated empty Beamline infers its reference energy from the Beamline before it
-    ber = Beamline(LineElement[])
+    ber = Beamline(LatElement[])
     brer = Branch([Beamline([Marker()]; E_ref=1e9, species_ref=Species("electron")), ber, ber])
     @test length(brer) == 1
     @test [bl.E_ref for bl in brer.beamlines] == [1e9, 1e9, 1e9]
 
     @test_throws ErrorException Branch([Drift(), 1.0])
-    @test_throws ErrorException Branch(Any[bla]; E_ref0=1e9)  # ref0 needs a leading LineElement
-    @test_throws ErrorException Branch(LineElement[]; E_ref0=1e9)
+    @test_throws ErrorException Branch(Any[bla]; E_ref0=1e9)  # ref0 needs a leading LatElement
+    @test_throws ErrorException Branch(LatElement[]; E_ref0=1e9)
     @test length(Branch([cell, Beamline([Drift(L=3.0)])])) == 3
 
     # MapParams
     f = (v,q=nothing)->((1,2,3,4,5,6),(7,8,9,10))
     g = (v,q=nothing)->((11,12,13,14,15,16),(17,18,19,20))
-    ele1 = LineElement(transport_map=f)
-    ele2 = LineElement(transport_map=f)
+    ele1 = LatElement(transport_map=f)
+    ele2 = LatElement(transport_map=f)
     @test !isnothing(ele1.MapParams)
     @test ele1.MapParams isa MapParams{typeof(f)}
     @test ele1.transport_map == f
@@ -1603,8 +1603,8 @@ using ForwardDiff, GTPSA, ReverseDiff
                                 12, 13, 14, -2,
                                 15, 16, 17, -3,
                                 18, 19, 20, -4))
-    ele1 = LineElement(four_potential=f)
-    ele2 = LineElement(four_potential=f)
+    ele1 = LatElement(four_potential=f)
+    ele2 = LatElement(four_potential=f)
     @test !isnothing(ele1.FourPotentialParams)
     @test ele1.FourPotentialParams isa FourPotentialParams{typeof(f)}
     @test ele1.four_potential == f
@@ -1712,7 +1712,7 @@ using ForwardDiff, GTPSA, ReverseDiff
     alias = "matt"
     label = "the matt"
     description = "this is a matt"
-    ele = LineElement(alias=alias, label=label, description=description)
+    ele = LatElement(alias=alias, label=label, description=description)
     @test ele.alias == alias
     @test ele.label == label
     @test ele.description == description
@@ -1726,18 +1726,18 @@ using ForwardDiff, GTPSA, ReverseDiff
     @test ele.alias == alias
     @test ele.label == label
     @test ele.description == description
-    @test ele ≈ LineElement()
+    @test ele ≈ LatElement()
 
     @test ele.MetaParams ≈ MetaParams()
 
     # InheritParams show: short description of the parent
     parent = Quadrupole(name="qp")
-    @test occursin("parent = LineElement(name = \"qp\", kind = \"Quadrupole\")", 
+    @test occursin("parent = LatElement(name = \"qp\", kind = \"Quadrupole\")", 
                    sprint(show, InheritParams(parent)))
-    @test occursin("parent = LineElement with no UniversalParams", 
-                   sprint(show, InheritParams(LineElement(Beamlines.ParamDict()))))
+    @test occursin("parent = LatElement with no UniversalParams", 
+                   sprint(show, InheritParams(LatElement(Beamlines.ParamDict()))))
 
-    ele = LineElement()
+    ele = LatElement()
     @test !ele.rad_damping
     @test !ele.rad_fluctuations
 
@@ -1806,7 +1806,7 @@ using ForwardDiff, GTPSA, ReverseDiff
 
 
     # Deepcopy ignores BeamlineParams
-    ele = LineElement(Kn1=0.36, L=0.5, voltage=10)
+    ele = LatElement(Kn1=0.36, L=0.5, voltage=10)
     bl = Beamline([ele])
     ele2 = deepcopy(bl.line[1])
     bl2 = Beamline([ele2])
@@ -1816,7 +1816,7 @@ using ForwardDiff, GTPSA, ReverseDiff
     @test !(bl.line[1].beamline === bl2.line[1].beamline)
 
     # Empty the beamline
-    ele = LineElement()
+    ele = LatElement()
     bl = Beamline([ele, ele, ele])
     blele1 = bl.line[1]
     empty!(bl)
@@ -2177,7 +2177,7 @@ using ForwardDiff, GTPSA, ReverseDiff
         @test latS3.branches[1] !== latS3.branches[2]
         @test [b.lattice_index for b in latS3.branches] == [1, 2]
         @test all(b -> b.name == "IR", [latS1.branches[1], latS3.branches...])
-        @test latS3.branches[1][1] !== latS3.branches[2][1] # Distinct LineElements
+        @test latS3.branches[1][1] !== latS3.branches[2][1] # Distinct LatElements
         @test latS1.context.a == 1 && latS2.context.a == 2 && latS1.context.k == 1
         @test_throws ErrorException brS.lattice # The original is in no Lattice
         @test ctxkeys(brS.context) == [:k]      # and keeps its own Context
@@ -2261,7 +2261,7 @@ using ForwardDiff, GTPSA, ReverseDiff
 
         # Context-dependent reference energy of a Beamline in a Branch and Lattice
         mE = Marker(E_ref=DefExpr(c -> c.E), species_ref=Species("electron"))
-        brE0 = Branch([Beamline([mE, Drift(L=1.0)]), Beamline(LineElement[])], context=Context(E=5e9))
+        brE0 = Branch([Beamline([mE, Drift(L=1.0)]), Beamline(LatElement[])], context=Context(E=5e9))
         blE = brE0.beamlines[1]
         @test getfield(blE, :context) === Beamlines.NULL_CONTEXT # Stored only in the Branch
         @test getfield(brE0, :context) === brE0.context
@@ -2271,7 +2271,7 @@ using ForwardDiff, GTPSA, ReverseDiff
         @test blE.line[1].dE_ref == 5e9 - Beamlines.massof(blE.line[1].species_ref)     # BeamlineParams getter, first element
         @test blE.line[2].dE_ref == 0        # BeamlineParams getter, other elements
         @test brE0.beamlines[2].E_ref == 5e9 # Empty Beamline infers from the one before
-        @test_throws ErrorException Beamline(LineElement[]).E_ref
+        @test_throws ErrorException Beamline(LatElement[]).E_ref
         latE = Lattice([brE0], context=Context(E=6e9))
         @test brE0.context.E == 5e9         # Original Branch is untouched
         @test brE0.beamlines[1].E_ref == 5e9
@@ -2389,13 +2389,13 @@ using ForwardDiff, GTPSA, ReverseDiff
         @test occursin("species_ref = Inferred", sprint(show, Branch(Beamline[])))
 
         # Empty Beamlines in a Branch contribute zero length to s
-        brx = Branch([Beamline(LineElement[]), Beamline([Drift(L=1.0)]; E_ref=1e9,
-                      species_ref=Species("electron")), Beamline(LineElement[]),
+        brx = Branch([Beamline(LatElement[]), Beamline([Drift(L=1.0)]; E_ref=1e9,
+                      species_ref=Species("electron")), Beamline(LatElement[]),
                       Beamline([Drift(L=2.0)])])
         @test brx.beamlines[2].line[1].s == 0
         @test brx.beamlines[4].line[1].s == 1.0
         @test brx.beamlines[4].line[1].s_downstream == 3.0
-        brx32 = Branch([Beamline([Drift(L=1f0)]), Beamline(LineElement[]), Beamline(LineElement[]),
+        brx32 = Branch([Beamline([Drift(L=1f0)]), Beamline(LatElement[]), Beamline(LatElement[]),
                         Beamline([Drift(L=2f0), Drift(L=3f0)])])
         @test [brx32[i].s for i in 1:3] == [0, 1, 3]
         @test all(i -> brx32[i].s isa Float32, 1:3)
@@ -2523,7 +2523,7 @@ using ForwardDiff, GTPSA, ReverseDiff
         @test lat[2, "3"] == [br2[3]]
         @test_throws BoundsError lat[3, "q1"]
         @test isempty(lat["nothing_here", "q1"])
-        @test lat[:, "q1"] isa Vector{LineElement} && lat["q1"] isa Vector{Branch}
+        @test lat[:, "q1"] isa Vector{LatElement} && lat["q1"] isa Vector{Branch}
         @test br1[r"q\d+"] == findelements(br1, r"q\d+")
         @test blg[r"M."i] == [blg.line[2]]
         @test lat[r"RING"i] == [br1]

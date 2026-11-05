@@ -1,6 +1,6 @@
-struct LineElement
+struct LatElement
   pdict::ParamDict
-  function LineElement(pdict=ParamDict(UniversalParams => UniversalParams()); kwargs...)
+  function LatElement(pdict=ParamDict(UniversalParams => UniversalParams()); kwargs...)
     ele = new(pdict)
     if :L in keys(kwargs) # this is for Python compatibility which reorders the arguments.
       setproperty!(ele, :L, kwargs[:L])
@@ -17,8 +17,8 @@ struct LineElement
 end
 
 # Element show
-function Base.show(io::IO, ele::LineElement)
-  print(io, "LineElement:")
+function Base.show(io::IO, ele::LatElement)
+  print(io, "LatElement:")
   # Show the parameter groups the element effectively has, i.e. with any inherited parameter
   # groups flattened in. InheritParams itself is shown compactly (see below).
   own_pdict = getfield(ele, :pdict)
@@ -88,7 +88,7 @@ function format_param_group(v, inherited)
   return str
 end
 
-function flattened_pdict(ele::LineElement, p=nothing)
+function flattened_pdict(ele::LatElement, p=nothing)
   curpdict = getfield(ele, :pdict)
   if !haskey(curpdict, InheritParams) && isnothing(p)
     return curpdict
@@ -107,10 +107,10 @@ function flattened_pdict(ele::LineElement, p=nothing)
   return p
 end
 
-Base.isapprox(a::LineElement, b::LineElement) = isapprox_ignoring(a, b)
+Base.isapprox(a::LatElement, b::LatElement) = isapprox_ignoring(a, b)
 
 """
-    isapprox_ignoring(a::LineElement, b::LineElement, ignore::Type{<:AbstractParams}...)
+    isapprox_ignoring(a::LatElement, b::LatElement, ignore::Type{<:AbstractParams}...)
 
 Same as `isapprox(a, b)` except that the parameter groups `ignore` are also not compared. 
 `BeamlineParams` and `MetaParams` are never compared, and an `IgnoreParams` with an empty 
@@ -119,7 +119,7 @@ list is treated as no `IgnoreParams`.
 This only affects the comparison: it is unrelated to the `ignore_params` list of 
 `IgnoreParams`.
 """
-function isapprox_ignoring(a::LineElement, b::LineElement, ignore::Type{<:AbstractParams}...)
+function isapprox_ignoring(a::LatElement, b::LatElement, ignore::Type{<:AbstractParams}...)
   l = flattened_pdict(a)
   r = flattened_pdict(b)
   # BeamlineParams and MetaParams do not affect the physics, and an IgnoreParams with an empty
@@ -146,17 +146,17 @@ function isapprox_ignoring(a::LineElement, b::LineElement, ignore::Type{<:Abstra
 end
 
 struct InheritParams <: AbstractParams
-  parent::LineElement
+  parent::LatElement
 end
 
 PROPS(::Type{InheritParams}) = OrderedDict{String,String}(
-  "parent" => "Parent `LineElement` to inherit parameter groups from for both reading and writing.",
+  "parent" => "Parent `LatElement` to inherit parameter groups from for both reading and writing.",
 )
 
 """
     InheritParams
 
-Stores a parent `LineElement` through which any parameter groups NOT present in the "child" 
+Stores a parent `LatElement` through which any parameter groups NOT present in the "child" 
 element containing the `InheritParams` would inherit. E.g., if the child element has its own
 `BeamlineParams`, then any property from the `BeamlineParams` parameter group would be read/
 write to the child's `BeamlineParams`.
@@ -171,14 +171,14 @@ function Base.show(io::IO, a::InheritParams)
   parent = a.parent
   println(io, nameof(typeof(a)))
   if isnothing(parent.UniversalParams) # name and kind would just be the defaults
-    println(io, " parent = LineElement with no UniversalParams")
+    println(io, " parent = LatElement with no UniversalParams")
   else
-    println(io, " parent = LineElement(name = ", repr(parent.name), ", kind = ", repr(parent.kind), ")")
+    println(io, " parent = LatElement(name = ", repr(parent.name), ", kind = ", repr(parent.kind), ")")
   end
   return
 end
 
-@inline get_parent(pdict::ParamDict) = (pdict[InheritParams]::InheritParams).parent::LineElement
+@inline get_parent(pdict::ParamDict) = (pdict[InheritParams]::InheritParams).parent::LatElement
 
 # For parameter groups, both read and write are not allowed
 # For properties, write is not allowed
@@ -191,19 +191,19 @@ end
   return haskey(pdict, ProtectParams) && key in (pdict[ProtectParams]::ProtectParams).protected_properties
 end
 
-@inline unsafe_getparams(ele::LineElement, param::Symbol) = getfield(ele, :pdict)[PARAMS_MAP[param]]
+@inline unsafe_getparams(ele::LatElement, param::Symbol) = getfield(ele, :pdict)[PARAMS_MAP[param]]
 
 # Use Accessors here for default bc super convenient for replacing entire (even mutable) type
 # For more complex params (e.g. BMultipoleParams) we will need custom override
 param_replace(p::AbstractParams, key::Symbol, value) = set(p, opcompose(PropertyLens(key)), value)
 
-function Base.getproperty(ele::LineElement, key::Symbol)
+function Base.getproperty(ele::LatElement, key::Symbol)
   pdict = getfield(ele, :pdict)
   context = haskey(pdict, BeamlineParams) ? ((pdict[BeamlineParams]::BeamlineParams).beamline.context) : (NULL_CONTEXT)
   return @inline _getproperty(ele, key, context)
 end
 
-function _getproperty(ele::LineElement, key::Symbol, context::Context)
+function _getproperty(ele::LatElement, key::Symbol, context::Context)
   pdict = getfield(ele, :pdict)
   if key == :pdict 
     error("Reading/writing directly to an element's parameter dictionary is not allowed. To get/set a parameter group use the syntax `<ele>.<parameter group name> = <parameter group>`. E.g. `ele.BMultipoleParams = BMultipoleParams()`")
@@ -241,7 +241,7 @@ function _getproperty(ele::LineElement, key::Symbol, context::Context)
         return p.ignore_params
       elseif PROPERTIES_MAP[key] == BeamlineParams
         error("""
-          Unable to get key $key from LineElement: element is not in a Beamline. 
+          Unable to get key $key from LatElement: element is not in a Beamline. 
           If you placed this element in a Beamline, use `findchildren` to find 
           the child instances of this element in a given Beamline.
         """)
@@ -251,13 +251,13 @@ function _getproperty(ele::LineElement, key::Symbol, context::Context)
   end
 
   if haskey(VIRTUAL_SETTER_MAP, key)
-    error("LineElement property $key is write-only")
+    error("LatElement property $key is write-only")
   else
-    error("Type LineElement has no property $key")
+    error("Type LatElement has no property $key")
   end
 end
 
-function Base.setproperty!(ele::LineElement, key::Symbol, value)
+function Base.setproperty!(ele::LatElement, key::Symbol, value)
   pdict = getfield(ele, :pdict)
   context = haskey(pdict, BeamlineParams) ? ((pdict[BeamlineParams]::BeamlineParams).beamline.context) : (NULL_CONTEXT)
   if haskey(PARAMS_MAP, key) # Setting whole parameter struct
@@ -270,7 +270,7 @@ function Base.setproperty!(ele::LineElement, key::Symbol, value)
         if key != :BeamlineParams
           delete!(pdict, PARAMS_MAP[key])
         else
-          error("Cannot trivially remove BeamlineParams from a LineElement: consider using `empty!(::Beamline)` instead")
+          error("Cannot trivially remove BeamlineParams from a LatElement: consider using `empty!(::Beamline)` instead")
         end
       else
         setindex!(pdict, value, PARAMS_MAP[key])
@@ -296,9 +296,9 @@ function Base.setproperty!(ele::LineElement, key::Symbol, value)
     @noinline _setproperty!(pdict, p, key, value)
   else
     if haskey(VIRTUAL_GETTER_MAP, key)
-      error("LineElement property $key is read-only")
+      error("LatElement property $key is read-only")
     else
-      error("Type LineElement has no property $key")
+      error("Type LatElement has no property $key")
     end
   end
 end
@@ -313,13 +313,13 @@ function _setproperty!(pdict::ParamDict, p::AbstractParams, key::Symbol, value)
   return pdict[PROPERTIES_MAP[key]] = param_replace(p, key, value)
 end
 
-function Base.deepcopy_internal(ele::LineElement, stackdict::IdDict)
-  return get!(()->deepcopy_no_beamline(ele), stackdict, ele)::LineElement
+function Base.deepcopy_internal(ele::LatElement, stackdict::IdDict)
+  return get!(()->deepcopy_no_beamline(ele), stackdict, ele)::LatElement
 end
 
 # This should also flatten any InheritParams
-function deepcopy_no_beamline(ele::LineElement)
-  newele = LineElement()
+function deepcopy_no_beamline(ele::LatElement)
+  newele = LatElement()
   for pg in keys(PARAMS_MAP)
     if pg == :BeamlineParams
       continue
@@ -332,12 +332,12 @@ function deepcopy_no_beamline(ele::LineElement)
   return newele
 end
 
-#Base.fieldnames(::Type{LineElement}) = tuple(:pdict, keys(PROPERTIES_MAP)..., keys(PARAMS_MAP)...)
-#Base.fieldnames(::LineElement) = tuple(:pdict, keys(PROPERTIES_MAP)..., keys(PARAMS_MAP)...)
-#Base.propertynames(::Type{LineElement}) = tuple(:pdict, keys(PROPERTIES_MAP)..., keys(PARAMS_MAP)...)
-Base.propertynames(::LineElement) = _lineelement_properties()
+#Base.fieldnames(::Type{LatElement}) = tuple(:pdict, keys(PROPERTIES_MAP)..., keys(PARAMS_MAP)...)
+#Base.fieldnames(::LatElement) = tuple(:pdict, keys(PROPERTIES_MAP)..., keys(PARAMS_MAP)...)
+#Base.propertynames(::Type{LatElement}) = tuple(:pdict, keys(PROPERTIES_MAP)..., keys(PARAMS_MAP)...)
+Base.propertynames(::LatElement) = _LatElement_properties()
 
-function _lineelement_properties()
+function _LatElement_properties()
   virt = union(keys(VIRTUAL_GETTER_MAP),keys(VIRTUAL_SETTER_MAP))
   prop = keys(PROPERTIES_MAP)
   param = keys(PARAMS_MAP)

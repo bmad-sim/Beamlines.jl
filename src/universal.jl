@@ -89,6 +89,10 @@ function Base.setproperty!(up::UniversalParams, key::Symbol, value)
     end
   elseif key == :L
     if value == 0
+      if !(up.tracking_method isa Exact)
+        @info "Setting tracking_method to Exact for element length set to 0"
+        setfield!(up, :tracking_method, Exact())
+      end
       if up.step_meaning == StepMeaning.DSStep && up.step != 0
         @info "Setting ds_step to 0 for element length set to 0"
         setfield!(up, :step, 0)
@@ -147,7 +151,7 @@ PROPS(::Type{UniversalParams}) = OrderedDict{String,String}(
 """
     UniversalParams
 
-Describes the kind, name, length, and tracking method for a `LineElement`.
+Describes the kind, name, length, and tracking method for a `LatElement`.
 
 ## Properties
 $(PROPSDOC(UniversalParams))

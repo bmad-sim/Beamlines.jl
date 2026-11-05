@@ -14,7 +14,7 @@ function writebl(io::IO, bl::Beamline)
           :PatchParams, :ApertureParams, :MapParams, :RFParams, :FourPotentialParams, :EMultipoleParams, :IgnoreParams]
   println(io, "Beamline([")
   for ele in bl.line
-    print(io, " LineElement(")
+    print(io, " LatElement(")
     for pg in map(x->deval(getproperty(ele, x), c), pgs)
       if isnothing(pg)
         continue

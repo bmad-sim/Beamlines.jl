@@ -6,7 +6,7 @@ CurrentModule = Beamlines
 ## Getting Started
 Let's start by constructing a simple FODO cell `Beamline`, which consists of a quadrupole magnet that focuses the beam in the horizontal plane (defocuses in the vertical), followed by a drift (empty space), then a quadrupole that defocuses in the horizontal plane (focuses in the vertical), and finally another drift. 
 
-To do this, we will define four `LineElement`s corresponding to each of these objects. The lengths of each object are specified by `L` (in meters), and the quadrupole strengths can be set using the property `Kn1`, where `n` means the "normal" multipole (`s` would be "skew") and `1` means 1st order multipole (quadrupole). 
+To do this, we will define four `LatElement`s corresponding to each of these objects. The lengths of each object are specified by `L` (in meters), and the quadrupole strengths can be set using the property `Kn1`, where `n` means the "normal" multipole (`s` would be "skew") and `1` means 1st order multipole (quadrupole). 
 
 ```@example first
 using Beamlines # hide
@@ -50,7 +50,7 @@ Python users may use the dict-based naming function `elements` instead.
 elements
 ```
 
-## Multiple `LineElement`s in (multiple) `Beamline`s
+## Multiple `LatElement`s in (multiple) `Beamline`s
 
 Continuing with the FODO cell example above, note that `fodo` contains two instances of the line element `d`. Therefore, if the length of `d` is changed, then both instances of `d` will see this new, changed length:
 
@@ -107,7 +107,7 @@ using Beamlines # hide
 fodo.line[2].parent
 ```
 
-Sometimes it can be a pain to find exactly where in a beamline are the corresponding child elements. As such, one can index the `Beamline` directly with a `LineElement` to obtain a vector of all child elements:
+Sometimes it can be a pain to find exactly where in a beamline are the corresponding child elements. As such, one can index the `Beamline` directly with a `LatElement` to obtain a vector of all child elements:
 
 ```@example second
 using Beamlines # hide
@@ -157,7 +157,7 @@ println("After: ", lambdafun())
 
 Here `lambdafun` takes no arguments (specified by the empty tuple `()`) and returns `-qf.Kn1`. In the context of programming, `lambdafun` is specifically called a [**closure**](https://en.wikipedia.org/wiki/Closure_(computer_programming)), because it "encloses" `qf`, and at the time of evaluation gets the `Kn1` of that enclosed `qf` and negates its sign.
 
-Now we just wrap this function in `Beamlines`'s `DefExpr` type, and we can set any `LineElement` parameter to be such a deferred expression:
+Now we just wrap this function in `Beamlines`'s `DefExpr` type, and we can set any `LatElement` parameter to be such a deferred expression:
 
 ```@example second
 using Beamlines # hide
@@ -236,7 +236,7 @@ push!(GLOBAL_CONTEXTS, c1)
 d() # Finds `a` from the `GLOBAL_CONTEXTS` stack
 ```
 
-All `Beamline`s have a `context` property to store a context, which all containing `LineElement` parameters defined use when getting properties at the element-level:
+All `Beamline`s have a `context` property to store a context, which all containing `LatElement` parameters defined use when getting properties at the element-level:
 
 ```@repl context4
 using Beamlines # hide
@@ -251,10 +251,10 @@ Context
 
 ## Parameters
 
-`Beamlines.jl` supports a continually-growing list of parameters to define accelerator elements. To see a full list of the parameters you can set, look at the docstring for the `LineElement` type. This can be retrieved in a Julia session using `Doc.docs(LineElement)`.
+`Beamlines.jl` supports a continually-growing list of parameters to define accelerator elements. To see a full list of the parameters you can set, look at the docstring for the `LatElement` type. This can be retrieved in a Julia session using `Doc.docs(LatElement)`.
 
 ```@docs; canonical=false
-LineElement
+LatElement
 ```
 
 For a more detailed description of each parameter, see the docstrings for individual parameter groups. These are shown in the [Parameter Groups](@ref pgs) section of the documentation.

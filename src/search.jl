@@ -1,4 +1,4 @@
-function Base.in(ele::LineElement, bl::Beamline)
+function Base.in(ele::LatElement, bl::Beamline)
   bp = ele.BeamlineParams
   if !isnothing(bp) && bp.beamline == bl
     return true
@@ -8,17 +8,17 @@ function Base.in(ele::LineElement, bl::Beamline)
 end
 
 """
-    findchildren(ele::LineElement, bl::Beamline)
+    findchildren(ele::LatElement, bl::Beamline)
 
-Finds all `LineElement`s in the Beamline `bl` that inherit from `ele`, either directly
+Finds all `LatElement`s in the Beamline `bl` that inherit from `ele`, either directly
 (`ele` is the parent) or through a chain of parents. For example, the elements of a `Beamline` 
 in a `Branch` are children of the elements of the `Beamline` used to create the `Branch`, which
 are in turn children of the elements used to create that `Beamline`.
 """
-findchildren(ele::LineElement, bl::Beamline) = filter(x -> _inherits_from(x, ele), bl.line)
+findchildren(ele::LatElement, bl::Beamline) = filter(x -> _inherits_from(x, ele), bl.line)
 
 # True if `ele` is a parent, grandparent, etc. of `x`.
-function _inherits_from(x::LineElement, ele::LineElement)
+function _inherits_from(x::LatElement, ele::LatElement)
   pdict = getfield(x, :pdict)
   while haskey(pdict, InheritParams)
     parent = get_parent(pdict)
@@ -28,7 +28,7 @@ function _inherits_from(x::LineElement, ele::LineElement)
   return false
 end
 
-function Base.getindex(bl::Beamline, ele::LineElement)
+function Base.getindex(bl::Beamline, ele::LatElement)
   if ele in bl
     return [ele]
   else

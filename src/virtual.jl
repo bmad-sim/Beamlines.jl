@@ -22,7 +22,7 @@ ele.BMultipoleParams        # Goes to InheritParams to get parent
 
 =#
 
-function get_BM_strength(ele::LineElement, key::Symbol, context)
+function get_BM_strength(ele::LatElement, key::Symbol, context)
   b = ele.BMultipoleParams
   if isnothing(b)
     return 0f0
@@ -52,7 +52,7 @@ function _get_BM_strength(ele, strength, normalized, integrated, stored_normaliz
       else
         # user asking for non-integrated strength of integrated BMultipole
         if L == 0
-          error("Unable to get $key of LineElement: Integrated multipole is stored, but the element length L = 0")
+          error("Unable to get $key of LatElement: Integrated multipole is stored, but the element length L = 0")
         end
         return strength/L
       end
@@ -60,9 +60,9 @@ function _get_BM_strength(ele, strength, normalized, integrated, stored_normaliz
   else
     if !isactive(ele.BeamlineParams)
       if stored_normalized == true
-        error("Unable to get $key of LineElement: Normalized multipole is stored, but the element is not within a Beamline with a set p_over_q_ref")
+        error("Unable to get $key of LatElement: Normalized multipole is stored, but the element is not within a Beamline with a set p_over_q_ref")
       else
-        error("Unable to get $key of LineElement: Unnormalized multipole is stored, but the element is not within a Beamline with a set p_over_q_ref")
+        error("Unable to get $key of LatElement: Unnormalized multipole is stored, but the element is not within a Beamline with a set p_over_q_ref")
       end
     end
     p_over_q_ref = _getproperty(ele, :p_over_q_ref, context)
@@ -81,7 +81,7 @@ function _get_BM_strength(ele, strength, normalized, integrated, stored_normaliz
           return strength/p_over_q_ref*L
         else
           if L == 0
-            error("Unable to get $key of LineElement: Integrated multipole is stored, but the element length L = 0")
+            error("Unable to get $key of LatElement: Integrated multipole is stored, but the element length L = 0")
           end
           return strength/p_over_q_ref/L
         end
@@ -90,7 +90,7 @@ function _get_BM_strength(ele, strength, normalized, integrated, stored_normaliz
           return strength*p_over_q_ref*L
         else
           if L == 0
-            error("Unable to get $key of LineElement: Integrated multipole is stored, but the element length L = 0")
+            error("Unable to get $key of LatElement: Integrated multipole is stored, but the element length L = 0")
           end
           return strength*p_over_q_ref/L
         end
@@ -108,7 +108,7 @@ function _promote_bm(b1::BMultipoleParams{S}, ::Type{T}) where {S,T}
   end
 end
 
-function set_BM_strength!(ele::LineElement, key::Symbol, context::Context, value)
+function set_BM_strength!(ele::LatElement, key::Symbol, context::Context, value)
   b1 = ele.BMultipoleParams
   if isnothing(b1)
     b1 = BMultipoleParams()
@@ -192,7 +192,7 @@ function _set_BM_strength!(ele, context::Context, b::BMultipoleParams, key, valu
   return b
 end
 
-function get_EM_strength(ele::LineElement, key::Symbol, context)
+function get_EM_strength(ele::LatElement, key::Symbol, context)
   b = ele.EMultipoleParams
   if isnothing(b)
     return 0f0
@@ -219,7 +219,7 @@ function _get_EM_strength(ele, strength, integrated, stored_integrated, context)
     else
       # user asking for non-integrated strength of integrated EMultipole
       if L == 0
-        error("Unable to get $key of LineElement: Integrated multipole is stored, but the element length L = 0")
+        error("Unable to get $key of LatElement: Integrated multipole is stored, but the element length L = 0")
       end
       return strength/L
     end
@@ -235,7 +235,7 @@ function _promote_em(b1::EMultipoleParams{S}, ::Type{T}) where {S,T}
   end
 end
 
-function set_EM_strength!(ele::LineElement, key::Symbol, context::Context, value)
+function set_EM_strength!(ele::LatElement, key::Symbol, context::Context, value)
   b1 = ele.EMultipoleParams
   if isnothing(b1)
     b1 = EMultipoleParams()
@@ -280,9 +280,9 @@ function _set_EM_strength!(ele, context::Context, b::EMultipoleParams, key, valu
   return b
 end
 
-get_bend_angle(::LineElement, ::Symbol, ::Context) = error("Property `angle` is write-only, and sets both `g_ref` and `Kn0` together")
+get_bend_angle(::LatElement, ::Symbol, ::Context) = error("Property `angle` is write-only, and sets both `g_ref` and `Kn0` together")
 
-function set_bend_angle!(ele::LineElement, ::Symbol, context::Context, value)
+function set_bend_angle!(ele::LatElement, ::Symbol, context::Context, value)
   L = _getproperty(ele, :L, context)
   bm = ele.BMultipoleParams
   bp = ele.BendParams
@@ -300,16 +300,16 @@ end
 function _set_bend_angle!(ele, context, L, bm, bp, value)
   # Angle = K0*L -> K0 = angle/L
   if L == 0
-    error("Cannot set angle of LineElement with L = 0 (did you specify `angle` before specifying `L`?)")
+    error("Cannot set angle of LatElement with L = 0 (did you specify `angle` before specifying `L`?)")
   end
   Kn0 = value/L
   _set_bend_g!(ele, context, bp, bm, Kn0) # sets both g_ref and Kn0
   return value
 end
 
-get_bend_g(::LineElement, ::Symbol, ::Context) = error("Property `g` is write-only, and sets both `g_ref` and `Kn0` together.")
+get_bend_g(::LatElement, ::Symbol, ::Context) = error("Property `g` is write-only, and sets both `g_ref` and `Kn0` together.")
 
-function set_bend_g!(ele::LineElement, ::Symbol, context::Context, value)
+function set_bend_g!(ele::LatElement, ::Symbol, context::Context, value)
   bp = ele.BendParams
   bm = ele.BMultipoleParams
   if isnothing(bp)
@@ -323,7 +323,7 @@ function set_bend_g!(ele::LineElement, ::Symbol, context::Context, value)
   return @noinline _set_bend_g!(ele, context, bp, bm, value)
 end
 
-function _set_bend_g!(ele::LineElement, context::Context, bp::BendParams{S}, bm::BMultipoleParams, value) where {S}
+function _set_bend_g!(ele::LatElement, context::Context, bp::BendParams{S}, bm::BMultipoleParams, value) where {S}
   T = promote_type(S, typeof(value))
   if T != S || bp.g_ref != value
     bp = set(bp, opcompose(PropertyLens(:g_ref)), T(value))
@@ -333,7 +333,7 @@ function _set_bend_g!(ele::LineElement, context::Context, bp::BendParams{S}, bm:
   return value
 end
 
-function get_BM_independent(ele::LineElement, ::Symbol, ::Context)
+function get_BM_independent(ele::LatElement, ::Symbol, ::Context)
   b = ele.BMultipoleParams
   return @noinline _get_BM_independent(b)
 end
@@ -348,7 +348,7 @@ function _get_BM_independent(b)
   return v
 end
 
-function set_BM_independent!(ele::LineElement, ::Symbol, context::Context, value)
+function set_BM_independent!(ele::LatElement, ::Symbol, context::Context, value)
   eltype(value) == @NamedTuple{order::Int, normalized::Bool, integrated::Bool}  || error("Please provide a list/array/tuple with eltype @NamedTuple{order::Int, normalized::Bool, integrated::Bool} to specify the multipole properties you want to set as independent variables.")
   b = ele.BMultipoleParams
   if isnothing(b)
@@ -410,26 +410,26 @@ end
 # When field_master = true, the B fields are the independent variables
 # If false, the normalized strengths are the independent variables
 # so field_master = !normalized in my BMultipole structure
-function set_field_master!(ele::LineElement, ::Symbol, context::Context, value::Bool)
+function set_field_master!(ele::LatElement, ::Symbol, context::Context, value::Bool)
   BM_independent = _get_BM_independent(ele.BMultipoleParams)
   c = map(t->(; order=t.order, normalized=!value, integrated=t.integrated), BM_independent)
   return set_BM_independent!(ele, :nothing, context, c)
 end
 
-function set_integrated_master!(ele::LineElement, ::Symbol, context::Context, value::Bool)
+function set_integrated_master!(ele::LatElement, ::Symbol, context::Context, value::Bool)
   BM_independent = _get_BM_independent(ele.BMultipoleParams)
   c = map(t->(; order=t.order, normalized=t.normalized, integrated=value), BM_independent)
   return set_BM_independent!(ele, :nothing, context, c)
 end
 
-function get_field_master(ele::LineElement, ::Symbol, ::Context)
+function get_field_master(ele::LatElement, ::Symbol, ::Context)
   b = ele.BMultipoleParams
   return @noinline _get_field_master(b)
 end
 
 function _get_field_master(b)
   if isnothing(b)
-    error("Unable to get field_master: LineElement does not contain BMultipoleParams")
+    error("Unable to get field_master: LatElement does not contain BMultipoleParams")
   end
   check = first(b.normalized)
   if !all(t->t==check, b.normalized)
@@ -438,14 +438,14 @@ function _get_field_master(b)
   return !check
 end
 
-function get_integrated_master(ele::LineElement, ::Symbol, ::Context)
+function get_integrated_master(ele::LatElement, ::Symbol, ::Context)
   b = ele.BMultipoleParams
   return @noinline _get_integrated_master(b)
 end
 
 function _get_integrated_master(b)
   if isnothing(b)
-    error("Unable to get integrated_master: LineElement does not contain BMultipoleParams")
+    error("Unable to get integrated_master: LatElement does not contain BMultipoleParams")
   end
   check = first(b.integrated)
   if !all(t->t==check, b.integrated)
@@ -454,7 +454,7 @@ function _get_integrated_master(b)
   return check
 end
 
-function get_EM_independent(ele::LineElement, ::Symbol, ::Context)
+function get_EM_independent(ele::LatElement, ::Symbol, ::Context)
   b = ele.EMultipoleParams
   return @noinline _get_EM_independent(b)
 end
@@ -469,7 +469,7 @@ function _get_EM_independent(b)
   return v
 end
 
-function set_EM_independent!(ele::LineElement, ::Symbol, context::Context, value)
+function set_EM_independent!(ele::LatElement, ::Symbol, context::Context, value)
   eltype(value) == @NamedTuple{order::Int, integrated::Bool}  || error("Please provide a list/array/tuple with eltype @NamedTuple{order::Int, integrated::Bool} to specify the multipole properties you want to set as independent variables.")
   b = ele.EMultipoleParams
   if isnothing(b)
@@ -515,20 +515,20 @@ function set_EM_independent!(ele::LineElement, ::Symbol, context::Context, value
   return value
 end
 
-function set_e_integrated_master!(ele::LineElement, ::Symbol, context::Context, value::Bool)
+function set_e_integrated_master!(ele::LatElement, ::Symbol, context::Context, value::Bool)
   EM_independent = _get_EM_independent(ele.EMultipoleParams)
   c = map(t->(; order=t.order, integrated=value), EM_independent)
   return set_EM_independent!(ele, :nothing, context, c)
 end
 
-function get_e_integrated_master(ele::LineElement, ::Symbol, ::Context)
+function get_e_integrated_master(ele::LatElement, ::Symbol, ::Context)
   b = ele.EMultipoleParams
   return @noinline _get_e_integrated_master(b)
 end
 
 function _get_e_integrated_master(b)
   if isnothing(b)
-    error("Unable to get integrated_master: LineElement does not contain EMultipoleParams")
+    error("Unable to get integrated_master: LatElement does not contain EMultipoleParams")
   end
   check = first(b.integrated)
   if !all(t->t==check, b.integrated)
@@ -537,7 +537,7 @@ function _get_e_integrated_master(b)
   return check
 end
 
-function get_cavity_rate(ele::LineElement, key::Symbol, ::Context)
+function get_cavity_rate(ele::LatElement, key::Symbol, ::Context)
   rfp = ele.RFParams
   if isnothing(rfp) || getfield(rfp, :rate_meaning) == RateMeaning.Indeterminate
     return 0f0 # Default value
@@ -549,7 +549,7 @@ function get_cavity_rate(ele::LineElement, key::Symbol, ::Context)
   else # Need to convert
     bp = ele.BeamlineParams
     if isnothing(bp)
-      error("Unable to get $key from LineElement: element is not in a Beamline and has harmon_master = $(rfp.harmon_master)")
+      error("Unable to get $key from LatElement: element is not in a Beamline and has harmon_master = $(rfp.harmon_master)")
     end
     bl = bp.beamline
     species = bl.species_ref
@@ -565,7 +565,7 @@ function get_cavity_rate(ele::LineElement, key::Symbol, ::Context)
   end
 end
 
-function set_cavity_rate!(ele::LineElement, key::Symbol, ::Context, value)
+function set_cavity_rate!(ele::LatElement, key::Symbol, ::Context, value)
   rf1 = ele.RFParams
   if isnothing(rf1)
     rf1 = RFParams()
@@ -591,7 +591,7 @@ function _set_cavity_rate!(rf::RFParams{S}, key, value) where {S}
   return rf
 end
 
-function set_harmon_master!(ele::LineElement, ::Symbol, ::Context, value::Bool)
+function set_harmon_master!(ele::LatElement, ::Symbol, ::Context, value::Bool)
   rfp = ele.RFParams
   if isnothing(rfp)
     ele.RFParams = RFParams(harmon_master=value)
@@ -615,7 +615,7 @@ end
 # Override is only needed bc error is thrown if either reference
 # species or reference energy are not set and generic setter 
 # first does a get to check if type promotion needed
-function set_bl_params!(ele::LineElement, sym::Symbol, ::Context, value)
+function set_bl_params!(ele::LatElement, sym::Symbol, ::Context, value)
   if !isnothing(ele.BeamlineParams) && ele.beamline_index != 1
     error("Unable to set $sym of an element that is in a beamline and not the first element of the beamline.")
   end
@@ -647,7 +647,7 @@ function set_bl_params!(ele::LineElement, sym::Symbol, ::Context, value)
   return setproperty!(ibp, sym, value)
 end
 
-function get_bl_params(ele::LineElement, key::Symbol, context::Context)
+function get_bl_params(ele::LatElement, key::Symbol, context::Context)
   prop = try_get_bl_params(ele, key, context)
   if prop isa GetError
     error(prop.msg)
@@ -669,7 +669,7 @@ function inherit_from_upstream(beamline, key)
 end
 
  # species_ref, or a GetError saying that computing key needs it
-function try_get_species_for(ele::LineElement, key::Symbol, ref_meaning::Symbol, context::Context)
+function try_get_species_for(ele::LatElement, key::Symbol, ref_meaning::Symbol, context::Context)
   species_ref = try_get_bl_params(ele, :species_ref, context)
   if species_ref isa GetError
     # Make it more informative:
@@ -697,7 +697,7 @@ function upstream_ref(beamline, branch_index, var_abs, species_ref)
   end
 end
  
-function try_get_bl_params(ele::LineElement, key::Symbol, context::Context)
+function try_get_bl_params(ele::LatElement, key::Symbol, context::Context)
   pdict = getfield(ele, :pdict)
  
   if !haskey(pdict, BeamlineParams) # not in a Beamline, just return ibp
@@ -925,7 +925,7 @@ function ref_meaning_abs_to_rel(ref_meaning::Symbol)
     error("Invalid ref_meaning specified")
   end
 end
-function get_parent_ele(ele::LineElement, ::Symbol, ::Context)
+function get_parent_ele(ele::LatElement, ::Symbol, ::Context)
   pdict = getfield(ele, :pdict)
   if haskey(pdict, InheritParams)
     return get_parent(pdict)

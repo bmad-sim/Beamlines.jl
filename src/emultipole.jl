@@ -39,7 +39,7 @@ $(PROPSDOC(EMultipoleParams))
     The last *set* for a given multipole defines if both the normal and skew strengths 
     for a given multipole order are integrated. E.g.
     ```julia
-    ele = LineElement(En1=0.1, Es1=0.2, L=0.4) # Order 1 is nonintegrated
+    ele = LatElement(En1=0.1, Es1=0.2, L=0.4) # Order 1 is nonintegrated
     ele.En1L = 0.3         # Order 1 independent variables are now integrated
     ele.Es1L == 0.2*0.4    # true
     ```
