@@ -57,9 +57,6 @@ export AbstractParams,
 
        scalarize,
        scalarize!,
-       scalarize_all,
-       scalar_max,
-       scalar_min,
 
        findchildren,
        findelements,

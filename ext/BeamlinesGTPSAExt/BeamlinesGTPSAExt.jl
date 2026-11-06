@@ -2,7 +2,7 @@ module BeamlinesGTPSAExt
 using GTPSA
 using Beamlines: Species, massof, chargeof, C_LIGHT, DefExpr
 import Beamlines: R_to_E, E_to_R, pc_to_R, R_to_pc, E_to_pc, pc_to_E,
-    R_to_v, scalarize, scalarize_all
+    R_to_v, scalarize
 
 # Particle energy conversions with @FastGTPSA
 R_to_pc(species::Species, R::TPS)  = @FastGTPSA R*chargeof(species)*C_LIGHT
@@ -50,6 +50,5 @@ end
 
 # Scalarize
 scalarize(t::TPS) = scalar(t)
-scalarize_all(t::TPS) = scalar(t)
 
 end
