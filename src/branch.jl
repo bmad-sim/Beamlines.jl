@@ -186,6 +186,7 @@ function _Branch{T}(
   species_ref0::Species=Species(),
   E_ref0=nothing,
   p_over_q_ref0=nothing,
+  pc_ref0=nothing,
   name::String = "",
   context = Context(),
 ) where {T<:_AbstractBeamline}
