@@ -112,7 +112,7 @@ end
 # Error if writes to rate while rate_meaning is Indeterminate:
 function Base.setproperty!(rfp::RFParams{T}, key::Symbol, value) where {T}
   if key == :harmon_master
-    error("RFParams property harmon_master is get-only at the RFParams level. Try setting it at the LineElement level.")
+    error("RFParams property harmon_master is get-only at the RFParams level. Try setting it at the LatElement level.")
   elseif key == :rate && rfp.rate_meaning == RateMeaning.Indeterminate
     error("Cannot set rate of RFParams with rate_meaning = RateMeaning.Indeterminate")
   elseif key in (:rate, :voltage, :phi0)

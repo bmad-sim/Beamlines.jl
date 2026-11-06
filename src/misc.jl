@@ -49,7 +49,7 @@ function matrix(v, q::Nothing, p) # `q::Nothing` -> no spin tracking
   return ((vx, vpx, vy, vpy, vz, vpz), q)
 end
 
-m = LineElement(transport_map=matrix, transport_map_params=random_matrix)
+m = LatElement(transport_map=matrix, transport_map_params=random_matrix)
 ```
 """
 MapParams

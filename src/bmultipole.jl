@@ -47,7 +47,7 @@ omitting the `n`/`s`, e.g. `Ksol`, `Bsol`, `KsolL`, `BsolL`.
     The last *set* for a given multipole defines if both the normal and skew strengths 
     for a given multipole order are normalized and integrated. E.g.
     ```julia
-    ele = LineElement(Kn1=0.1, Ks1=0.2, L=0.4) # Order 1 is normalized, nonintegrated
+    ele = LatElement(Kn1=0.1, Ks1=0.2, L=0.4) # Order 1 is normalized, nonintegrated
     ele.Kn1L = 0.3         # Order 1 independent variables are now normalized, integrated
     ele.Ks1L == 0.2*0.4    # true
     ele.Bn1 = 0.5          # Order 1 independent variables are now unnormalized, nonintegrated
@@ -82,9 +82,10 @@ end
 o2i(b::BMultipoleParams, ord::Int) = findfirst(t->t==ord, b.order)
 
 function BMultipoleParams{T}(b::BMultipoleParams=BMultipoleParams()) where {T}
-  n = T.(b.n)
-  s = T.(b.s)
-  tilt = T.(b.tilt)
+  # Not T.(b.n): broadcasting would narrow the element type (e.g. to a concrete TimeDependentParam{F})
+  n = T[T(x) for x in b.n]
+  s = T[T(x) for x in b.s]
+  tilt = T[T(x) for x in b.tilt]
   return BMultipoleParams(n,s,tilt,b.order,b.normalized,b.integrated)
 end
 

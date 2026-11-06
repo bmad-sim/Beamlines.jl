@@ -11,10 +11,11 @@ end
 function writebl(io::IO, bl::Beamline)
   c = bl.context
   pgs = [ :UniversalParams, :InitialBeamlineParams, :AlignmentParams, :BendParams, :BMultipoleParams, 
-          :PatchParams, :ApertureParams, :MapParams, :RFParams, :FourPotentialParams, :EMultipoleParams, :IgnoreParams]
+          :PatchParams, :ApertureParams, :MapParams, :RFParams, :FourPotentialParams, :EMultipoleParams, :IgnoreParams,
+          :IBSParams]
   println(io, "Beamline([")
   for ele in bl.line
-    print(io, " LineElement(")
+    print(io, " LatElement(")
     for pg in map(x->deval(getproperty(ele, x), c), pgs)
       if isnothing(pg)
         continue
@@ -39,14 +40,21 @@ end
 function writeparam(io::IO, a::UniversalParams)
   fields = fieldnames(typeof(a))
   for field in fields
-    if field == :tracking_method
+    if field == :step || field == :step_meaning
+      continue
+    elseif field == :tracking_method
       tm = getproperty(a, field)
-      print(io, String(field), "=", typeof(tm), "(")
+      print(io, String(field), "=", Base.typename(typeof(tm)).wrapper, "(")
       subfields = fieldnames(typeof(tm))
       for subfield in subfields
         print(io, String(subfield), "=", param_repr(getproperty(tm, subfield)), ",")
       end
       print(io, "),")
+      if a.step_meaning == StepMeaning.NSteps
+        print(io, "n_steps", "=", param_repr(a.n_steps), ",")
+      elseif a.step_meaning == StepMeaning.DSStep
+        print(io, "ds_step", "=", param_repr(a.ds_step), ",")
+      end
     else
       print(io, String(field), "=", param_repr(getproperty(a, field)), ",")
     end
