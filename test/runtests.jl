@@ -1765,6 +1765,29 @@ using ForwardDiff, GTPSA, ReverseDiff
       @test scalarize(InitialBeamlineParams(ref_meaning=Beamlines.RefMeaning.dp_over_q_ref, ref=adnum)).dp_over_q_ref == num
     end
 
+    @testset "recursive scalarize" begin
+      @test scalarize(ForwardDiff.Dual(2.0, 1.0)) === 2.0
+      dd = ForwardDiff.Dual(ForwardDiff.Dual(2.0, 1.0), 3.0)
+      @test @inferred(scalarize(dd)) === 2.0
+      @test scalarize(ReverseDiff.TrackedReal(5.0, 6.0)) === 5.0
+      @test scalarize(
+        ReverseDiff.TrackedReal(ForwardDiff.Dual(5.0, 1.0), 6.0)
+      ) === 5.0
+      @test scalarize(
+        ForwardDiff.Dual(ReverseDiff.TrackedReal(5.0, 6.0), 1.0)
+      ) === 5.0
+      tv = ReverseDiff.track([1.0, 2.0])
+      sv2 = scalarize(tv)
+      @test sv2 == [1.0, 2.0] && sv2 isa Vector{Float64}
+      dv = [ForwardDiff.Dual(ForwardDiff.Dual(1.0, 1.0), 2.0),
+            ForwardDiff.Dual(ForwardDiff.Dual(-3.0, 4.0), 5.0)]
+      sv = scalarize(dv)
+      @test sv == [1.0, -3.0]
+      @test eltype(sv) == Float64
+      bp = BendParams(g_ref = ForwardDiff.Dual(ForwardDiff.Dual(0.5, 1.0), 2.0))
+      @test scalarize(bp).g_ref === 0.5
+    end
+
     qf = Quadrupole(Kn1=0.36, L=0.5)
     d = Drift(L=5.0)
     qd = Quadrupole(Kn1=-0.36, L=0.5)

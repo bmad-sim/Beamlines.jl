@@ -179,9 +179,9 @@ cell = Branch([Quadrupole(L=0.5), Drift(L=1.0)])
 branch2 = Branch([beginning, arc, cell, cell, Marker()]) # 5 `Beamline`s
 ```
 """
+function _Branch{T}(
 # Defined for `_Branch{T}` rather than `Branch` so the inner constructor 
 # `_Branch{T}(::Vector{T})` is more specific and `Branch(::Vector{Beamline})` is not ambiguous.
-function _Branch{T}(
   elements::AbstractVector;
   species_ref0::Species=Species(),
   E_ref0=nothing,
