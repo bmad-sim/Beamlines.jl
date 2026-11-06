@@ -1,3 +1,12 @@
+"""
+    scalarize(t)
+
+Value of `t` with derivative parts removed: ForwardDiff `Dual`s
+and ReverseDiff tracked values are unwrapped at every nesting
+level, and a TPS gives its scalar part. Arrays are processed
+elementwise and parameter groups fieldwise; any other value is
+returned unchanged.
+"""
 scalarize(t) = t
 scalarize(t::AbstractArray) = scalarize.(t)
 
