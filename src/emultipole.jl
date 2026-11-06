@@ -39,7 +39,7 @@ $(PROPSDOC(EMultipoleParams))
     The last *set* for a given multipole defines if both the normal and skew strengths 
     for a given multipole order are integrated. E.g.
     ```julia
-    ele = LineElement(En1=0.1, Es1=0.2, L=0.4) # Order 1 is nonintegrated
+    ele = LatElement(En1=0.1, Es1=0.2, L=0.4) # Order 1 is nonintegrated
     ele.En1L = 0.3         # Order 1 independent variables are now integrated
     ele.Es1L == 0.2*0.4    # true
     ```
@@ -72,9 +72,10 @@ end
 o2i(b::EMultipoleParams, ord::Int) = findfirst(t->t==ord, b.order)
 
 function EMultipoleParams{T}(b::EMultipoleParams=EMultipoleParams()) where {T}
-  n = T.(b.n)
-  s = T.(b.s)
-  etilt = T.(b.etilt)
+  # Not T.(b.n): broadcasting would narrow the element type (e.g. to a concrete TimeDependentParam{F})
+  n = T[T(x) for x in b.n]
+  s = T[T(x) for x in b.s]
+  etilt = T[T(x) for x in b.etilt]
   return EMultipoleParams(n,s,etilt,b.order,b.integrated)
 end
 

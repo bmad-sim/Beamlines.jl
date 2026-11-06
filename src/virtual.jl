@@ -22,7 +22,7 @@ ele.BMultipoleParams        # Goes to InheritParams to get parent
 
 =#
 
-function get_BM_strength(ele::LineElement, key::Symbol, context)
+function get_BM_strength(ele::LatElement, key::Symbol, context)
   b = ele.BMultipoleParams
   if isnothing(b)
     return 0f0
@@ -52,7 +52,7 @@ function _get_BM_strength(ele, strength, normalized, integrated, stored_normaliz
       else
         # user asking for non-integrated strength of integrated BMultipole
         if L == 0
-          error("Unable to get $key of LineElement: Integrated multipole is stored, but the element length L = 0")
+          error("Unable to get $key of LatElement: Integrated multipole is stored, but the element length L = 0")
         end
         return strength/L
       end
@@ -60,9 +60,9 @@ function _get_BM_strength(ele, strength, normalized, integrated, stored_normaliz
   else
     if !isactive(ele.BeamlineParams)
       if stored_normalized == true
-        error("Unable to get $key of LineElement: Normalized multipole is stored, but the element is not within a Beamline with a set p_over_q_ref")
+        error("Unable to get $key of LatElement: Normalized multipole is stored, but the element is not within a Beamline with a set p_over_q_ref")
       else
-        error("Unable to get $key of LineElement: Unnormalized multipole is stored, but the element is not within a Beamline with a set p_over_q_ref")
+        error("Unable to get $key of LatElement: Unnormalized multipole is stored, but the element is not within a Beamline with a set p_over_q_ref")
       end
     end
     p_over_q_ref = _getproperty(ele, :p_over_q_ref, context)
@@ -81,7 +81,7 @@ function _get_BM_strength(ele, strength, normalized, integrated, stored_normaliz
           return strength/p_over_q_ref*L
         else
           if L == 0
-            error("Unable to get $key of LineElement: Integrated multipole is stored, but the element length L = 0")
+            error("Unable to get $key of LatElement: Integrated multipole is stored, but the element length L = 0")
           end
           return strength/p_over_q_ref/L
         end
@@ -90,7 +90,7 @@ function _get_BM_strength(ele, strength, normalized, integrated, stored_normaliz
           return strength*p_over_q_ref*L
         else
           if L == 0
-            error("Unable to get $key of LineElement: Integrated multipole is stored, but the element length L = 0")
+            error("Unable to get $key of LatElement: Integrated multipole is stored, but the element length L = 0")
           end
           return strength*p_over_q_ref/L
         end
@@ -108,7 +108,7 @@ function _promote_bm(b1::BMultipoleParams{S}, ::Type{T}) where {S,T}
   end
 end
 
-function set_BM_strength!(ele::LineElement, key::Symbol, context::Context, value)
+function set_BM_strength!(ele::LatElement, key::Symbol, context::Context, value)
   b1 = ele.BMultipoleParams
   if isnothing(b1)
     b1 = BMultipoleParams()
@@ -192,7 +192,7 @@ function _set_BM_strength!(ele, context::Context, b::BMultipoleParams, key, valu
   return b
 end
 
-function get_EM_strength(ele::LineElement, key::Symbol, context)
+function get_EM_strength(ele::LatElement, key::Symbol, context)
   b = ele.EMultipoleParams
   if isnothing(b)
     return 0f0
@@ -219,7 +219,7 @@ function _get_EM_strength(ele, strength, integrated, stored_integrated, context)
     else
       # user asking for non-integrated strength of integrated EMultipole
       if L == 0
-        error("Unable to get $key of LineElement: Integrated multipole is stored, but the element length L = 0")
+        error("Unable to get $key of LatElement: Integrated multipole is stored, but the element length L = 0")
       end
       return strength/L
     end
@@ -235,7 +235,7 @@ function _promote_em(b1::EMultipoleParams{S}, ::Type{T}) where {S,T}
   end
 end
 
-function set_EM_strength!(ele::LineElement, key::Symbol, context::Context, value)
+function set_EM_strength!(ele::LatElement, key::Symbol, context::Context, value)
   b1 = ele.EMultipoleParams
   if isnothing(b1)
     b1 = EMultipoleParams()
@@ -280,9 +280,9 @@ function _set_EM_strength!(ele, context::Context, b::EMultipoleParams, key, valu
   return b
 end
 
-get_bend_angle(::LineElement, ::Symbol, ::Context) = error("Property `angle` is write-only, and sets both `g_ref` and `Kn0` together")
+get_bend_angle(::LatElement, ::Symbol, ::Context) = error("Property `angle` is write-only, and sets both `g_ref` and `Kn0` together")
 
-function set_bend_angle!(ele::LineElement, ::Symbol, context::Context, value)
+function set_bend_angle!(ele::LatElement, ::Symbol, context::Context, value)
   L = _getproperty(ele, :L, context)
   bm = ele.BMultipoleParams
   bp = ele.BendParams
@@ -300,16 +300,16 @@ end
 function _set_bend_angle!(ele, context, L, bm, bp, value)
   # Angle = K0*L -> K0 = angle/L
   if L == 0
-    error("Cannot set angle of LineElement with L = 0 (did you specify `angle` before specifying `L`?)")
+    error("Cannot set angle of LatElement with L = 0 (did you specify `angle` before specifying `L`?)")
   end
   Kn0 = value/L
   _set_bend_g!(ele, context, bp, bm, Kn0) # sets both g_ref and Kn0
   return value
 end
 
-get_bend_g(::LineElement, ::Symbol, ::Context) = error("Property `g` is write-only, and sets both `g_ref` and `Kn0` together.")
+get_bend_g(::LatElement, ::Symbol, ::Context) = error("Property `g` is write-only, and sets both `g_ref` and `Kn0` together.")
 
-function set_bend_g!(ele::LineElement, ::Symbol, context::Context, value)
+function set_bend_g!(ele::LatElement, ::Symbol, context::Context, value)
   bp = ele.BendParams
   bm = ele.BMultipoleParams
   if isnothing(bp)
@@ -323,7 +323,7 @@ function set_bend_g!(ele::LineElement, ::Symbol, context::Context, value)
   return @noinline _set_bend_g!(ele, context, bp, bm, value)
 end
 
-function _set_bend_g!(ele::LineElement, context::Context, bp::BendParams{S}, bm::BMultipoleParams, value) where {S}
+function _set_bend_g!(ele::LatElement, context::Context, bp::BendParams{S}, bm::BMultipoleParams, value) where {S}
   T = promote_type(S, typeof(value))
   if T != S || bp.g_ref != value
     bp = set(bp, opcompose(PropertyLens(:g_ref)), T(value))
@@ -333,7 +333,7 @@ function _set_bend_g!(ele::LineElement, context::Context, bp::BendParams{S}, bm:
   return value
 end
 
-function get_BM_independent(ele::LineElement, ::Symbol, ::Context)
+function get_BM_independent(ele::LatElement, ::Symbol, ::Context)
   b = ele.BMultipoleParams
   return @noinline _get_BM_independent(b)
 end
@@ -348,7 +348,7 @@ function _get_BM_independent(b)
   return v
 end
 
-function set_BM_independent!(ele::LineElement, ::Symbol, context::Context, value)
+function set_BM_independent!(ele::LatElement, ::Symbol, context::Context, value)
   eltype(value) == @NamedTuple{order::Int, normalized::Bool, integrated::Bool}  || error("Please provide a list/array/tuple with eltype @NamedTuple{order::Int, normalized::Bool, integrated::Bool} to specify the multipole properties you want to set as independent variables.")
   b = ele.BMultipoleParams
   if isnothing(b)
@@ -410,26 +410,26 @@ end
 # When field_master = true, the B fields are the independent variables
 # If false, the normalized strengths are the independent variables
 # so field_master = !normalized in my BMultipole structure
-function set_field_master!(ele::LineElement, ::Symbol, context::Context, value::Bool)
+function set_field_master!(ele::LatElement, ::Symbol, context::Context, value::Bool)
   BM_independent = _get_BM_independent(ele.BMultipoleParams)
   c = map(t->(; order=t.order, normalized=!value, integrated=t.integrated), BM_independent)
   return set_BM_independent!(ele, :nothing, context, c)
 end
 
-function set_integrated_master!(ele::LineElement, ::Symbol, context::Context, value::Bool)
+function set_integrated_master!(ele::LatElement, ::Symbol, context::Context, value::Bool)
   BM_independent = _get_BM_independent(ele.BMultipoleParams)
   c = map(t->(; order=t.order, normalized=t.normalized, integrated=value), BM_independent)
   return set_BM_independent!(ele, :nothing, context, c)
 end
 
-function get_field_master(ele::LineElement, ::Symbol, ::Context)
+function get_field_master(ele::LatElement, ::Symbol, ::Context)
   b = ele.BMultipoleParams
   return @noinline _get_field_master(b)
 end
 
 function _get_field_master(b)
   if isnothing(b)
-    error("Unable to get field_master: LineElement does not contain BMultipoleParams")
+    error("Unable to get field_master: LatElement does not contain BMultipoleParams")
   end
   check = first(b.normalized)
   if !all(t->t==check, b.normalized)
@@ -438,14 +438,14 @@ function _get_field_master(b)
   return !check
 end
 
-function get_integrated_master(ele::LineElement, ::Symbol, ::Context)
+function get_integrated_master(ele::LatElement, ::Symbol, ::Context)
   b = ele.BMultipoleParams
   return @noinline _get_integrated_master(b)
 end
 
 function _get_integrated_master(b)
   if isnothing(b)
-    error("Unable to get integrated_master: LineElement does not contain BMultipoleParams")
+    error("Unable to get integrated_master: LatElement does not contain BMultipoleParams")
   end
   check = first(b.integrated)
   if !all(t->t==check, b.integrated)
@@ -454,7 +454,7 @@ function _get_integrated_master(b)
   return check
 end
 
-function get_EM_independent(ele::LineElement, ::Symbol, ::Context)
+function get_EM_independent(ele::LatElement, ::Symbol, ::Context)
   b = ele.EMultipoleParams
   return @noinline _get_EM_independent(b)
 end
@@ -469,7 +469,7 @@ function _get_EM_independent(b)
   return v
 end
 
-function set_EM_independent!(ele::LineElement, ::Symbol, context::Context, value)
+function set_EM_independent!(ele::LatElement, ::Symbol, context::Context, value)
   eltype(value) == @NamedTuple{order::Int, integrated::Bool}  || error("Please provide a list/array/tuple with eltype @NamedTuple{order::Int, integrated::Bool} to specify the multipole properties you want to set as independent variables.")
   b = ele.EMultipoleParams
   if isnothing(b)
@@ -515,20 +515,20 @@ function set_EM_independent!(ele::LineElement, ::Symbol, context::Context, value
   return value
 end
 
-function set_e_integrated_master!(ele::LineElement, ::Symbol, context::Context, value::Bool)
+function set_e_integrated_master!(ele::LatElement, ::Symbol, context::Context, value::Bool)
   EM_independent = _get_EM_independent(ele.EMultipoleParams)
   c = map(t->(; order=t.order, integrated=value), EM_independent)
   return set_EM_independent!(ele, :nothing, context, c)
 end
 
-function get_e_integrated_master(ele::LineElement, ::Symbol, ::Context)
+function get_e_integrated_master(ele::LatElement, ::Symbol, ::Context)
   b = ele.EMultipoleParams
   return @noinline _get_e_integrated_master(b)
 end
 
 function _get_e_integrated_master(b)
   if isnothing(b)
-    error("Unable to get integrated_master: LineElement does not contain EMultipoleParams")
+    error("Unable to get integrated_master: LatElement does not contain EMultipoleParams")
   end
   check = first(b.integrated)
   if !all(t->t==check, b.integrated)
@@ -537,7 +537,7 @@ function _get_e_integrated_master(b)
   return check
 end
 
-function get_cavity_rate(ele::LineElement, key::Symbol, ::Context)
+function get_cavity_rate(ele::LatElement, key::Symbol, ::Context)
   rfp = ele.RFParams
   if isnothing(rfp) || getfield(rfp, :rate_meaning) == RateMeaning.Indeterminate
     return 0f0 # Default value
@@ -549,7 +549,7 @@ function get_cavity_rate(ele::LineElement, key::Symbol, ::Context)
   else # Need to convert
     bp = ele.BeamlineParams
     if isnothing(bp)
-      error("Unable to get $key from LineElement: element is not in a Beamline and has harmon_master = $(rfp.harmon_master)")
+      error("Unable to get $key from LatElement: element is not in a Beamline and has harmon_master = $(rfp.harmon_master)")
     end
     bl = bp.beamline
     species = bl.species_ref
@@ -565,7 +565,7 @@ function get_cavity_rate(ele::LineElement, key::Symbol, ::Context)
   end
 end
 
-function set_cavity_rate!(ele::LineElement, key::Symbol, ::Context, value)
+function set_cavity_rate!(ele::LatElement, key::Symbol, ::Context, value)
   rf1 = ele.RFParams
   if isnothing(rf1)
     rf1 = RFParams()
@@ -591,7 +591,7 @@ function _set_cavity_rate!(rf::RFParams{S}, key, value) where {S}
   return rf
 end
 
-function set_harmon_master!(ele::LineElement, ::Symbol, ::Context, value::Bool)
+function set_harmon_master!(ele::LatElement, ::Symbol, ::Context, value::Bool)
   rfp = ele.RFParams
   if isnothing(rfp)
     ele.RFParams = RFParams(harmon_master=value)
@@ -615,7 +615,7 @@ end
 # Override is only needed bc error is thrown if either reference
 # species or reference energy are not set and generic setter 
 # first does a get to check if type promotion needed
-function set_bl_params!(ele::LineElement, sym::Symbol, ::Context, value)
+function set_bl_params!(ele::LatElement, sym::Symbol, ::Context, value)
   if !isnothing(ele.BeamlineParams) && ele.beamline_index != 1
     error("Unable to set $sym of an element that is in a beamline and not the first element of the beamline.")
   end
@@ -626,15 +626,16 @@ function set_bl_params!(ele::LineElement, sym::Symbol, ::Context, value)
     ele.InitialBeamlineParams = ibp
   end
 
-  if sym == :species_ref && !isnothing(getfield(ibp, :ref)) && 
-    getfield(ibp, :ref_meaning) == RefMeaning.p_over_q_ref && 
-    sign(chargeof(value)) != sign(getfield(ibp, :ref))
-    new_p_over_q_ref = sign(chargeof(value))*getfield(ibp, :ref)
+  # The sign of a non-Number p_over_q_ref (e.g. time dependent) cannot be checked here
+  if sym == :species_ref && getfield(ibp, :ref) isa Number &&
+    getfield(ibp, :ref_meaning) == RefMeaning.p_over_q_ref &&
+    sign(chargeof(value)) == -sign(getfield(ibp, :ref))
+    new_p_over_q_ref = -getfield(ibp, :ref)
     @info "Setting p_over_q_ref to $(new_p_over_q_ref) to match sign of new species_ref charge"
     setfield!(ibp, :ref, new_p_over_q_ref)
   elseif sym == :p_over_q_ref && value isa Number && !isnullspecies(getfield(ibp, :species_ref)) &&
-    sign(chargeof(getfield(ibp, :species_ref))) != sign(value)
-    value = sign(chargeof(getfield(ibp, :species_ref)))*value
+    sign(chargeof(getfield(ibp, :species_ref))) == -sign(value)
+    value = -value
     @info "Setting p_over_q_ref to $(value) to match sign of stored species_ref charge"
   end
 
@@ -647,7 +648,7 @@ function set_bl_params!(ele::LineElement, sym::Symbol, ::Context, value)
   return setproperty!(ibp, sym, value)
 end
 
-function get_bl_params(ele::LineElement, key::Symbol, context::Context)
+function get_bl_params(ele::LatElement, key::Symbol, context::Context)
   prop = try_get_bl_params(ele, key, context)
   if prop isa GetError
     error(prop.msg)
@@ -655,131 +656,221 @@ function get_bl_params(ele::LineElement, key::Symbol, context::Context)
   return prop
 end
 
-function try_get_bl_params(ele::LineElement, key::Symbol, context::Context)
-  pdict = getfield(ele, :pdict)
-  
-  if haskey(pdict, BeamlineParams) # If element in a Beamline
-    if key in (:dE_ref, :dpc_ref, :dp_over_q_ref) && (pdict[BeamlineParams]::BeamlineParams).beamline_index != 1
+function inherit_from_upstream(beamline, key)
+  if key in (:dE_ref, :dpc_ref, :dp_over_q_ref) # No change for deltas if inheriting
+    return 0
+  else
+    branch_index = getfield(beamline, :branch_index)
+    if branch_index == -1 || branch_index == 1
+      return GetError("Unable to get $key: $key is not set nor inferrable")
+    else
+      return trygetproperty(getfield(beamline, :branch).beamlines[branch_index-1], key)
+    end
+  end
+end
+
+ # species_ref, or a GetError saying that computing key needs it
+function try_get_species_for(ele::LatElement, key::Symbol, ref_meaning::Symbol, context::Context)
+  species_ref = try_get_bl_params(ele, :species_ref, context)
+  if species_ref isa GetError
+    # Make it more informative:
+    return GetError("
+      Unable to get $key: stored is $ref_meaning and computing $key requires a species_ref,
+      which has not been set nor is inferrable.
+    ")
+  end
+  return species_ref
+end
+ 
+# Absolute value of var_abs at the START of this Beamline (the end of the upstream Beamline).
+# If this is the first Beamline in a Branch, the particle is assumed to start at rest 
+# (out of thin air): pc = 0, p_over_q = 0, E = massof(species_ref).
+# Returns a GetError if the upstream value is not inferrable.
+function upstream_ref(beamline, branch_index, var_abs, species_ref)
+  if branch_index == 1
+    if var_abs == :E_ref
+      return massof(species_ref)
+    else
       return 0
     end
-    beamline = (pdict[BeamlineParams]::BeamlineParams).beamline
-    ibp = first(beamline.line).InitialBeamlineParams
-    if isnothing(ibp) # If first element does not have InitialBeamlineParams, then it is inferred from previous
-      branch_index = getfield(beamline, :branch_index)
-      if branch_index == -1 || branch_index == 1
-        return GetError("Unable to get $key: $key is not set nor inferrable")
-      else
-        return trygetproperty(getfield(beamline, :branch).beamlines[branch_index-1], key)
-      end
-    elseif key == :species_ref # Species
-      field = getfield(ibp, :species_ref) 
-      if isnullspecies(field)
-        branch_index = getfield(beamline, :branch_index)
-        if branch_index == -1 || branch_index == 1
-          return GetError("Unable to get $key: $key is not set nor inferrable")
-        else
-          return trygetproperty(getfield(beamline, :branch).beamlines[branch_index-1], key)
-        end
-      else
-        return field
-      end
-    else # key in (:E_ref, :pc_ref, :p_over_q_ref, :dE_ref, :dpc_ref, :dp_over_q_ref)
-      ref = deval(getfield(ibp, :ref), context)
-      if isnothing(ref)
-        branch_index = getfield(beamline, :branch_index)
-        if branch_index == -1 || branch_index == 1
-          return GetError("Unable to get $key: $key is not set nor inferrable")
-        else
-          return trygetproperty(getfield(beamline, :branch).beamlines[branch_index-1], key)
-        end
-      end
-      ref_meaning = refmeaning_to_sym(getfield(ibp, :ref_meaning))
-      if key == ref_meaning
-        return ref
-      elseif key in (:E_ref, :pc_ref, :p_over_q_ref) # Key absolute
-        if ref_meaning in (:E_ref, :pc_ref, :p_over_q_ref) # key absolute, ref_meaning absolute
-          species_ref = try_get_bl_params(ele, :species_ref, context)
-          if species_ref isa GetError
-            # Make it more informative:
-            return GetError("
-              Unable to get $key: stored is $ref_meaning and computing $key requires a species_ref,
-              which has not been set nor is inferrable.
-              ")
-          end
-          return ref_abs_convert(key, ref, ref_meaning, species_ref)
-        else # Key absolute, ref_meaning relative
-          if (key == :E_ref && ref_meaning == :dE_ref) || 
-              (key == :pc_ref && ref_meaning == :dpc_ref) || 
-              (key == :p_over_q_ref && ref_meaning == :dp_over_q_ref)
-            # Can just add going backwards
-            branch_index = getfield(beamline, :branch_index)
-            if branch_index == -1
-              return GetError("
-                Unable to get property $key: because this Beamline has set $(ref_meaning),
-                the property $key must be dependent on an upstream Beamline in a Branch, but 
-                the Beamline is not in a Branch.
-              ")
-            elseif branch_index == 1
-              return ref # Basically just assume zero for all "before" if first Beamline (out of thin air)
-            else
-              return ref + trygetproperty(getfield(beamline, :branch).beamlines[branch_index-1], key)
-            end
-          else
-            species_ref = try_get_bl_params(ele, :species_ref, context)
-            if species_ref isa GetError
-              # Make it more informative:
-              return GetError("
-                Unable to get $key: stored is $ref_meaning and computing $key requires a species_ref,
-                which has not been set nor is inferrable.
-                ")
-            end
-            ref_meaning_abs = ref_meaning_rel_to_abs(ref_meaning)
-            ref = try_get_bl_params(first(beamline.line), ref_meaning_abs, context)
-            if ref isa GetError
-              return GetError("
-                Unable to get $key: stored is $ref_meaning and $key is not inferrable.
-              ")
-            end
-            return ref_abs_convert(key, ref, ref_meaning_abs, species_ref)
-          end
-        end
-      else # Key relative
-        branch_index = getfield(beamline, :branch_index)
-        if branch_index == -1
-          return GetError("
-            Unable to get property $key: because this Beamline has set $(ref_meaning),
-            the property $key must be dependent on an upstream Beamline in a Branch, but 
-            the Beamline is not in a Branch.
-          ") 
-        elseif branch_index == 1
-          return ref # Basically just assume zero for all "before" if first Beamline (out of thin air)
-        else
-          species_ref = try_get_bl_params(ele, :species_ref, context)
-          if species_ref isa GetError
-            # Make it more informative:
-            return GetError("
-              Unable to get $key: stored is $ref_meaning and computing $key requires a species_ref,
-              which has not been set nor is inferrable.
-            ")
-          end
-          key_abs = ref_meaning_rel_to_abs(key)
-          ref_abs_f = try_get_bl_params(first(beamline.line), key_abs, context)
-          ref_abs_i = trygetproperty(getfield(beamline, :branch).beamlines[branch_index-1], key_abs)
-          if ref_abs_i isa GetError || ref_abs_f isa GetError
-            return GetError("
-              Unable to get $key: stored is $ref_meaning and $key is not inferrable.
-            ")
-          end
-          return ref_abs_f - ref_abs_i
-        end
-      end
-    end
-  else # not in a Beamline, just return ibp
+  else
+    return trygetproperty(getfield(beamline, :branch).beamlines[branch_index-1], var_abs)
+  end
+end
+ 
+function try_get_bl_params(ele::LatElement, key::Symbol, context::Context)
+  pdict = getfield(ele, :pdict)
+ 
+  if !haskey(pdict, BeamlineParams) # not in a Beamline, just return ibp
     ibp = ele.InitialBeamlineParams
     if isnothing(ibp)
       return GetError("Unable to get $key: $key is not set.")
     else
       return trygetproperty(ibp, key)
+    end
+  end
+ 
+  # Element is in a Beamline
+  if key in (:dE_ref, :dpc_ref, :dp_over_q_ref) && (pdict[BeamlineParams]::BeamlineParams).beamline_index != 1
+    return 0
+  end
+  beamline = (pdict[BeamlineParams]::BeamlineParams).beamline
+  ibp = first(beamline.line).InitialBeamlineParams
+  if isnothing(ibp) # If first element does not have InitialBeamlineParams, then it is inferred from previous
+    return inherit_from_upstream(beamline, key)
+  elseif key == :species_ref # Species
+    field = getfield(ibp, :species_ref) 
+    if isnullspecies(field)
+      return inherit_from_upstream(beamline, key)
+    else
+      return field
+    end
+  end
+ 
+  # key in (:E_ref, :pc_ref, :p_over_q_ref, :dE_ref, :dpc_ref, :dp_over_q_ref)
+  ref = deval(getfield(ibp, :ref), context)
+  if isnothing(ref)
+    # No reference set here. If the species was changed, no variable (E, pc, p_over_q) has a
+    # natural reason to be preserved, and inheriting each independently would be inconsistent.
+    branch_index = getfield(beamline, :branch_index)
+    species_field = getfield(ibp, :species_ref)
+    if branch_index > 1 && !isnullspecies(species_field)
+      prev_species = trygetproperty(getfield(beamline, :branch).beamlines[branch_index-1], :species_ref)
+      if !(prev_species isa GetError) && prev_species != species_field
+        return GetError("
+          Unable to get $key: this Beamline changes species_ref from $(prev_species) to $(species_field)
+          but does not set a reference (E_ref, pc_ref, p_over_q_ref or a delta), so $key is ambiguous.
+          Set a reference on this Beamline whenever species_ref changes.
+        ")
+      end
+    end
+    return inherit_from_upstream(beamline, key)
+  end
+  ref_meaning = refmeaning_to_sym(getfield(ibp, :ref_meaning))
+  key_is_abs = key in (:E_ref, :pc_ref, :p_over_q_ref)
+  stored_is_abs = ref_meaning in (:E_ref, :pc_ref, :p_over_q_ref)
+ 
+  if key == ref_meaning
+    return ref
+  elseif key_is_abs && stored_is_abs # Key absolute, stored absolute: just convert
+    species_ref = try_get_species_for(ele, key, ref_meaning, context)
+    if species_ref isa GetError
+      return species_ref
+    end
+    return ref_abs_convert(key, ref, ref_meaning, species_ref)
+  end
+ 
+  # Otherwise the key and/or the stored value is a delta, so this Beamline's value must be 
+  # related to the upstream Beamline (the start of this Beamline).
+  branch_index = getfield(beamline, :branch_index)
+  if branch_index == -1
+    return GetError("
+      Unable to get property $key: because this Beamline has set $(ref_meaning),
+      the property $key must be dependent on an upstream Beamline in a Branch, but 
+      the Beamline is not in a Branch.
+    ")
+  end
+ 
+  # Absolute variables ("families") of the key and of the stored value
+  key_abs = key_is_abs ? key : ref_meaning_rel_to_abs(key)
+  ref_meaning_abs = stored_is_abs ? ref_meaning : ref_meaning_rel_to_abs(ref_meaning)
+ 
+  # A species is needed to convert between families. It is also needed in the first Beamline of
+  # a Branch when the stored variable is energy-like, since "before" is a particle at rest and
+  # so the initial E is massof(species_ref).
+  species_ref = nothing
+  if key_abs != ref_meaning_abs || (branch_index == 1 && ref_meaning_abs == :E_ref)
+    species_ref = try_get_species_for(ele, key, ref_meaning, context)
+    if species_ref isa GetError
+      return species_ref
+    end
+  end
+ 
+  # ref0 = absolute value of the stored variable at the start of this Beamline
+  ref0 = upstream_ref(beamline, branch_index, ref_meaning_abs, species_ref)
+  if ref0 isa GetError
+    return GetError("
+      Unable to get $key: stored is $ref_meaning and the upstream $ref_meaning_abs
+      is not inferrable.
+    ")
+  end
+ 
+  if key_is_abs # Stored is relative
+    # Absolute value of the stored variable at the end of this Beamline (add in its own variable),
+    # then convert with THIS Beamline's species. No delta conversion is used here, so a species
+    # change between Beamlines is handled correctly.
+    ref_abs = ref0 + ref
+    if key_abs == ref_meaning_abs
+      return ref_abs
+    else
+      return ref_abs_convert(key, ref_abs, ref_meaning_abs, species_ref)
+    end
+  end
+ 
+  # Key relative: change in the stored variable over this Beamline
+  dref = stored_is_abs ? ref - ref0 : ref
+  if key_abs == ref_meaning_abs
+    return dref # Same variable: no conversion needed
+  end
+ 
+  # Different variable. A delta conversion is only meaningful if the species did not change
+  # across the Beamline boundary (always true for the first Beamline: starts at rest).
+  species_changed = false
+  prev = nothing
+  if branch_index != 1
+    prev = getfield(beamline, :branch).beamlines[branch_index-1]
+    prev_species = trygetproperty(prev, :species_ref)
+    species_changed = !(prev_species isa GetError) && prev_species != species_ref
+  end
+ 
+  if !species_changed
+    return ref_delta_convert(key, ref0, dref, ref_meaning_abs_to_rel(ref_meaning_abs), species_ref)
+  end
+ 
+  # Species changed: define the delta as the difference of the two absolute values
+  key_f = try_get_bl_params(ele, key_abs, context)
+  key_i = trygetproperty(prev, key_abs)
+  if key_f isa GetError || key_i isa GetError
+    return GetError("
+      Unable to get $key: stored is $ref_meaning and $key is not inferrable.
+    ")
+  end
+  return key_f - key_i
+end
+
+ 
+# key and ref_meaning are both relative (d*_ref) and in different families.
+# ref0 is the absolute value of the ref_meaning variable at the start of the delta,
+# dref is the delta in the ref_meaning variable.
+function ref_delta_convert(key, ref0, dref, ref_meaning, species_ref)
+  # dE -> dpc and dE -> dp_over_q are 0/0 for dE = 0 when starting at rest (E0 = massof(species_ref)).
+  # (Not a general iszero(dref) check, which would break derivatives at dref = 0 everywhere else.)
+  if ref_meaning == :dE_ref && iszero(dref) && ref0 == massof(species_ref)
+    return zero(dref)
+  end
+  if key == :dE_ref
+    if ref_meaning == :dpc_ref
+      return dpc_to_dE(species_ref, ref0, dref)
+    elseif ref_meaning == :dp_over_q_ref
+      return dR_to_dE(species_ref, ref0, dref)
+    else
+      error("Unsupported conversion: $ref_meaning to $key")
+    end
+  elseif key == :dpc_ref
+    if ref_meaning == :dE_ref
+      return dE_to_dpc(species_ref, ref0, dref)
+    elseif ref_meaning == :dp_over_q_ref
+      return dR_to_dpc(species_ref, dref)
+    else
+      error("Unsupported conversion: $ref_meaning to $key")
+    end
+  else
+    if ref_meaning == :dpc_ref
+      return dpc_to_dR(species_ref, dref)
+    elseif ref_meaning == :dE_ref
+      return dE_to_dR(species_ref, ref0, dref)
+    else
+      error("Unsupported conversion: $ref_meaning to $key")
     end
   end
 end
@@ -788,20 +879,26 @@ function ref_abs_convert(key, ref, ref_meaning, species_ref)
   if key == :E_ref
     if ref_meaning == :pc_ref
       return pc_to_E(species_ref, ref)
-    else
+    elseif ref_meaning == :p_over_q_ref
       return R_to_E(species_ref, ref)
+    else
+      error("Unsupported conversion: $ref_meaning to $key")
     end
   elseif key == :pc_ref
     if ref_meaning == :E_ref
       return E_to_pc(species_ref, ref)
-    else
+    elseif ref_meaning == :p_over_q_ref
       return R_to_pc(species_ref, ref)
+    else
+      error("Unsupported conversion: $ref_meaning to $key")
     end
   else
     if ref_meaning == :pc_ref
       return pc_to_R(species_ref, ref)
-    else
+    elseif ref_meaning == :E_ref
       return E_to_R(species_ref, ref)
+    else
+      error("Unsupported conversion: $ref_meaning to $key")
     end
   end
 end
@@ -818,7 +915,18 @@ function ref_meaning_rel_to_abs(ref_meaning::Symbol)
   end
 end
 
-function get_parent_ele(ele::LineElement, ::Symbol, ::Context)
+function ref_meaning_abs_to_rel(ref_meaning::Symbol)
+  if ref_meaning == :E_ref
+    return :dE_ref
+  elseif ref_meaning == :pc_ref
+    return :dpc_ref
+  elseif ref_meaning == :p_over_q_ref
+    return :dp_over_q_ref
+  else
+    error("Invalid ref_meaning specified")
+  end
+end
+function get_parent_ele(ele::LatElement, ::Symbol, ::Context)
   pdict = getfield(ele, :pdict)
   if haskey(pdict, InheritParams)
     return get_parent(pdict)
