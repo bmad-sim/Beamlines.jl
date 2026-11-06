@@ -72,9 +72,10 @@ end
 o2i(b::EMultipoleParams, ord::Int) = findfirst(t->t==ord, b.order)
 
 function EMultipoleParams{T}(b::EMultipoleParams=EMultipoleParams()) where {T}
-  n = T.(b.n)
-  s = T.(b.s)
-  etilt = T.(b.etilt)
+  # Not T.(b.n): broadcasting would narrow the element type (e.g. to a concrete TimeDependentParam{F})
+  n = T[T(x) for x in b.n]
+  s = T[T(x) for x in b.s]
+  etilt = T[T(x) for x in b.etilt]
   return EMultipoleParams(n,s,etilt,b.order,b.integrated)
 end
 

@@ -82,9 +82,10 @@ end
 o2i(b::BMultipoleParams, ord::Int) = findfirst(t->t==ord, b.order)
 
 function BMultipoleParams{T}(b::BMultipoleParams=BMultipoleParams()) where {T}
-  n = T.(b.n)
-  s = T.(b.s)
-  tilt = T.(b.tilt)
+  # Not T.(b.n): broadcasting would narrow the element type (e.g. to a concrete TimeDependentParam{F})
+  n = T[T(x) for x in b.n]
+  s = T[T(x) for x in b.s]
+  tilt = T[T(x) for x in b.tilt]
   return BMultipoleParams(n,s,tilt,b.order,b.normalized,b.integrated)
 end
 

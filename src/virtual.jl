@@ -626,15 +626,16 @@ function set_bl_params!(ele::LatElement, sym::Symbol, ::Context, value)
     ele.InitialBeamlineParams = ibp
   end
 
-  if sym == :species_ref && !isnothing(getfield(ibp, :ref)) && 
-    getfield(ibp, :ref_meaning) == RefMeaning.p_over_q_ref && 
-    sign(chargeof(value)) != sign(getfield(ibp, :ref))
-    new_p_over_q_ref = sign(chargeof(value))*getfield(ibp, :ref)
+  # The sign of a non-Number p_over_q_ref (e.g. time dependent) cannot be checked here
+  if sym == :species_ref && getfield(ibp, :ref) isa Number &&
+    getfield(ibp, :ref_meaning) == RefMeaning.p_over_q_ref &&
+    sign(chargeof(value)) == -sign(getfield(ibp, :ref))
+    new_p_over_q_ref = -getfield(ibp, :ref)
     @info "Setting p_over_q_ref to $(new_p_over_q_ref) to match sign of new species_ref charge"
     setfield!(ibp, :ref, new_p_over_q_ref)
   elseif sym == :p_over_q_ref && value isa Number && !isnullspecies(getfield(ibp, :species_ref)) &&
-    sign(chargeof(getfield(ibp, :species_ref))) != sign(value)
-    value = sign(chargeof(getfield(ibp, :species_ref)))*value
+    sign(chargeof(getfield(ibp, :species_ref))) == -sign(value)
+    value = -value
     @info "Setting p_over_q_ref to $(value) to match sign of stored species_ref charge"
   end
 
