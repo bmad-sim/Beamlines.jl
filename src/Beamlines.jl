@@ -1,7 +1,6 @@
 module Beamlines
 export AbstractParams, 
        LatElement, 
-       Bunch, 
        ParamDict, 
        UniversalParams, 
        BMultipoleParams, 

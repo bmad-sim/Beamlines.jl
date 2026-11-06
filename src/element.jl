@@ -18,7 +18,7 @@ end
 
 # Element show
 function Base.show(io::IO, ele::LatElement)
-  print(io, "LatElement:")
+  print(io, "$(typeof(ele)):")
   # Show the parameter groups the element effectively has, i.e. with any inherited parameter
   # groups flattened in. InheritParams itself is shown compactly (see below).
   own_pdict = getfield(ele, :pdict)
@@ -335,9 +335,9 @@ end
 #Base.fieldnames(::Type{LatElement}) = tuple(:pdict, keys(PROPERTIES_MAP)..., keys(PARAMS_MAP)...)
 #Base.fieldnames(::LatElement) = tuple(:pdict, keys(PROPERTIES_MAP)..., keys(PARAMS_MAP)...)
 #Base.propertynames(::Type{LatElement}) = tuple(:pdict, keys(PROPERTIES_MAP)..., keys(PARAMS_MAP)...)
-Base.propertynames(::LatElement) = _LatElement_properties()
+Base.propertynames(::LatElement) = _latelement_properties()
 
-function _LatElement_properties()
+function _latelement_properties()
   virt = union(keys(VIRTUAL_GETTER_MAP),keys(VIRTUAL_SETTER_MAP))
   prop = keys(PROPERTIES_MAP)
   param = keys(PARAMS_MAP)

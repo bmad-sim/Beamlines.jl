@@ -15,7 +15,7 @@ using ForwardDiff, GTPSA, ReverseDiff
     @test up.name == "Test123"
     @test typeof(up.L) == typeof(L)
     @test up.L == L
-    @test up.tracking_method == DriftKick()
+    @test up.tracking_method == nothing
     @test ele.kind == up.kind
     @test ele.name == up.name
     @test ele.L == up.L
