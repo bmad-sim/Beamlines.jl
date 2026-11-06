@@ -2,12 +2,12 @@
 
 ## Up-to-date documentation is in [SciBmad](https://bmad-sim.github.io/SciBmad.jl/)
 
----
-
 [![Stable](https://img.shields.io/badge/docs-stable-blue.svg)](https://bmad-sim.github.io/Beamlines.jl/stable/)
 [![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://bmad-sim.github.io/Beamlines.jl/dev/)
 [![Build Status](https://github.com/mattsignorelli/Beamlines.jl/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/mattsignorelli/Beamlines.jl/actions/workflows/CI.yml?query=branch%3Amain)
 [![codecov](https://codecov.io/github/bmad-sim/Beamlines.jl/graph/badge.svg?token=4776DOLQ8B)](https://codecov.io/github/bmad-sim/Beamlines.jl)
+
+--- 
 
 This package defines the `Beamline` and `LatElement` types, which can be used to define particle accelerator beamlines. The `LatElement` is fully extensible and polymorphic, and has been highly optimized for fast getting/setting of the beamline element parameters. High-order automatic differentiation of parameters, e.g. magnet strengths or lengths, is also easy using `Beamlines.jl`. All dependent variables computed from `LatElement`s are computed from the internally stored independent variables as lazily as deferred expressions; there is no eager "bookkeeper". This both fully minimizes overhead from storing and computing quantities you don't need (especially impactful in optimization loops), and ensures that you don't need to rely on a complicated bookkeeper to properly update all dependent variables, minimizing bugs and easing long term maintainence. Furthermore, the generic `DefExpr` type is provided as a general usage lazily-evaluated deferred expression for controlling potentially many parameters with only a single update.
 
