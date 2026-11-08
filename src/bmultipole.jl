@@ -174,7 +174,8 @@ function param_replace(b1::BMultipoleParams{T0,N0}, key::Symbol, value) where {T
     integrated = b1.integrated[i]
     T = promote_type(T0,typeof(value))
     b = BMultipoleParams{T}(b1)
-    return setproperty!(b, key, value)
+    setproperty!(b, key, value)
+    return b
   else
     # adding new multipole
     T = promote_type(T0,typeof(value))

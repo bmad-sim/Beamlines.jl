@@ -3650,3 +3650,18 @@ end
     @test err isa ErrorException && occursin("Unable to get $k of LatElement", err.msg)
   end
 end
+
+@testset "Tilt of a different number type than the strengths" begin
+  # Setting an existing (e)tilt to a value that needs a wider number type replaces the group with
+  # a promoted one (it used to put the value itself in the element)
+  q = Quadrupole(L=1.0, Kn1=1, tilt1=0.1)
+  @test q.Kn1 == 1 && q.tilt1 == 0.1 && eltype(q.BMultipoleParams) == Float64
+  q = Quadrupole(L=1.0, Kn1=0.3f0)
+  q.tilt1 = 0.1
+  @test q.Kn1 == 0.3f0 && q.tilt1 == 0.1 && eltype(q.BMultipoleParams) == Float64
+  q = Quadrupole(L=1.0, Kn1=0.3, tilt1=ForwardDiff.Dual(0.1, 1.0))
+  @test q.Kn1 == 0.3 && q.tilt1 == ForwardDiff.Dual(0.1, 1.0)
+  e = LatElement(L=1.0, En1=1)
+  e.etilt1 = 0.1
+  @test e.En1 == 1 && e.etilt1 == 0.1 && eltype(e.EMultipoleParams) == Float64
+end
