@@ -12,6 +12,40 @@ The `isactive` function does not check the `ignore_params` list.
 isactive(::AbstractParams) = true
 isactive(::Nothing) = false
 
+"""
+    rawget(p::AbstractParams, key::Symbol)
+    rawget(ele::LatElement, key::Symbol)
+
+Gets the independent variable `key` of the parameter group `p` or of the element `ele` exactly
+as it is stored, without evaluating deferred expressions: e.g. a `DefExpr` set for `Kn1` is
+returned as that `DefExpr`. Evaluating it with `deval` in the `Context` of the element's
+`Beamline` gives `getproperty(ele, key)`.
+
+Properties which are not independent variables but computed from them (e.g. `Kn1L` or `Bn1`
+when `Kn1` was set last, `E_ref` when `p_over_q_ref` was set, `s`) cannot be gotten raw, and
+give an error.
+
+## Examples
+```jldoctest
+julia> a = 0.36;
+
+julia> qf = Quadrupole(Kn1=DefExpr(()->a), L=0.5);
+
+julia> d = rawget(qf, :Kn1);
+
+julia> qf.Kn1 = 2*d; # Twice the stored expression, still dependent on a
+
+julia> a = 0.4;
+
+julia> qf.Kn1
+0.8
+```
+"""
+function rawget(p::AbstractParams, key::Symbol)
+  hasfield(typeof(p), key) || error("Unable to rawget $key: $key is not an independent variable stored in $(nameof(typeof(p)))")
+  return getfield(p, key)
+end
+
 @generated function deval(a::AbstractParams, c::Context=NULL_CONTEXT)
     apply = [
       begin

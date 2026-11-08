@@ -126,6 +126,12 @@ function DefExpr(f)
   return DefExpr{T}(f)
 end
 
+"""
+    deval(d, c::Context=NULL_CONTEXT)
+
+Evaluates `d` in the `Context` `c` if it is a `DefExpr`, else returns `d`. E.g.
+`deval(rawget(ele, :Kn1), c)` for an element in a `Beamline` with `Context` `c` is `ele.Kn1`.
+"""
 deval(d::DefExpr, c::Context=NULL_CONTEXT) = d(c)
 deval(d, c=NULL_CONTEXT) = d
 

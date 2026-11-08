@@ -121,6 +121,24 @@ function Base.getproperty(b::BMultipoleParams{T}, key::Symbol) where {T}
   error("BMultipoleParams $b does not have property $key")
 end
 
+function rawget(b::BMultipoleParams, key::Symbol)
+  if haskey(BMULTIPOLE_STRENGTH_MAP, key)
+    normal, order, normalized, integrated = BMULTIPOLE_STRENGTH_MAP[key]
+    if !(order in b.order)
+      return 0f0 # Default
+    end
+    i = o2i(b, order)
+    if b.normalized[i] == normalized && b.integrated[i] == integrated
+      return normal ? b.n[i] : b.s[i]
+    end
+    stored = BMULTIPOLE_STRENGTH_INVERSE_MAP[(normal, order, b.normalized[i], b.integrated[i])]
+    error("Unable to rawget $key: $key is a dependent variable, computed from the independent variable $stored. Use rawget with :$stored instead")
+  elseif haskey(BMULTIPOLE_TILT_MAP, key)
+    return getproperty(b, key)
+  end
+  return invoke(rawget, Tuple{AbstractParams,Symbol}, b, key)
+end
+
 function Base.setproperty!(b::BMultipoleParams{T}, key::Symbol, value) where {T}
   if key in (:n, :s, :tilt, :order, :normalized, :integrated)
     return setfield!(b, key, value) # Will error because immutable struct

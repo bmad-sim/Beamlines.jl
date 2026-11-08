@@ -3553,3 +3553,96 @@ end
     end
   end
 end
+@testset "rawget" begin
+  e = Species("electron")
+  a = 0.36
+  L = 0.5
+  R = -10.0
+  kL = DefExpr(()->L)
+  k1 = DefExpr(c -> c.k1)
+  kR = DefExpr(()->R)
+  q = Quadrupole(L=kL, Kn1=k1, Ks2L=0.1, Bs3=DefExpr(()->a), tilt1=0.2, x_offset=1e-3, ds_step=0.1)
+  cav = RFCavity(L=0.3, voltage=1e6, harmon=DefExpr(()->100))
+  m = Multipole(En1L=0.1)
+  bl = Beamline([Drift(L=1.0), q, cav, m]; p_over_q_ref=kR, species_ref=e, context=Context(k1=0.3))
+  ctx = bl.context
+  c = bl.line[2]
+
+  # Stored properties are returned as stored, on the parent and the children
+  for ele in (q, c)
+    @test rawget(ele, :L) === kL
+    @test rawget(ele, :Kn1) === k1
+    # The parameter group stores all strengths and tilts as DefExprs once one of them is
+    @test deval(rawget(ele, :Ks2L)) === 0.1
+    @test deval(rawget(ele, :tilt1)) === 0.2
+    @test rawget(ele, :x_offset) === 1e-3
+    @test rawget(ele, :ds_step) === 0.1
+  end
+  @test rawget(cav, :harmon) === getfield(cav.RFParams, :rate)
+  @test rawget(m, :En1L) === 0.1
+  for ele in bl.line
+    @test rawget(ele, :p_over_q_ref) === kR
+    @test rawget(ele, :species_ref) == e
+  end
+  @test rawget(bl.line[1], :Kn1) === getproperty(bl.line[1], :Kn1) # Default
+  @test rawget(c, :BMultipoleParams) === c.BMultipoleParams
+
+  # Also on the parameter groups
+  @test rawget(q.UniversalParams, :L) === kL
+  @test rawget(q.UniversalParams, :ds_step) === 0.1
+  @test rawget(q.BMultipoleParams, :Kn1) === k1
+  @test rawget(q.AlignmentParams, :x_offset) === 1e-3
+  @test rawget(cav.RFParams, :harmon) === getfield(cav.RFParams, :rate)
+  @test rawget(bl.line[1].InitialBeamlineParams, :p_over_q_ref) === kR
+  @test_throws ErrorException rawget(q.BMultipoleParams, :Kn1L)
+  @test_throws ErrorException rawget(c.BeamlineParams, :s)
+
+  # Evaluated in the Context, they are getproperty, also after the variables change
+  for (Lv, Rv, k1v) in ((0.5, -10.0, 0.3), (0.6, -20.0, 0.4))
+    L = Lv
+    R = Rv
+    ctx.k1 = k1v
+    for k in (:L, :Kn1, :Ks2L, :Bs3, :ds_step, :p_over_q_ref)
+      @test isequal(deval(rawget(c, k), ctx), getproperty(c, k))
+    end
+    @test isequal(deval(rawget(bl.line[3], :harmon), ctx), bl.line[3].harmon)
+  end
+
+  # Computed properties cannot be gotten raw
+  for (ele, k, stored) in ((c, :Kn1L, "Kn1"), (c, :Bn1, "Kn1"), (c, :Ks2, "Ks2L"), (c, :Bs3L, "Bs3"),
+                           (c, :n_steps, "ds_step"), (bl.line[3], :rf_frequency, "harmon"), (m, :En1, "En1L"))
+    err = try rawget(ele, k); nothing catch err; err end
+    @test err isa ErrorException && occursin("is a dependent variable, computed from the independent variable $stored.", err.msg)
+  end
+  for k in (:E_ref, :pc_ref, :s, :s_downstream, :field_master, :BM_independent, :parent)
+    @test_throws ErrorException rawget(c, k)
+  end
+
+  # A changed reference is seen through the stored strength, not a raw Bn1
+  bl.p_over_q_ref = -20.0
+  @test deval(rawget(c, :Kn1), ctx)*bl.p_over_q_ref == c.Bn1
+
+  # Setting a property from its raw value keeps the dependence
+  q.Kn1 = 2*rawget(q, :Kn1)
+  ctx.k1 = 0.25
+  @test c.Kn1 == 0.5
+
+  # Reference of a Branch: stored in the first element of each Beamline, else inherited (computed)
+  bl1 = Beamline([Marker(), Drift(L=1.0)]; E_ref=DefExpr(()->10e9), species_ref=e)
+  bl2 = Beamline([Marker()]; dE_ref=-3e9)
+  bl3 = Beamline([Marker()])
+  br = Branch([bl1, bl2, bl3])
+  b1, b2, b3 = br.beamlines
+  @test rawget(b1.line[2], :E_ref) === rawget(b1.line[1], :E_ref)
+  @test_throws ErrorException rawget(b1.line[1], :dE_ref) # Computed from the stored E_ref
+  @test rawget(b2.line[1], :dE_ref) === -3e9
+  @test rawget(b1.line[2], :dE_ref) === 0
+  @test_throws ErrorException rawget(b2.line[1], :E_ref)
+  @test_throws ErrorException rawget(b3.line[1], :E_ref)
+
+  # Error messages of computed strengths name the property
+  for (ele, k) in ((Multipole(Kn2L=0.1), :Kn2), (Multipole(En1L=0.1), :En1))
+    err = try getproperty(ele, k); nothing catch err; err end
+    @test err isa ErrorException && occursin("Unable to get $k of LatElement", err.msg)
+  end
+end

@@ -35,10 +35,10 @@ function get_BM_strength(ele::LatElement, key::Symbol, context)
   strength = normal ? deval(b.n[i], context) : deval(b.s[i], context)
   stored_normalized = b.normalized[i]
   stored_integrated = b.integrated[i]
-  return @noinline _get_BM_strength(ele, strength, normalized, integrated, stored_normalized, stored_integrated, context)
+  return @noinline _get_BM_strength(ele, key, strength, normalized, integrated, stored_normalized, stored_integrated, context)
 end
 
-function _get_BM_strength(ele, strength, normalized, integrated, stored_normalized, stored_integrated, context)
+function _get_BM_strength(ele, key, strength, normalized, integrated, stored_normalized, stored_integrated, context)
   # Yes there is a simpler way to write the below but this 
   # way minimizes type instability.
   if stored_normalized == normalized
@@ -205,10 +205,10 @@ function get_EM_strength(ele::LatElement, key::Symbol, context)
   i = o2i(b,order)
   strength = normal ? deval(b.n[i], context) : deval(b.s[i], context)
   stored_integrated = b.integrated[i]
-  return @noinline _get_EM_strength(ele, strength, integrated, stored_integrated, context)
+  return @noinline _get_EM_strength(ele, key, strength, integrated, stored_integrated, context)
 end
 
-function _get_EM_strength(ele, strength, integrated, stored_integrated, context)
+function _get_EM_strength(ele, key, strength, integrated, stored_integrated, context)
   if stored_integrated == integrated
     return strength
   else

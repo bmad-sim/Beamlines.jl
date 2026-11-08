@@ -134,6 +134,19 @@ function Base.getproperty(rfp::RFParams, key::Symbol)
   end
 end
 
+function rawget(rfp::RFParams, key::Symbol)
+  if key in (:harmon, :rf_frequency)
+    rate_meaning = getfield(rfp, :rate_meaning)
+    if rate_meaning == RateMeaning.Indeterminate
+      return 0f0 # Default
+    end
+    stored = rate_meaning == RateMeaning.Harmon ? :harmon : :rf_frequency
+    key == stored || error("Unable to rawget $key: $key is a dependent variable, computed from the independent variable $stored. Use rawget with :$stored instead")
+    return getfield(rfp, :rate)
+  end
+  return invoke(rawget, Tuple{AbstractParams,Symbol}, rfp, key)
+end
+
 # Note that if rate = 0, rf_frequency = harmon = 0. So in 
 # Note that in the case where voltage != 0 but rate = 0
 isactive(rfp::RFParams) = (rfp.voltage != 0)
