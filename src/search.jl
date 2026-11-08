@@ -41,6 +41,8 @@ Base.getindex(bl::Beamline, f::Function) = filter(f, bl.line)
 Base.length(bl::Beamline) = length(bl.line)
 Base.firstindex(bl::Beamline) = 1
 Base.lastindex(bl::Beamline) = length(bl)
+Base.iterate(bl::Beamline, i=1) = iterate(bl.line, i)
+Base.eltype(::Type{Beamline}) = LatElement
 
 #---------------------------------------------------------------------------------------------------
 

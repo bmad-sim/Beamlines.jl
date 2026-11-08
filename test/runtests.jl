@@ -2108,6 +2108,10 @@ using ForwardDiff, GTPSA, ReverseDiff
     @test br[end-1] === br[3]
     @test br[begin] === br[1]
     @test bl2[end] === bl2.line[2]
+    @test collect(bl2) == [bl2.line[1], bl2.line[2]]
+    @test eltype(bl2) == LatElement
+    foreach(x -> x.ibs_model = IBSModel.Gaussian, bl2) # Sets the parents d3 and d4
+    @test d3.ibs_model == d4.ibs_model == IBSModel.Gaussian
     @test bl2[begin] === bl2.line[1]
     @test_throws BoundsError Branch(Beamline[])[end]
     @test_throws BoundsError br[5]
