@@ -58,7 +58,17 @@ end
       end for (type,name) in zip(fieldtypes(a),fieldnames(a))
     ]
     base_type = Base.typename(a).wrapper
+    # Arrays of DefExprs (or of abstract type) are always evaluated, which also narrows their eltype
+    if any(type <: AbstractArray && (eltype(type) <: DefExpr || isabstracttype(eltype(type))) for type in fieldtypes(a))
+      return quote
+          ($base_type)($(apply...))
+      end
+    end
+    # Otherwise, if no field is a DefExpr, there is nothing to evaluate
+    checks = [:(getfield(a, $(QuoteNode(name))) isa DefExpr) for (type,name) in zip(fieldtypes(a),fieldnames(a))
+                if typeintersect(type, DefExpr) !== Union{}]
     return quote
+        $(foldr((x, y) -> :($x || $y), checks; init=false)) || return a
         ($base_type)($(apply...))
     end
 end
