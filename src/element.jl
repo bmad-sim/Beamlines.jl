@@ -131,16 +131,16 @@ function isapprox_ignoring(a::LatElement, b::LatElement, ignore::Type{<:Abstract
   L_l != L_r && return false
   anymissing = false
   for pair in l
-      if skip(pair...)
-        continue
-      end
+    if skip(pair...)
+      continue
+    end
 
-      isin = in(pair, r, ≈)
-      if ismissing(isin)
-          anymissing = true
-      elseif !isin
-          return false
-      end
+    isin = in(pair, r, ≈)
+    if ismissing(isin)
+      anymissing = true
+    elseif !isin
+      return false
+    end
   end
   return anymissing ? missing : true
 end

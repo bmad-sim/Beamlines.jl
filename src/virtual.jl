@@ -130,9 +130,9 @@ function _set_BM_strength!(ele, context::Context, b::BMultipoleParams, key, valu
   i = o2i(b, order)
   if b.normalized[i] == normalized && b.integrated[i] == integrated
       # EASY!
-      b = _promote_bm(b, typeof(value))
-      bm = normal ? b.n : b.s
-      bm[i] = value
+    b = _promote_bm(b, typeof(value))
+    bm = normal ? b.n : b.s
+    bm[i] = value
   end
 
   # Switching normalized status:
@@ -257,9 +257,9 @@ function _set_EM_strength!(ele, context::Context, b::EMultipoleParams, key, valu
   i = o2i(b, order)
   if b.integrated[i] == integrated
       # EASY!
-      b = _promote_em(b, typeof(value))
-      bm = normal ? b.n : b.s
-      bm[i] = value
+    b = _promote_em(b, typeof(value))
+    bm = normal ? b.n : b.s
+    bm[i] = value
   end
 
   # Switching integrated status

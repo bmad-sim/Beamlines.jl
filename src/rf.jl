@@ -100,13 +100,13 @@ Base.eltype(::RFParams{T}) where {T} = T
 Base.eltype(::Type{RFParams{T}}) where {T} = T
 
 function Base.isapprox(a::RFParams, b::RFParams) 
-    return  a.rate           ≈  b.rate && 
-            a.voltage        ≈  b.voltage && 
-            a.phi0           ≈  b.phi0 &&
-            a.rate_meaning   == b.rate_meaning &&
-            a.zero_phase     == b.zero_phase &&
-            a.traveling_wave == b.traveling_wave &&
-            a.is_crabcavity  == b.is_crabcavity
+  return  a.rate           ≈  b.rate && 
+          a.voltage        ≈  b.voltage && 
+          a.phi0           ≈  b.phi0 &&
+          a.rate_meaning   == b.rate_meaning &&
+          a.zero_phase     == b.zero_phase &&
+          a.traveling_wave == b.traveling_wave &&
+          a.is_crabcavity  == b.is_crabcavity
 end
 
 # Error if writes to rate while rate_meaning is Indeterminate:

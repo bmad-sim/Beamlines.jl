@@ -32,14 +32,14 @@ This may be needed after optimizing the element's parameters using e.g. `Forward
 that propagates the gradients.
 """
 function scalarize!(bl::Beamline)
-    for ele in bl.line
-        scalarize!(ele)
-    end
-    dict = getfield(bl.context, :d)
-    for (k,v) in dict
-        dict[k] = scalarize(v)
-    end
-    return bl 
+  for ele in bl.line
+    scalarize!(ele)
+  end
+  dict = getfield(bl.context, :d)
+  for (k,v) in dict
+    dict[k] = scalarize(v)
+  end
+  return bl 
 end
 
 """
@@ -51,8 +51,8 @@ e.g. `ForwardDiff`, `ReverseDiff`, or `GTPSA`, which will set the parameter equa
 special number type that propagates the gradients.
 """
 function scalarize!(branch::Branch)
-    for bl in branch.beamlines
-        scalarize!(bl)
-    end
-    return branch
+  for bl in branch.beamlines
+    scalarize!(bl)
+  end
+  return branch
 end
