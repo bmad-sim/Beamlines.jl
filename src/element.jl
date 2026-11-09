@@ -131,16 +131,16 @@ function isapprox_ignoring(a::LatElement, b::LatElement, ignore::Type{<:Abstract
   L_l != L_r && return false
   anymissing = false
   for pair in l
-      if skip(pair...)
-        continue
-      end
+    if skip(pair...)
+      continue
+    end
 
-      isin = in(pair, r, ≈)
-      if ismissing(isin)
-          anymissing = true
-      elseif !isin
-          return false
-      end
+    isin = in(pair, r, ≈)
+    if ismissing(isin)
+      anymissing = true
+    elseif !isin
+      return false
+    end
   end
   return anymissing ? missing : true
 end
@@ -255,6 +255,33 @@ function _getproperty(ele::LatElement, key::Symbol, context::Context)
   else
     error("Type LatElement has no property $key")
   end
+end
+
+function rawget(ele::LatElement, key::Symbol)
+  if key in (:species_ref, :E_ref, :pc_ref, :p_over_q_ref, :dE_ref, :dpc_ref, :dp_over_q_ref)
+    # Stored in the first element of the Beamline
+    pdict = getfield(ele, :pdict)
+    if haskey(pdict, BeamlineParams)
+      bp = pdict[BeamlineParams]::BeamlineParams
+      if key in (:dE_ref, :dpc_ref, :dp_over_q_ref) && bp.beamline_index != 1
+        return 0 # As getproperty: no change within a Beamline
+      end
+      ibp = first(bp.beamline.line).InitialBeamlineParams
+    else
+      ibp = ele.InitialBeamlineParams
+    end
+    isnothing(ibp) && error("Unable to rawget $key: $key is not an independent variable of this Beamline (it may be inherited from an upstream Beamline)")
+    return rawget(ibp, key)
+  end
+  T = haskey(BMULTIPOLE_STRENGTH_MAP, key) ? BMultipoleParams :
+      haskey(EMULTIPOLE_STRENGTH_MAP, key) ? EMultipoleParams :
+      key in (:harmon, :rf_frequency) ? RFParams : get(PROPERTIES_MAP, key, nothing)
+  if isnothing(T)
+    haskey(PARAMS_MAP, key) && return getproperty(ele, key) # Parameter groups are stored as they are
+    error("Unable to rawget $key: $key is not an independent variable")
+  end
+  p = getproperty(ele, nameof(T))
+  return isnothing(p) ? getproperty(ele, key) : rawget(p, key) # Default without the parameter group
 end
 
 function Base.setproperty!(ele::LatElement, key::Symbol, value)

@@ -105,6 +105,24 @@ function Base.getproperty(b::EMultipoleParams{T}, key::Symbol) where {T}
   error("EMultipoleParams $b does not have property $key")
 end
 
+function rawget(b::EMultipoleParams, key::Symbol)
+  if haskey(EMULTIPOLE_STRENGTH_MAP, key)
+    normal, order, integrated = EMULTIPOLE_STRENGTH_MAP[key]
+    if !(order in b.order)
+      return 0f0 # Default
+    end
+    i = o2i(b, order)
+    if b.integrated[i] == integrated
+      return normal ? b.n[i] : b.s[i]
+    end
+    stored = EMULTIPOLE_STRENGTH_INVERSE_MAP[(normal, order, b.integrated[i])]
+    error("Unable to rawget $key: $key is a dependent variable, computed from the independent variable $stored. Use rawget with :$stored instead")
+  elseif haskey(EMULTIPOLE_TILT_MAP, key)
+    return getproperty(b, key)
+  end
+  return invoke(rawget, Tuple{AbstractParams,Symbol}, b, key)
+end
+
 function Base.setproperty!(b::EMultipoleParams{T}, key::Symbol, value) where {T}
   if key in (:n, :s, :etilt, :order, :integrated)
     return setfield!(b, key, value) # Will error because immutable struct
@@ -139,7 +157,8 @@ function param_replace(b1::EMultipoleParams{T0,N0}, key::Symbol, value) where {T
     integrated = b1.integrated[i]
     T = promote_type(T0,typeof(value))
     b = EMultipoleParams{T}(b1)
-    return setproperty!(b, key, value)
+    setproperty!(b, key, value)
+    return b
   else
     # adding new multipole
     T = promote_type(T0,typeof(value))

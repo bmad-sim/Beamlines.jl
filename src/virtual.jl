@@ -35,10 +35,10 @@ function get_BM_strength(ele::LatElement, key::Symbol, context)
   strength = normal ? deval(b.n[i], context) : deval(b.s[i], context)
   stored_normalized = b.normalized[i]
   stored_integrated = b.integrated[i]
-  return @noinline _get_BM_strength(ele, strength, normalized, integrated, stored_normalized, stored_integrated, context)
+  return @noinline _get_BM_strength(ele, key, strength, normalized, integrated, stored_normalized, stored_integrated, context)
 end
 
-function _get_BM_strength(ele, strength, normalized, integrated, stored_normalized, stored_integrated, context)
+function _get_BM_strength(ele, key, strength, normalized, integrated, stored_normalized, stored_integrated, context)
   # Yes there is a simpler way to write the below but this 
   # way minimizes type instability.
   if stored_normalized == normalized
@@ -130,9 +130,9 @@ function _set_BM_strength!(ele, context::Context, b::BMultipoleParams, key, valu
   i = o2i(b, order)
   if b.normalized[i] == normalized && b.integrated[i] == integrated
       # EASY!
-      b = _promote_bm(b, typeof(value))
-      bm = normal ? b.n : b.s
-      bm[i] = value
+    b = _promote_bm(b, typeof(value))
+    bm = normal ? b.n : b.s
+    bm[i] = value
   end
 
   # Switching normalized status:
@@ -205,10 +205,10 @@ function get_EM_strength(ele::LatElement, key::Symbol, context)
   i = o2i(b,order)
   strength = normal ? deval(b.n[i], context) : deval(b.s[i], context)
   stored_integrated = b.integrated[i]
-  return @noinline _get_EM_strength(ele, strength, integrated, stored_integrated, context)
+  return @noinline _get_EM_strength(ele, key, strength, integrated, stored_integrated, context)
 end
 
-function _get_EM_strength(ele, strength, integrated, stored_integrated, context)
+function _get_EM_strength(ele, key, strength, integrated, stored_integrated, context)
   if stored_integrated == integrated
     return strength
   else
@@ -257,9 +257,9 @@ function _set_EM_strength!(ele, context::Context, b::EMultipoleParams, key, valu
   i = o2i(b, order)
   if b.integrated[i] == integrated
       # EASY!
-      b = _promote_em(b, typeof(value))
-      bm = normal ? b.n : b.s
-      bm[i] = value
+    b = _promote_em(b, typeof(value))
+    bm = normal ? b.n : b.s
+    bm[i] = value
   end
 
   # Switching integrated status

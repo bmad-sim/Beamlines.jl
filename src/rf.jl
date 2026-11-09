@@ -100,13 +100,13 @@ Base.eltype(::RFParams{T}) where {T} = T
 Base.eltype(::Type{RFParams{T}}) where {T} = T
 
 function Base.isapprox(a::RFParams, b::RFParams) 
-    return  a.rate           ≈  b.rate && 
-            a.voltage        ≈  b.voltage && 
-            a.phi0           ≈  b.phi0 &&
-            a.rate_meaning   == b.rate_meaning &&
-            a.zero_phase     == b.zero_phase &&
-            a.traveling_wave == b.traveling_wave &&
-            a.is_crabcavity  == b.is_crabcavity
+  return  a.rate           ≈  b.rate && 
+          a.voltage        ≈  b.voltage && 
+          a.phi0           ≈  b.phi0 &&
+          a.rate_meaning   == b.rate_meaning &&
+          a.zero_phase     == b.zero_phase &&
+          a.traveling_wave == b.traveling_wave &&
+          a.is_crabcavity  == b.is_crabcavity
 end
 
 # Error if writes to rate while rate_meaning is Indeterminate:
@@ -132,6 +132,19 @@ function Base.getproperty(rfp::RFParams, key::Symbol)
   else
     return getfield(rfp, key)
   end
+end
+
+function rawget(rfp::RFParams, key::Symbol)
+  if key in (:harmon, :rf_frequency)
+    rate_meaning = getfield(rfp, :rate_meaning)
+    if rate_meaning == RateMeaning.Indeterminate
+      return 0f0 # Default
+    end
+    stored = rate_meaning == RateMeaning.Harmon ? :harmon : :rf_frequency
+    key == stored || error("Unable to rawget $key: $key is a dependent variable, computed from the independent variable $stored. Use rawget with :$stored instead")
+    return getfield(rfp, :rate)
+  end
+  return invoke(rawget, Tuple{AbstractParams,Symbol}, rfp, key)
 end
 
 # Note that if rate = 0, rf_frequency = harmon = 0. So in 
