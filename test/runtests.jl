@@ -4,2566 +4,2547 @@ using Test
 using ForwardDiff, GTPSA, ReverseDiff
 
 @testset "Beamlines.jl" begin
-    L = 5.0f0
-    ele = LatElement(kind="Test", name="Test123", L=L)
+  L = 5.0f0
+  ele = LatElement(kind="Test", name="Test123", L=L)
 
-    @test getfield(ele, :pdict)[UniversalParams] === ele.UniversalParams
+  @test getfield(ele, :pdict)[UniversalParams] === ele.UniversalParams
 
-    up = ele.UniversalParams
-    @test isactive(up)
-    @test up.kind == "Test"
-    @test up.name == "Test123"
-    @test typeof(up.L) == typeof(L)
-    @test up.L == L
-    @test up.tracking_method == nothing
-    @test ele.kind == up.kind
-    @test ele.name == up.name
-    @test ele.L == up.L
-    @test ele.tracking_method == up.tracking_method
+  up = ele.UniversalParams
+  @test isactive(up)
+  @test up.kind == "Test"
+  @test up.name == "Test123"
+  @test typeof(up.L) == typeof(L)
+  @test up.L == L
+  @test up.tracking_method == nothing
+  @test ele.kind == up.kind
+  @test ele.name == up.name
+  @test ele.L == up.L
+  @test ele.tracking_method == up.tracking_method
 
-    ele2 = deepcopy(ele)
-    @test !(ele2 === ele)
-    @test ele2 ≈ ele 
+  ele2 = deepcopy(ele)
+  @test !(ele2 === ele)
+  @test ele2 ≈ ele 
 
-    up_new = UniversalParams(tracking_method=DriftKick(), L=10.0, name="NewTest", kind="NewTest123")
-    ele.UniversalParams = up_new
-    @test ele.UniversalParams === up_new
-    @test ele.kind == up_new.kind
-    @test ele.name == up_new.name
-    @test ele.L == up_new.L
-    @test ele.tracking_method == up_new.tracking_method
+  up_new = UniversalParams(tracking_method=DriftKick(), L=10.0, name="NewTest", kind="NewTest123")
+  ele.UniversalParams = up_new
+  @test ele.UniversalParams === up_new
+  @test ele.kind == up_new.kind
+  @test ele.name == up_new.name
+  @test ele.L == up_new.L
+  @test ele.tracking_method == up_new.tracking_method
 
-    g_ref = 0.1
-    e1 = 0.123
-    e2 = 0.456
+  g_ref = 0.1
+  e1 = 0.123
+  e2 = 0.456
 
-    # Check if pdict remains valid:
-    @test_throws ErrorException getfield(ele, :pdict)[BendParams] = up_new
-    @test_throws ErrorException getfield(ele, :pdict)[1] = 10.0
-    @test_throws ErrorException getfield(ele, :pdict)[1] = up_new
-    @test_throws ErrorException getfield(ele, :pdict)[UniversalParams] = 10.0
+  # Check if pdict remains valid:
+  @test_throws ErrorException getfield(ele, :pdict)[BendParams] = up_new
+  @test_throws ErrorException getfield(ele, :pdict)[1] = 10.0
+  @test_throws ErrorException getfield(ele, :pdict)[1] = up_new
+  @test_throws ErrorException getfield(ele, :pdict)[UniversalParams] = 10.0
 
-    @test !isactive(ele.BendParams)
-    @test ele.g_ref == 0 # Default value
-    ele.g_ref = g_ref
-    @test isactive(ele.BendParams)
-    @test ele.g_ref == g_ref
-    @test ele.e1 == 0
-    @test ele.e2 == 0
+  @test !isactive(ele.BendParams)
+  @test ele.g_ref == 0 # Default value
+  ele.g_ref = g_ref
+  @test isactive(ele.BendParams)
+  @test ele.g_ref == g_ref
+  @test ele.e1 == 0
+  @test ele.e2 == 0
 
-    ele.e1 = e1
-    ele.e2 = e2
-    @test ele.e1 == e1
-    @test ele.e2 == e2
+  ele.e1 = e1
+  ele.e2 = e2
+  @test ele.e1 == e1
+  @test ele.e2 == e2
 
-    bp = BendParams(1.0im, 2.0im, 3.0im, 4.0im, 5.0im, 6.0im)
-    @test eltype(bp) == ComplexF64
-    @test eltype(typeof(bp)) == ComplexF64
-    @test bp ≈ BendParams(1.0im, 2.0im, 3.0im, 4.0im, 5.0im, 6.0im)
-    ele.BendParams = bp
-    @test ele.BendParams === bp
-    @test ele.g_ref == 1.0im
-    @test ele.tilt_ref == 2.0im
-    @test ele.e1 == 3.0im
-    @test ele.e2 == 4.0im
-    @test ele.edge1_int == 5.0im
-    @test ele.edge2_int == 6.0im
+  bp = BendParams(1.0im, 2.0im, 3.0im, 4.0im, 5.0im, 6.0im)
+  @test eltype(bp) == ComplexF64
+  @test eltype(typeof(bp)) == ComplexF64
+  @test bp ≈ BendParams(1.0im, 2.0im, 3.0im, 4.0im, 5.0im, 6.0im)
+  ele.BendParams = bp
+  @test ele.BendParams === bp
+  @test ele.g_ref == 1.0im
+  @test ele.tilt_ref == 2.0im
+  @test ele.e1 == 3.0im
+  @test ele.e2 == 4.0im
+  @test ele.edge1_int == 5.0im
+  @test ele.edge2_int == 6.0im
 
-    ele.g_ref = 0.2
-    @test ele.g_ref == 0.2
-    @test ele.BendParams === bp # do not change parameter group if promotion is ok
+  ele.g_ref = 0.2
+  @test ele.g_ref == 0.2
+  @test ele.BendParams === bp # do not change parameter group if promotion is ok
 
-    @test !isactive(ele.AlignmentParams)
-    ap = AlignmentParams(1, 2, 3, 4, 5, 6)
-    @test eltype(ap) == Int
-    @test eltype(typeof(ap)) == Int
-    @test ap ≈ AlignmentParams(1, 2, 3, 4, 5, 6)
-    ele.AlignmentParams = ap
-    @test isactive(ele.AlignmentParams)
-    @test ele.AlignmentParams === ap
-    @test ele.x_offset == 1
-    @test ele.y_offset == 2
-    @test ele.z_offset == 3
-    @test ele.x_rot == 4
-    @test ele.y_rot == 5
-    @test ele.tilt == 6
+  @test !isactive(ele.AlignmentParams)
+  ap = AlignmentParams(1, 2, 3, 4, 5, 6)
+  @test eltype(ap) == Int
+  @test eltype(typeof(ap)) == Int
+  @test ap ≈ AlignmentParams(1, 2, 3, 4, 5, 6)
+  ele.AlignmentParams = ap
+  @test isactive(ele.AlignmentParams)
+  @test ele.AlignmentParams === ap
+  @test ele.x_offset == 1
+  @test ele.y_offset == 2
+  @test ele.z_offset == 3
+  @test ele.x_rot == 4
+  @test ele.y_rot == 5
+  @test ele.tilt == 6
 
-    ele.x_offset = 7
-    @test ele.x_offset == 7
-    @test ap.x_offset == 7
-    @test ele.AlignmentParams === ap
+  ele.x_offset = 7
+  @test ele.x_offset == 7
+  @test ap.x_offset == 7
+  @test ele.AlignmentParams === ap
 
-    @test typeof(ele.x_offset) == Int
-    ele.x_offset = 10.0
-    @test ele.x_offset == 10.0
-    @test !(ele.AlignmentParams === ap)
-    @test typeof(ele.x_offset) == Float64
+  @test typeof(ele.x_offset) == Int
+  ele.x_offset = 10.0
+  @test ele.x_offset == 10.0
+  @test !(ele.AlignmentParams === ap)
+  @test typeof(ele.x_offset) == Float64
 
-    @test !isactive(ele.BMultipoleParams)
-    @test ele.Kn1 == 0 # Default value
-    ele.Kn1 = 0.36
-    @test isactive(ele.BMultipoleParams)
-    @test ele.Kn1 == 0.36
-    @test ele.Kn1L == 0.36*ele.L
-    @test ele.BMultipoleParams.n[1] == 0.36
-    @test !ele.BMultipoleParams.integrated[1]
-    @test ele.BMultipoleParams.normalized[1]
-    @test ele.BMultipoleParams.order[1] == 2
-    @test ele.BMultipoleParams[2] == BMultipole(0.36,0.,0.,2,true,false)
-    @test ele.Kn2 == 0 # Default value
-    @test_throws ErrorException ele.BMultipoleParams[3]
+  @test !isactive(ele.BMultipoleParams)
+  @test ele.Kn1 == 0 # Default value
+  ele.Kn1 = 0.36
+  @test isactive(ele.BMultipoleParams)
+  @test ele.Kn1 == 0.36
+  @test ele.Kn1L == 0.36*ele.L
+  @test ele.BMultipoleParams.n[1] == 0.36
+  @test !ele.BMultipoleParams.integrated[1]
+  @test ele.BMultipoleParams.normalized[1]
+  @test ele.BMultipoleParams.order[1] == 2
+  @test ele.BMultipoleParams[2] == BMultipole(0.36,0.,0.,2,true,false)
+  @test ele.Kn2 == 0 # Default value
+  @test_throws ErrorException ele.BMultipoleParams[3]
 
-    @test !isactive(ele.EMultipoleParams)
-    @test ele.En1 == 0 # Default value
-    ele.En1 = 0.36
-    @test isactive(ele.EMultipoleParams)
-    @test ele.En1 == 0.36
-    @test ele.En1L == 0.36*ele.L
-    @test ele.EMultipoleParams.n[1] == 0.36
-    @test !ele.EMultipoleParams.integrated[1]
-    @test ele.BMultipoleParams.order[1] == 2
-    @test ele.EMultipoleParams[2] == EMultipole(0.36,0.,0.,2,false)
-    @test ele.En2 == 0 # Default value
-    @test_throws ErrorException ele.EMultipoleParams[3]
+  @test !isactive(ele.EMultipoleParams)
+  @test ele.En1 == 0 # Default value
+  ele.En1 = 0.36
+  @test isactive(ele.EMultipoleParams)
+  @test ele.En1 == 0.36
+  @test ele.En1L == 0.36*ele.L
+  @test ele.EMultipoleParams.n[1] == 0.36
+  @test !ele.EMultipoleParams.integrated[1]
+  @test ele.BMultipoleParams.order[1] == 2
+  @test ele.EMultipoleParams[2] == EMultipole(0.36,0.,0.,2,false)
+  @test ele.En2 == 0 # Default value
+  @test_throws ErrorException ele.EMultipoleParams[3]
     
-    ele.L = 2.0
-    @test ele.Kn1 == 0.36
-    @test ele.Kn1L == 2.0*0.36
+  ele.L = 2.0
+  @test ele.Kn1 == 0.36
+  @test ele.Kn1L == 2.0*0.36
 
-    @test ele.En1 == 0.36
-    @test ele.En1L == 2.0*0.36
+  @test ele.En1 == 0.36
+  @test ele.En1L == 2.0*0.36
 
-    ele.L = 2.0*im
-    @test ele.Kn1 == 0.36
-    @test ele.Kn1L == 2.0*im*0.36
+  ele.L = 2.0*im
+  @test ele.Kn1 == 0.36
+  @test ele.Kn1L == 2.0*im*0.36
 
-    @test ele.En1 == 0.36
-    @test ele.En1L == 2.0*im*0.36
+  @test ele.En1 == 0.36
+  @test ele.En1L == 2.0*im*0.36
 
-    ele.Bn2L = 0.50
-    @test ele.Bn2L == 0.50
-    @test ele.Bn2 == 0.50/ele.L
-    @test ele.BMultipoleParams.n[2] == 0.50
-    @test ele.BMultipoleParams.integrated[2]
-    @test !ele.BMultipoleParams.normalized[2]
-    @test ele.BMultipoleParams[3] == BMultipole(0.50,0.,0.,3,false,true)
+  ele.Bn2L = 0.50
+  @test ele.Bn2L == 0.50
+  @test ele.Bn2 == 0.50/ele.L
+  @test ele.BMultipoleParams.n[2] == 0.50
+  @test ele.BMultipoleParams.integrated[2]
+  @test !ele.BMultipoleParams.normalized[2]
+  @test ele.BMultipoleParams[3] == BMultipole(0.50,0.,0.,3,false,true)
 
-    ele.En2L = 0.50
+  ele.En2L = 0.50
     
-    # Test iteration over BMultipoles
-    i = 1
-    for bm in ele.BMultipoleParams
-      if i == 1
-        @test bm == BMultipole(0.36,0.,0.,2,true,false)
-      else
-        @test bm == BMultipole(0.50,0.,0.,3,false,true)
-      end
-       i += 1
+  # Test iteration over BMultipoles
+  i = 1
+  for bm in ele.BMultipoleParams
+    if i == 1
+      @test bm == BMultipole(0.36,0.,0.,2,true,false)
+    else
+      @test bm == BMultipole(0.50,0.,0.,3,false,true)
     end
-    @test i == 3
+     i += 1
+  end
+  @test i == 3
 
-    # Now EMultipoles
-    i = 1
-    for bm in ele.EMultipoleParams
-      if i == 1
-        @test bm == EMultipole(0.36,0.,0.,2,false)
-      else
-        @test bm == EMultipole(0.50,0.,0.,3,true)
-      end
-       i += 1
+  # Now EMultipoles
+  i = 1
+  for bm in ele.EMultipoleParams
+    if i == 1
+      @test bm == EMultipole(0.36,0.,0.,2,false)
+    else
+      @test bm == EMultipole(0.50,0.,0.,3,true)
     end
-    @test i == 3
+     i += 1
+  end
+  @test i == 3
 
-    @test eltype(ele.BMultipoleParams) == Float64
-    ele.Bn2L = 1.2*ele.L
-    @test eltype(ele.BMultipoleParams) == ComplexF64 # promotion because length is complex
-    @test ele.Bn2 == 1.2
-    @test ele.Bn2L == 1.2*ele.L
-    @test ele.Kn1 == 0.36
-    @test ele.Kn1L == 2.0*im*0.36
+  @test eltype(ele.BMultipoleParams) == Float64
+  ele.Bn2L = 1.2*ele.L
+  @test eltype(ele.BMultipoleParams) == ComplexF64 # promotion because length is complex
+  @test ele.Bn2 == 1.2
+  @test ele.Bn2L == 1.2*ele.L
+  @test ele.Kn1 == 0.36
+  @test ele.Kn1L == 2.0*im*0.36
 
-    @test eltype(ele.EMultipoleParams) == Float64
-    ele.En2L = 1.2*ele.L
-    @test eltype(ele.EMultipoleParams) == ComplexF64
-    @test ele.En2 == 1.2
-    @test ele.En2L == 1.2*ele.L
+  @test eltype(ele.EMultipoleParams) == Float64
+  ele.En2L = 1.2*ele.L
+  @test eltype(ele.EMultipoleParams) == ComplexF64
+  @test ele.En2 == 1.2
+  @test ele.En2L == 1.2*ele.L
 
-    BM_indep = ele.BM_independent
-    @test (; order=3, normalized=false, integrated=true) in BM_indep
-    @test (; order=2, normalized=true, integrated=false) in BM_indep
+  BM_indep = ele.BM_independent
+  @test (; order=3, normalized=false, integrated=true) in BM_indep
+  @test (; order=2, normalized=true, integrated=false) in BM_indep
 
-    ele.BM_independent = [(; order=3, normalized=false, integrated=false),
-                          (; order=2, normalized=true, integrated=true)]
-    BM_indep2 = ele.BM_independent
-    @test (; order=3, normalized=false, integrated=false) in BM_indep2
-    @test (; order=2, normalized=true, integrated=true) in BM_indep2
-    @test ele.Bn2 == 1.2
-    @test ele.Kn1 == 0.36
+  ele.BM_independent = [(; order=3, normalized=false, integrated=false),
+                        (; order=2, normalized=true, integrated=true)]
+  BM_indep2 = ele.BM_independent
+  @test (; order=3, normalized=false, integrated=false) in BM_indep2
+  @test (; order=2, normalized=true, integrated=true) in BM_indep2
+  @test ele.Bn2 == 1.2
+  @test ele.Kn1 == 0.36
 
-    EM_indep = ele.EM_independent
-    @test (; order=3, integrated=true) in EM_indep
-    @test (; order=2, integrated=false) in EM_indep
+  EM_indep = ele.EM_independent
+  @test (; order=3, integrated=true) in EM_indep
+  @test (; order=2, integrated=false) in EM_indep
 
-    ele.EM_independent = [(; order=3, integrated=false),
-                          (; order=2, integrated=true)]
-    EM_indep2 = ele.EM_independent
-    @test (; order=3, integrated=false) in EM_indep2
-    @test (; order=2, integrated=true) in EM_indep2
-    @test ele.En2 == 1.2
+  ele.EM_independent = [(; order=3, integrated=false),
+                        (; order=2, integrated=true)]
+  EM_indep2 = ele.EM_independent
+  @test (; order=3, integrated=false) in EM_indep2
+  @test (; order=2, integrated=true) in EM_indep2
+  @test ele.En2 == 1.2
 
-    ele.BMultipoleParams = nothing
-    ele.L = 5.0f0
-    @test !isactive(ele.BMultipoleParams)
-    ele.tilt0 = 1.0f0
-    @test ele.BMultipoleParams.integrated[1]
-    @test ele.BMultipoleParams.normalized[1]
+  ele.BMultipoleParams = nothing
+  ele.L = 5.0f0
+  @test !isactive(ele.BMultipoleParams)
+  ele.tilt0 = 1.0f0
+  @test ele.BMultipoleParams.integrated[1]
+  @test ele.BMultipoleParams.normalized[1]
 
-    ele.EMultipoleParams = nothing
-    ele.L = 5.0f0
-    @test !isactive(ele.EMultipoleParams)
-    ele.etilt0 = 1.0f0
-    @test ele.EMultipoleParams.integrated[1]
+  ele.EMultipoleParams = nothing
+  ele.L = 5.0f0
+  @test !isactive(ele.EMultipoleParams)
+  ele.etilt0 = 1.0f0
+  @test ele.EMultipoleParams.integrated[1]
 
-    b1 = SBend(L=1.0f0, g=0.2f0)
-    @test b1.Kn0 == 0.2f0
-    @test b1.g_ref == b1.Kn0
-    @test_throws ErrorException b1.g
-    @test_throws ErrorException b1.angle
+  b1 = SBend(L=1.0f0, g=0.2f0)
+  @test b1.Kn0 == 0.2f0
+  @test b1.g_ref == b1.Kn0
+  @test_throws ErrorException b1.g
+  @test_throws ErrorException b1.angle
 
-    b1.Kn0 = im
-    @test eltype(b1.BMultipoleParams) == ComplexF32
-    @test eltype(b1.BendParams) == Float32
-    @test b1.g_ref == 0.2f0
+  b1.Kn0 = im
+  @test eltype(b1.BMultipoleParams) == ComplexF32
+  @test eltype(b1.BendParams) == Float32
+  @test b1.g_ref == 0.2f0
 
-    b1.g_ref = 0.3
-    @test eltype(b1.BendParams) == Float64
-    @test eltype(b1.BMultipoleParams) == ComplexF32
-    @test b1.g_ref ==  0.3
-    @test b1.Kn0 == 1.0f0*im
+  b1.g_ref = 0.3
+  @test eltype(b1.BendParams) == Float64
+  @test eltype(b1.BMultipoleParams) == ComplexF32
+  @test b1.g_ref ==  0.3
+  @test b1.Kn0 == 1.0f0*im
 
-    # Test storing Kn0L internally before setting g
-    b2 = SBend(L=3.0, Kn0L=2, g=0.5)
-    @test eltype(b2.BMultipoleParams) == Float64
-    @test eltype(b2.BendParams) == Float64
-    @test b2.Kn0L == 0.5*3.0 # note NOT 2! changed by g, order matters
-    @test b2.Kn0 == 0.5
+  # Test storing Kn0L internally before setting g
+  b2 = SBend(L=3.0, Kn0L=2, g=0.5)
+  @test eltype(b2.BMultipoleParams) == Float64
+  @test eltype(b2.BendParams) == Float64
+  @test b2.Kn0L == 0.5*3.0 # note NOT 2! changed by g, order matters
+  @test b2.Kn0 == 0.5
 
-    b2.g = 0.5*im
-    @test eltype(b2.BendParams) == ComplexF64
-    @test eltype(b2.BMultipoleParams) == ComplexF64
-    @test b2.g_ref == 0.5*im
-    @test b2.Kn0 == 0.5*im
-    @test b2.Kn0L == 0.5*im*3.0
+  b2.g = 0.5*im
+  @test eltype(b2.BendParams) == ComplexF64
+  @test eltype(b2.BMultipoleParams) == ComplexF64
+  @test b2.g_ref == 0.5*im
+  @test b2.Kn0 == 0.5*im
+  @test b2.Kn0L == 0.5*im*3.0
 
-    b3 = SBend(L=2.0, g_ref=3.0, Kn0=3.0*im)
-    @test b3.g_ref == 3.0
-    @test b3.Kn0 == 3.0*im
-    @test b3.Kn0L == 6.0*im
-    @test eltype(b3.BendParams) == Float64
-    @test eltype(b3.BMultipoleParams) == ComplexF64
-    b4 = SBend(L=2.0, angle=pi/2)
-    @test b4.g_ref == pi/2/b4.L
-    @test b4.Kn0 == pi/2/b4.L
+  b3 = SBend(L=2.0, g_ref=3.0, Kn0=3.0*im)
+  @test b3.g_ref == 3.0
+  @test b3.Kn0 == 3.0*im
+  @test b3.Kn0L == 6.0*im
+  @test eltype(b3.BendParams) == Float64
+  @test eltype(b3.BMultipoleParams) == ComplexF64
+  b4 = SBend(L=2.0, angle=pi/2)
+  @test b4.g_ref == pi/2/b4.L
+  @test b4.Kn0 == pi/2/b4.L
 
-    # Basic beamline:
-    a = LatElement(L=0.5f0, Bn1=2.0f0)
-    ele.Bn2L = 1.2
-    ele.Kn1 = 0.36
-    ele.L = 2.0
-    bl = Beamline([a,ele])
-    @test !(bl.line[1] === a)
-    @test bl.line[1] ≈ a
-    @test !(bl.line[2] === ele)
-    @test bl.line[2] ≈ ele
-    @test_throws ErrorException bl.p_over_q_ref
-    @test_throws ErrorException a.p_over_q_ref
+  # Basic beamline:
+  a = LatElement(L=0.5f0, Bn1=2.0f0)
+  ele.Bn2L = 1.2
+  ele.Kn1 = 0.36
+  ele.L = 2.0
+  bl = Beamline([a,ele])
+  @test !(bl.line[1] === a)
+  @test bl.line[1] ≈ a
+  @test !(bl.line[2] === ele)
+  @test bl.line[2] ≈ ele
+  @test_throws ErrorException bl.p_over_q_ref
+  @test_throws ErrorException a.p_over_q_ref
 
-    a = bl.line[1]
-    ele = bl.line[2]
+  a = bl.line[1]
+  ele = bl.line[2]
 
-    @test a.beamline_index == 1
-    @test a.beamline === bl
+  @test a.beamline_index == 1
+  @test a.beamline === bl
 
-    @test ele.beamline_index == 2
-    @test ele.beamline === bl
+  @test ele.beamline_index == 2
+  @test ele.beamline === bl
 
-    bl.p_over_q_ref = 5.0
-    @test a.Kn1 == 2.0f0/5.0
-    @test a.Kn1L == 0.5f0*2.0f0/5.0
-    @test a.p_over_q_ref == 5.0
-    a.p_over_q_ref = 6.0
-    @test a.p_over_q_ref == 6.0
-    a.p_over_q_ref = 5.0
-    @test eltype(a.BMultipoleParams) == Float32
-    a.Kn1 = 123
-    @test eltype(a.BMultipoleParams) == Float32
-    @test a.Kn1 == 123
-    @test a.Bn1 == 123*5.0
-    @test a.Bn1L == 0.5*123*5.0
-    @test !a.BMultipoleParams.integrated[1]
-    @test a.BMultipoleParams.normalized[1]
-    # Sets:
-    a.Kn1 = 0.5
-    @test a.Kn1 ≈ 0.5
-    a.Kn1L = 0.5
-    @test a.Kn1L ≈ 0.5
-    a.Bn1L = 0.5
-    @test a.Bn1L ≈ 0.5
+  bl.p_over_q_ref = 5.0
+  @test a.Kn1 == 2.0f0/5.0
+  @test a.Kn1L == 0.5f0*2.0f0/5.0
+  @test a.p_over_q_ref == 5.0
+  a.p_over_q_ref = 6.0
+  @test a.p_over_q_ref == 6.0
+  a.p_over_q_ref = 5.0
+  @test eltype(a.BMultipoleParams) == Float32
+  a.Kn1 = 123
+  @test eltype(a.BMultipoleParams) == Float32
+  @test a.Kn1 == 123
+  @test a.Bn1 == 123*5.0
+  @test a.Bn1L == 0.5*123*5.0
+  @test !a.BMultipoleParams.integrated[1]
+  @test a.BMultipoleParams.normalized[1]
+  # Sets:
+  a.Kn1 = 0.5
+  @test a.Kn1 ≈ 0.5
+  a.Kn1L = 0.5
+  @test a.Kn1L ≈ 0.5
+  a.Bn1L = 0.5
+  @test a.Bn1L ≈ 0.5
 
-    a.En1 = 0.5
-    @test a.En1 ≈ 0.5
-    a.En1L = 0.5
-    @test a.En1L ≈ 0.5
+  a.En1 = 0.5
+  @test a.En1 ≈ 0.5
+  a.En1L = 0.5
+  @test a.En1L ≈ 0.5
 
-    a.Kn2 = 1.2
-    @test a.Kn2 ≈ 1.2
-    a.Kn2L = 1.2
-    @test a.Kn2L ≈ 1.2
-    a.Bn2L = 1.2
-    @test a.Bn2L ≈ 1.2
-    a.Bn2 = 1.2
-    @test a.Bn2 ≈ 1.2
+  a.Kn2 = 1.2
+  @test a.Kn2 ≈ 1.2
+  a.Kn2L = 1.2
+  @test a.Kn2L ≈ 1.2
+  a.Bn2L = 1.2
+  @test a.Bn2L ≈ 1.2
+  a.Bn2 = 1.2
+  @test a.Bn2 ≈ 1.2
 
-    a.En2L = 1.2
-    @test a.En2L ≈ 1.2
-    a.En2 = 1.2
-    @test a.En2 ≈ 1.2
+  a.En2L = 1.2
+  @test a.En2L ≈ 1.2
+  a.En2 = 1.2
+  @test a.En2 ≈ 1.2
 
-    a.Bn3L = 5.6
-    @test a.Bn3L ≈ 5.6
-    a.Bn3 = 5.6
-    @test a.Bn3 ≈ 5.6
-    a.Kn3L = 5.6
-    @test a.Kn3L ≈ 5.6
-    a.Kn3 = 5.6
-    @test a.Kn3 ≈ 5.6
+  a.Bn3L = 5.6
+  @test a.Bn3L ≈ 5.6
+  a.Bn3 = 5.6
+  @test a.Bn3 ≈ 5.6
+  a.Kn3L = 5.6
+  @test a.Kn3L ≈ 5.6
+  a.Kn3 = 5.6
+  @test a.Kn3 ≈ 5.6
 
-    a.En3L = 5.6
-    @test a.En3L ≈ 5.6
-    a.En3 = 5.6
-    @test a.En3 ≈ 5.6
+  a.En3L = 5.6
+  @test a.En3L ≈ 5.6
+  a.En3 = 5.6
+  @test a.En3 ≈ 5.6
 
-    a.Kn4L = 7.8
-    @test a.Kn4L ≈ 7.8
-    a.Kn4 = 7.8
-    @test a.Kn4 ≈ 7.8
-    @test_throws ErrorException a.Bs4L = 7.8
-    @test a.Kn4 ≈ 7.8
-    a.Ks4 = 7.8
-    @test a.Ks4 ≈ 7.8
+  a.Kn4L = 7.8
+  @test a.Kn4L ≈ 7.8
+  a.Kn4 = 7.8
+  @test a.Kn4 ≈ 7.8
+  @test_throws ErrorException a.Bs4L = 7.8
+  @test a.Kn4 ≈ 7.8
+  a.Ks4 = 7.8
+  @test a.Ks4 ≈ 7.8
 
-    a.En4L = 7.8
-    @test a.En4L ≈ 7.8
-    a.En4 = 7.8
-    @test a.En4 ≈ 7.8
+  a.En4L = 7.8
+  @test a.En4L ≈ 7.8
+  a.En4 = 7.8
+  @test a.En4 ≈ 7.8
 
-    ele.BMultipoleParams = nothing
-    ele.Bsol = 1.0
-    ele.Bn1L = 2.0
-    ele.Kn2 = 3.0
-    ele.Kn3L = 4.0
+  ele.BMultipoleParams = nothing
+  ele.Bsol = 1.0
+  ele.Bn1L = 2.0
+  ele.Kn2 = 3.0
+  ele.Kn3L = 4.0
 
-    ele.EMultipoleParams = nothing
-    ele.En0 = 1.0
-    ele.En1L = 2.0
-    ele.En2 = 3.0
-    ele.En3L = 4.0
+  ele.EMultipoleParams = nothing
+  ele.En0 = 1.0
+  ele.En1L = 2.0
+  ele.En2 = 3.0
+  ele.En3L = 4.0
 
-    BM_indep = ele.BM_independent
-    @test length(BM_indep) == 4
-    @test (; order=0, normalized=false, integrated=false) in BM_indep
-    @test (; order=2, normalized=false, integrated=true) in BM_indep
-    @test (; order=3, normalized=true, integrated=false) in BM_indep
-    @test (; order=4, normalized=true, integrated=true) in BM_indep
-    @test ele.Bsol == 1.0
-    @test ele.Bn1L == 2.0
-    @test ele.Kn2 == 3.0
-    @test ele.Kn3L == 4.0
+  BM_indep = ele.BM_independent
+  @test length(BM_indep) == 4
+  @test (; order=0, normalized=false, integrated=false) in BM_indep
+  @test (; order=2, normalized=false, integrated=true) in BM_indep
+  @test (; order=3, normalized=true, integrated=false) in BM_indep
+  @test (; order=4, normalized=true, integrated=true) in BM_indep
+  @test ele.Bsol == 1.0
+  @test ele.Bn1L == 2.0
+  @test ele.Kn2 == 3.0
+  @test ele.Kn3L == 4.0
 
-    EM_indep = ele.EM_independent
-    @test length(EM_indep) == 4
-    @test (; order=1, integrated=false) in EM_indep
-    @test (; order=2, integrated=true) in EM_indep
-    @test (; order=3, integrated=false) in EM_indep
-    @test (; order=4, integrated=true) in EM_indep
-    @test ele.En0 == 1.0
-    @test ele.En1L == 2.0
-    @test ele.En2 == 3.0
-    @test ele.En3L == 4.0
+  EM_indep = ele.EM_independent
+  @test length(EM_indep) == 4
+  @test (; order=1, integrated=false) in EM_indep
+  @test (; order=2, integrated=true) in EM_indep
+  @test (; order=3, integrated=false) in EM_indep
+  @test (; order=4, integrated=true) in EM_indep
+  @test ele.En0 == 1.0
+  @test ele.En1L == 2.0
+  @test ele.En2 == 3.0
+  @test ele.En3L == 4.0
 
-    ele.BM_independent = [(; order=0, normalized=true, integrated=true),
-                          (; order=2, normalized=true, integrated=false),
-                          (; order=3, normalized=false, integrated=true),
-                          (; order=4, normalized=false, integrated=false),
-                          (; order=5, normalized=true, integrated=false)]
-    BM_indep2 = ele.BM_independent
-    @test length(BM_indep2) == 5
-    @test (; order=0, normalized=true, integrated=true) in BM_indep2
-    @test (; order=2, normalized=true, integrated=false) in BM_indep2
-    @test (; order=3, normalized=false, integrated=true) in BM_indep2
-    @test (; order=4, normalized=false, integrated=false) in BM_indep2
-    @test (; order=5, normalized=true, integrated=false) in BM_indep2
+  ele.BM_independent = [(; order=0, normalized=true, integrated=true),
+                        (; order=2, normalized=true, integrated=false),
+                        (; order=3, normalized=false, integrated=true),
+                        (; order=4, normalized=false, integrated=false),
+                        (; order=5, normalized=true, integrated=false)]
+  BM_indep2 = ele.BM_independent
+  @test length(BM_indep2) == 5
+  @test (; order=0, normalized=true, integrated=true) in BM_indep2
+  @test (; order=2, normalized=true, integrated=false) in BM_indep2
+  @test (; order=3, normalized=false, integrated=true) in BM_indep2
+  @test (; order=4, normalized=false, integrated=false) in BM_indep2
+  @test (; order=5, normalized=true, integrated=false) in BM_indep2
 
-    ele.EM_independent = [(; order=1, integrated=true),
-                          (; order=2, integrated=false),
-                          (; order=3, integrated=true),
-                          (; order=4, integrated=false),
-                          (; order=5, integrated=false)]
-    EM_indep2 = ele.EM_independent
-    @test length(BM_indep2) == 5
-    @test (; order=1, integrated=true) in EM_indep2
-    @test (; order=2, integrated=false) in EM_indep2
-    @test (; order=3, integrated=true) in EM_indep2
-    @test (; order=4, integrated=false) in EM_indep2
-    @test (; order=5, integrated=false) in EM_indep2
+  ele.EM_independent = [(; order=1, integrated=true),
+                        (; order=2, integrated=false),
+                        (; order=3, integrated=true),
+                        (; order=4, integrated=false),
+                        (; order=5, integrated=false)]
+  EM_indep2 = ele.EM_independent
+  @test length(BM_indep2) == 5
+  @test (; order=1, integrated=true) in EM_indep2
+  @test (; order=2, integrated=false) in EM_indep2
+  @test (; order=3, integrated=true) in EM_indep2
+  @test (; order=4, integrated=false) in EM_indep2
+  @test (; order=5, integrated=false) in EM_indep2
 
-    @test ele.Bsol == 1.0
-    @test ele.Bn1L == 2.0
-    @test ele.Kn2 == 3.0
-    @test ele.Kn3L == 4.0
-    @test ele.Kn4 == 0.0
+  @test ele.Bsol == 1.0
+  @test ele.Bn1L == 2.0
+  @test ele.Kn2 == 3.0
+  @test ele.Kn3L == 4.0
+  @test ele.Kn4 == 0.0
 
-    @test ele.En0 == 1.0
-    @test ele.En1L == 2.0
-    @test ele.En2 == 3.0
-    @test ele.En3L == 4.0
-    @test ele.En4 == 0.0
+  @test ele.En0 == 1.0
+  @test ele.En1L == 2.0
+  @test ele.En2 == 3.0
+  @test ele.En3L == 4.0
+  @test ele.En4 == 0.0
 
-    ele.Kn4 = 5.0
-    ele.field_master = true
-    @test ele.field_master == true
-    BM_indep3 = ele.BM_independent
-    @test length(BM_indep3) == 5
-    @test (; order=0, normalized=false, integrated=true) in BM_indep3
-    @test (; order=2, normalized=false, integrated=false) in BM_indep3
-    @test (; order=3, normalized=false, integrated=true) in BM_indep3
-    @test (; order=4, normalized=false, integrated=false) in BM_indep3
-    @test (; order=5, normalized=false, integrated=false) in BM_indep3
+  ele.Kn4 = 5.0
+  ele.field_master = true
+  @test ele.field_master == true
+  BM_indep3 = ele.BM_independent
+  @test length(BM_indep3) == 5
+  @test (; order=0, normalized=false, integrated=true) in BM_indep3
+  @test (; order=2, normalized=false, integrated=false) in BM_indep3
+  @test (; order=3, normalized=false, integrated=true) in BM_indep3
+  @test (; order=4, normalized=false, integrated=false) in BM_indep3
+  @test (; order=5, normalized=false, integrated=false) in BM_indep3
 
-    ele.En4 = 5.0
+  ele.En4 = 5.0
 
-    @test ele.Bsol == 1.0
-    @test ele.Bn1L == 2.0
-    @test ele.Kn2 == 3.0
-    @test ele.Kn3L == 4.0
-    @test ele.Kn4 == 5.0
+  @test ele.Bsol == 1.0
+  @test ele.Bn1L == 2.0
+  @test ele.Kn2 == 3.0
+  @test ele.Kn3L == 4.0
+  @test ele.Kn4 == 5.0
 
-    @test ele.En4 == 5.0
+  @test ele.En4 == 5.0
 
-    ele.field_master = false   
-    @test ele.field_master == false
-    BM_indep4 = ele.BM_independent
-    @test length(BM_indep4) == 5
-    @test (; order=0, normalized=true, integrated=true) in BM_indep4
-    @test (; order=2, normalized=true, integrated=false) in BM_indep4
-    @test (; order=3, normalized=true, integrated=true) in BM_indep4
-    @test (; order=4, normalized=true, integrated=false) in BM_indep4
-    @test (; order=5, normalized=true, integrated=false) in BM_indep4
+  ele.field_master = false   
+  @test ele.field_master == false
+  BM_indep4 = ele.BM_independent
+  @test length(BM_indep4) == 5
+  @test (; order=0, normalized=true, integrated=true) in BM_indep4
+  @test (; order=2, normalized=true, integrated=false) in BM_indep4
+  @test (; order=3, normalized=true, integrated=true) in BM_indep4
+  @test (; order=4, normalized=true, integrated=false) in BM_indep4
+  @test (; order=5, normalized=true, integrated=false) in BM_indep4
 
-    @test ele.Bsol == 1.0
-    @test ele.Bn1L == 2.0
-    @test ele.Kn2 == 3.0
-    @test ele.Kn3L == 4.0
-    @test ele.Kn4 == 5.0
+  @test ele.Bsol == 1.0
+  @test ele.Bn1L == 2.0
+  @test ele.Kn2 == 3.0
+  @test ele.Kn3L == 4.0
+  @test ele.Kn4 == 5.0
 
-    ele.BM_independent = [(; order=0, normalized=true, integrated=true),
-                          (; order=2, normalized=true, integrated=false),
-                          (; order=3, normalized=false, integrated=true),
-                          (; order=4, normalized=false, integrated=false),
-                          (; order=5, normalized=true, integrated=false)]
-    @test length(ele.BM_independent) == 5
-    @test ele.Bsol == 1.0
-    @test ele.Bn1L == 2.0
-    @test ele.Kn2 == 3.0
-    @test ele.Kn3L == 4.0
-    @test ele.Kn4 == 5.0
+  ele.BM_independent = [(; order=0, normalized=true, integrated=true),
+                        (; order=2, normalized=true, integrated=false),
+                        (; order=3, normalized=false, integrated=true),
+                        (; order=4, normalized=false, integrated=false),
+                        (; order=5, normalized=true, integrated=false)]
+  @test length(ele.BM_independent) == 5
+  @test ele.Bsol == 1.0
+  @test ele.Bn1L == 2.0
+  @test ele.Kn2 == 3.0
+  @test ele.Kn3L == 4.0
+  @test ele.Kn4 == 5.0
 
-    ele.EM_independent = [(; order=1, integrated=true),
-                          (; order=2, integrated=false),
-                          (; order=3, integrated=true),
-                          (; order=4, integrated=false),
-                          (; order=5, integrated=false)]
-    @test length(ele.BM_independent) == 5
-    @test ele.En0 == 1.0
-    @test ele.En1L == 2.0
-    @test ele.En2 == 3.0
-    @test ele.En3L == 4.0
-    @test ele.En4 == 5.0
+  ele.EM_independent = [(; order=1, integrated=true),
+                        (; order=2, integrated=false),
+                        (; order=3, integrated=true),
+                        (; order=4, integrated=false),
+                        (; order=5, integrated=false)]
+  @test length(ele.BM_independent) == 5
+  @test ele.En0 == 1.0
+  @test ele.En1L == 2.0
+  @test ele.En2 == 3.0
+  @test ele.En3L == 4.0
+  @test ele.En4 == 5.0
 
-    ele.integrated_master = true
-    @test ele.integrated_master == true
-    BM_indep5 = ele.BM_independent
-    @test length(BM_indep5) == 5
-    @test (; order=0, normalized=true, integrated=true) in BM_indep5
-    @test (; order=2, normalized=true, integrated=true) in BM_indep5
-    @test (; order=3, normalized=false, integrated=true) in BM_indep5
-    @test (; order=4, normalized=false, integrated=true) in BM_indep5
-    @test (; order=5, normalized=true, integrated=true) in BM_indep5
-    @test ele.Bsol == 1.0
-    @test ele.Bn1L == 2.0
-    @test ele.Kn2 == 3.0
-    @test ele.Kn3L == 4.0
-    @test ele.Kn4 == 5.0
+  ele.integrated_master = true
+  @test ele.integrated_master == true
+  BM_indep5 = ele.BM_independent
+  @test length(BM_indep5) == 5
+  @test (; order=0, normalized=true, integrated=true) in BM_indep5
+  @test (; order=2, normalized=true, integrated=true) in BM_indep5
+  @test (; order=3, normalized=false, integrated=true) in BM_indep5
+  @test (; order=4, normalized=false, integrated=true) in BM_indep5
+  @test (; order=5, normalized=true, integrated=true) in BM_indep5
+  @test ele.Bsol == 1.0
+  @test ele.Bn1L == 2.0
+  @test ele.Kn2 == 3.0
+  @test ele.Kn3L == 4.0
+  @test ele.Kn4 == 5.0
 
-    ele.e_integrated_master = true
-    @test ele.e_integrated_master == true
-    EM_indep5 = ele.EM_independent
-    @test length(EM_indep5) == 5
-    @test (; order=1, integrated=true) in EM_indep5
-    @test (; order=2, integrated=true) in EM_indep5
-    @test (; order=3, integrated=true) in EM_indep5
-    @test (; order=4, integrated=true) in EM_indep5
-    @test (; order=5, integrated=true) in EM_indep5
-    @test ele.En0 == 1.0
-    @test ele.En1L == 2.0
-    @test ele.En2 == 3.0
-    @test ele.En3L == 4.0
-    @test ele.En4 == 5.0
+  ele.e_integrated_master = true
+  @test ele.e_integrated_master == true
+  EM_indep5 = ele.EM_independent
+  @test length(EM_indep5) == 5
+  @test (; order=1, integrated=true) in EM_indep5
+  @test (; order=2, integrated=true) in EM_indep5
+  @test (; order=3, integrated=true) in EM_indep5
+  @test (; order=4, integrated=true) in EM_indep5
+  @test (; order=5, integrated=true) in EM_indep5
+  @test ele.En0 == 1.0
+  @test ele.En1L == 2.0
+  @test ele.En2 == 3.0
+  @test ele.En3L == 4.0
+  @test ele.En4 == 5.0
 
-    ele.integrated_master = false
-    @test ele.integrated_master == false
-    BM_indep6 = ele.BM_independent
-    @test length(BM_indep6) == 5
-    @test (; order=0, normalized=true, integrated=false) in BM_indep6
-    @test (; order=2, normalized=true, integrated=false) in BM_indep6
-    @test (; order=3, normalized=false, integrated=false) in BM_indep6
-    @test (; order=4, normalized=false, integrated=false) in BM_indep6
-    @test (; order=5, normalized=true, integrated=false) in BM_indep6
-    @test ele.Bsol == 1.0
-    @test ele.Bn1L == 2.0
-    @test ele.Kn2 == 3.0
-    @test ele.Kn3L == 4.0
-    @test ele.Kn4 == 5.0
+  ele.integrated_master = false
+  @test ele.integrated_master == false
+  BM_indep6 = ele.BM_independent
+  @test length(BM_indep6) == 5
+  @test (; order=0, normalized=true, integrated=false) in BM_indep6
+  @test (; order=2, normalized=true, integrated=false) in BM_indep6
+  @test (; order=3, normalized=false, integrated=false) in BM_indep6
+  @test (; order=4, normalized=false, integrated=false) in BM_indep6
+  @test (; order=5, normalized=true, integrated=false) in BM_indep6
+  @test ele.Bsol == 1.0
+  @test ele.Bn1L == 2.0
+  @test ele.Kn2 == 3.0
+  @test ele.Kn3L == 4.0
+  @test ele.Kn4 == 5.0
 
-    ele.e_integrated_master = false
-    @test ele.e_integrated_master == false
-    EM_indep6 = ele.EM_independent
-    @test length(EM_indep6) == 5
-    @test (; order=1, integrated=false) in EM_indep6
-    @test (; order=2, integrated=false) in EM_indep6
-    @test (; order=3, integrated=false) in EM_indep6
-    @test (; order=4, integrated=false) in EM_indep6
-    @test (; order=5, integrated=false) in EM_indep6
-    @test ele.En0 == 1.0
-    @test ele.En1L == 2.0
-    @test ele.En2 == 3.0
-    @test ele.En3L == 4.0
-    @test ele.En4 == 5.0
+  ele.e_integrated_master = false
+  @test ele.e_integrated_master == false
+  EM_indep6 = ele.EM_independent
+  @test length(EM_indep6) == 5
+  @test (; order=1, integrated=false) in EM_indep6
+  @test (; order=2, integrated=false) in EM_indep6
+  @test (; order=3, integrated=false) in EM_indep6
+  @test (; order=4, integrated=false) in EM_indep6
+  @test (; order=5, integrated=false) in EM_indep6
+  @test ele.En0 == 1.0
+  @test ele.En1L == 2.0
+  @test ele.En2 == 3.0
+  @test ele.En3L == 4.0
+  @test ele.En4 == 5.0
 
 
-    #=
-    # BitsBeamline
-    foreach(t->t.integrated_master=true, bl.line)
-    foreach(t->t.field_master=true, bl.line)
-    a.dt = 69.; a.dx = 68.; a.dy = 67.; a.dz = 66.; a.dx_rot = 65.; a.dy_rot = 64.; a.dz_rot =63.
-    a.x1_limit = 70; a.x2_limit = 71; a.y1_limit = 72; a.y2_limit = 73;
-    ele.x1_limit = 74; ele.x2_limit = 75; ele.y1_limit = 76; ele.y2_limit = 77;
-    ele.aperture_shape = ApertureShape.Rectangular
-    ele.aperture_at = ApertureAt.BothEnds
-    ele.aperture_shifts_with_body = false
-    ele.aperture_active = false
-    bbl = BitsBeamline(bl)
-    bl2 = Beamline(bbl)
-    @test all(bl.line .≈ bl2.line)
+  #=
+  # BitsBeamline
+  foreach(t->t.integrated_master=true, bl.line)
+  foreach(t->t.field_master=true, bl.line)
+  a.dt = 69.; a.dx = 68.; a.dy = 67.; a.dz = 66.; a.dx_rot = 65.; a.dy_rot = 64.; a.dz_rot =63.
+  a.x1_limit = 70; a.x2_limit = 71; a.y1_limit = 72; a.y2_limit = 73;
+  ele.x1_limit = 74; ele.x2_limit = 75; ele.y1_limit = 76; ele.y2_limit = 77;
+  ele.aperture_shape = ApertureShape.Rectangular
+  ele.aperture_at = ApertureAt.BothEnds
+  ele.aperture_shifts_with_body = false
+  ele.aperture_active = false
+  bbl = BitsBeamline(bl)
+  bl2 = Beamline(bbl)
+  @test all(bl.line .≈ bl2.line)
 
-    foreach(t->t.field_master=false, bl.line)
-    bbl = BitsBeamline(bl, store_normalized=true)
-    bl2 = Beamline(bbl)
-    @test all(bl.line .≈ bl2.line)
+  foreach(t->t.field_master=false, bl.line)
+  bbl = BitsBeamline(bl, store_normalized=true)
+  bl2 = Beamline(bbl)
+  @test all(bl.line .≈ bl2.line)
 
     
-    # BitsBeamline with MultipleTrackingMethods
-    struct MyTrackingMethod
-      a::Float64
-    end
-    Beamlines.TRACKING_METHOD_MAP[MyTrackingMethod] = 0x1
-    function Beamlines.get_tracking_method_extras(mt::MyTrackingMethod)
-      return Beamlines.SA[mt.a]
-    end
+  # BitsBeamline with MultipleTrackingMethods
+  struct MyTrackingMethod
+    a::Float64
+  end
+  Beamlines.TRACKING_METHOD_MAP[MyTrackingMethod] = 0x1
+  function Beamlines.get_tracking_method_extras(mt::MyTrackingMethod)
+    return Beamlines.SA[mt.a]
+  end
 
-    bl.line[2].tracking_method = MyTrackingMethod(123.4)
+  bl.line[2].tracking_method = MyTrackingMethod(123.4)
 
-    foreach(t->t.field_master=true, bl.line)
-    bbl = BitsBeamline(bl)
-    bl2 = Beamline(bbl)
-    @test all(bl.line .≈ bl2.line)
+  foreach(t->t.field_master=true, bl.line)
+  bbl = BitsBeamline(bl)
+  bl2 = Beamline(bbl)
+  @test all(bl.line .≈ bl2.line)
 
-    foreach(t->t.field_master=false, bl.line)
-    bbl = BitsBeamline(bl, store_normalized=true)
-    bl2 = Beamline(bbl)
-    @test all(bl.line .≈ bl2.line)
+  foreach(t->t.field_master=false, bl.line)
+  bbl = BitsBeamline(bl, store_normalized=true)
+  bl2 = Beamline(bbl)
+  @test all(bl.line .≈ bl2.line)
 
-    # BitsBeamline with repeat:
-    bl = Beamline([deepcopy_no_beamline(a), 
-                   deepcopy_no_beamline(ele), 
-                   deepcopy_no_beamline(a), 
-                   deepcopy_no_beamline(ele)], p_over_q_ref=60.0)
-    foreach(t->t.field_master=true, bl.line)
-    bbl = BitsBeamline(bl)
-    bl2 = Beamline(bbl)
-    @test all(bl.line .≈ bl2.line)
+  # BitsBeamline with repeat:
+  bl = Beamline([deepcopy_no_beamline(a), 
+                 deepcopy_no_beamline(ele), 
+                 deepcopy_no_beamline(a), 
+                 deepcopy_no_beamline(ele)], p_over_q_ref=60.0)
+  foreach(t->t.field_master=true, bl.line)
+  bbl = BitsBeamline(bl)
+  bl2 = Beamline(bbl)
+  @test all(bl.line .≈ bl2.line)
 
-    foreach(t->t.field_master=false, bl.line)
-    bbl = BitsBeamline(bl, store_normalized=true)
-    bl2 = Beamline(bbl)
-    @test all(bl.line .≈ bl2.line)
-    =#
+  foreach(t->t.field_master=false, bl.line)
+  bbl = BitsBeamline(bl, store_normalized=true)
+  bl2 = Beamline(bbl)
+  @test all(bl.line .≈ bl2.line)
+  =#
 
-    # Controllers
-    c = Controller(
-      (a,   :Kn1) => (t; Kn1, L) -> Kn1,
-      (ele, :L)  => (t; Kn1, L) -> L;
-      vars = (; Kn1 = 0.0, L = 0.0,)
-    )
+  # Controllers
+  c = Controller(
+    (a,   :Kn1) => (t; Kn1, L) -> Kn1,
+    (ele, :L)  => (t; Kn1, L) -> L;
+    vars = (; Kn1 = 0.0, L = 0.0,)
+  )
     
-    Kn1 = a.Kn1
-    L = ele.L
-    set!(c)
-    @test a.Kn1 == 0.0
-    @test ele.L == 0.0
+  Kn1 = a.Kn1
+  L = ele.L
+  set!(c)
+  @test a.Kn1 == 0.0
+  @test ele.L == 0.0
 
-    c.Kn1 = 123.4
-    @test a.Kn1 == 123.4
-    @test ele.L == 0.0
+  c.Kn1 = 123.4
+  @test a.Kn1 == 123.4
+  @test ele.L == 0.0
 
-    c.L = 0.75
-    @test a.Kn1 == 123.4
-    @test ele.L == 0.75
+  c.L = 0.75
+  @test a.Kn1 == 123.4
+  @test ele.L == 0.75
     
-    a.Kn1 = 0
-    ele.L = 0
+  a.Kn1 = 0
+  ele.L = 0
 
-    set!(c)
-    @test a.Kn1 == 123.4
-    @test ele.L == 0.75
+  set!(c)
+  @test a.Kn1 == 123.4
+  @test ele.L == 0.75
 
-    c2 = Controller(
-      (c, :Kn1) => (t; x) -> 2*x,
-      (c, :L)  => (t; x) -> 3*x;
-      vars = (; x = 1.0)
-    )
+  c2 = Controller(
+    (c, :Kn1) => (t; x) -> 2*x,
+    (c, :L)  => (t; x) -> 3*x;
+    vars = (; x = 1.0)
+  )
 
-    set!(c2)
-    @test a.Kn1 == 2
-    @test ele.L == 3
+  set!(c2)
+  @test a.Kn1 == 2
+  @test ele.L == 3
 
-    c2.x = 2
-    @test a.Kn1 == 4
-    @test ele.L == 6
+  c2.x = 2
+  @test a.Kn1 == 4
+  @test ele.L == 6
 
-    a.Kn1 = 0
-    ele.L = 0
-    set!(c2)
-    @test a.Kn1 == 4
-    @test ele.L == 6
+  a.Kn1 = 0
+  ele.L = 0
+  set!(c2)
+  @test a.Kn1 == 4
+  @test ele.L == 6
 
-    @test c.vars == (; Kn1 = 4, L = 6)
+  @test c.vars == (; Kn1 = 4, L = 6)
 
-    # check s computation
-    @test a.s == 0
-    @test a.s_downstream == a.L
-    @test ele.s == a.L
-    @test ele.s_downstream == a.L + ele.L
+  # check s computation
+  @test a.s == 0
+  @test a.s_downstream == a.L
+  @test ele.s == a.L
+  @test ele.s_downstream == a.L + ele.L
 
-    @test !isactive(ele.PatchParams)
-    pp = PatchParams(-1.2e-12, 1.23e-4, 0, -2, 0.0012, 5, 6)
-    @test eltype(pp) == Float64
-    @test eltype(typeof(pp)) == Float64
-    @test pp ≈ PatchParams(-1.2e-12, 1.23e-4, 0, -2, 0.0012, 5, 6)
-    ele.PatchParams = pp
-    @test isactive(ele.PatchParams)
-    @test ele.PatchParams === pp
-    @test ele.dt == -1.2e-12 
-    @test ele.dx == 1.23e-4
-    @test ele.dy == 0 
-    @test ele.dz == -2
-    @test ele.dx_rot == 0.0012 
-    @test ele.dy_rot == 5
-    @test ele.dz_rot == 6
+  @test !isactive(ele.PatchParams)
+  pp = PatchParams(-1.2e-12, 1.23e-4, 0, -2, 0.0012, 5, 6)
+  @test eltype(pp) == Float64
+  @test eltype(typeof(pp)) == Float64
+  @test pp ≈ PatchParams(-1.2e-12, 1.23e-4, 0, -2, 0.0012, 5, 6)
+  ele.PatchParams = pp
+  @test isactive(ele.PatchParams)
+  @test ele.PatchParams === pp
+  @test ele.dt == -1.2e-12 
+  @test ele.dx == 1.23e-4
+  @test ele.dy == 0 
+  @test ele.dz == -2
+  @test ele.dx_rot == 0.0012 
+  @test ele.dy_rot == 5
+  @test ele.dz_rot == 6
 
-    ele.dt = 1.0
-    @test ele.dt == 1.0
-    @test typeof(ele.dt) == Float64
-    @test ele.PatchParams === pp
+  ele.dt = 1.0
+  @test ele.dt == 1.0
+  @test typeof(ele.dt) == Float64
+  @test ele.PatchParams === pp
 
-    ele.dx = 1.0im
-    ele.dy = 1
-    ele.dz = 1
-    ele.dx_rot = 1
-    ele.dy_rot = 1
-    ele.dz_rot = 1
-    @test ele.dx == 1.0im
-    @test ele.dy == 1
-    @test ele.dz == 1
-    @test ele.dx_rot == 1
-    @test ele.dy_rot == 1
-    @test ele.dz_rot == 1
-    @test typeof(ele.dt) == ComplexF64
-    @test typeof(ele.dx) == ComplexF64
-    @test typeof(ele.dy) == ComplexF64
-    @test typeof(ele.dz) == ComplexF64
-    @test typeof(ele.dx_rot) == ComplexF64
-    @test typeof(ele.dy_rot) == ComplexF64
-    @test typeof(ele.dz_rot) == ComplexF64
-    @test !(ele.PatchParams === pp)
+  ele.dx = 1.0im
+  ele.dy = 1
+  ele.dz = 1
+  ele.dx_rot = 1
+  ele.dy_rot = 1
+  ele.dz_rot = 1
+  @test ele.dx == 1.0im
+  @test ele.dy == 1
+  @test ele.dz == 1
+  @test ele.dx_rot == 1
+  @test ele.dy_rot == 1
+  @test ele.dz_rot == 1
+  @test typeof(ele.dt) == ComplexF64
+  @test typeof(ele.dx) == ComplexF64
+  @test typeof(ele.dy) == ComplexF64
+  @test typeof(ele.dz) == ComplexF64
+  @test typeof(ele.dx_rot) == ComplexF64
+  @test typeof(ele.dy_rot) == ComplexF64
+  @test typeof(ele.dz_rot) == ComplexF64
+  @test !(ele.PatchParams === pp)
 
-    # @elements
-    @elements qf = Quadrupole(Kn1=0.36)
-    @test qf.name == "qf"
-    @elements d = Drift()
-    @test d.name == "d"
+  # @elements
+  @elements qf = Quadrupole(Kn1=0.36)
+  @test qf.name == "qf"
+  @elements d = Drift()
+  @test d.name == "d"
     
-    @elements begin
-      qf = Quadrupole(Kn1=0.36)
-    end
-    @test qf.name == "qf"
+  @elements begin
+    qf = Quadrupole(Kn1=0.36)
+  end
+  @test qf.name == "qf"
 
-    @elements begin
-      d = Drift()
-    end
-    @test d.name == "d"
+  @elements begin
+    d = Drift()
+  end
+  @test d.name == "d"
 
-    @elements begin
-      qf = Quadrupole(Kn1=0.36)
-      d = Drift()
-    end
-    @test qf.name == "qf"
-    @test d.name == "d"
+  @elements begin
+    qf = Quadrupole(Kn1=0.36)
+    d = Drift()
+  end
+  @test qf.name == "qf"
+  @test d.name == "d"
 
-    @elements begin
-      qf = Quadrupole(Kn1=0.36)
-      a = 1+qf.Kn1
-      d = Drift(L=a)
-    end
-    @test qf.name == "qf"
-    @test d.name == "d"
-    @test d.L == 1+0.36
-    @test a == 1+0.36
+  @elements begin
+    qf = Quadrupole(Kn1=0.36)
+    a = 1+qf.Kn1
+    d = Drift(L=a)
+  end
+  @test qf.name == "qf"
+  @test d.name == "d"
+  @test d.L == 1+0.36
+  @test a == 1+0.36
 
-    # Duplicate elements
-    qf = Quadrupole(Kn1=0.36, L=0.5)
+  # Duplicate elements
+  qf = Quadrupole(Kn1=0.36, L=0.5)
+  d = Drift(L=1)
+  qd = Quadrupole(Kn1=-0.36, L=0.5)
+
+  fodo = Beamline([qf, d, qd, d, qf, d, qd, d], p_over_q_ref=60)
+  @test !(qf === fodo.line[1])
+  @test !(d === fodo.line[2])
+  @test !(qd === fodo.line[3])
+  @test !(d === fodo.line[4] )
+  @test !(qf === fodo.line[5])
+  @test !(qd === fodo.line[7])
+
+  @test qf ≈ fodo.line[5]
+  @test d ≈ fodo.line[4]
+  @test qd ≈ fodo.line[7]
+
+  qf2 = fodo.line[5]
+  qf2.L = 2
+  @test qf.L == 2
+  @test qf2.L == 2
+  @test qf2 ≈ qf
+  qf.L = 0.5
+  @test qf.L == 0.5
+  @test qf2.L == 0.5
+  @test qf2 ≈ qf
+  qf.Kn1 = 0.1
+  @test qf.Kn1 == 0.1
+  @test qf2.Kn1 == 0.1
+    
+  qf2.Kn2 = 1.23
+  @test qf.Kn2 == 1.23
+  @test qf2.Kn2 == 1.23
+    
+  # Promote through child
+  qf2.Kn2L = 1.23*im
+
+  @test typeof(qf.Kn2L) == ComplexF64
+  @test qf.Kn2L == 1.23*im
+  @test typeof(qf2.Kn2L) == ComplexF64
+  @test qf2.Kn2L == 1.23*im
+  @test qf ≈ qf2 
+
+  @test qf2.BMultipoleParams === qf.BMultipoleParams
+
+  # Add new group through child
+  qf2.x_rot = 0f0
+  @test qf.AlignmentParams === qf2.AlignmentParams
+  @test qf ≈ qf2
+
+  qf2.AlignmentParams = AlignmentParams(1,2,3,4,5,6)
+  @test qf.AlignmentParams === qf2.AlignmentParams
+  @test qf ≈ qf2
+
+  # s-position
+  qf = fodo.line[1]
+  @test qf.s == 0
+  @test qf.s_downstream == 0.5
+  @test qf2.s == 3
+  @test qf2.s_downstream == 3.5
+  @test fodo.line[end].s_downstream == 6
+
+  # Manual override 
+  getfield(qf2, :pdict)[UniversalParams] = UniversalParams(L=1)
+  @test qf2.BMultipoleParams === qf.BMultipoleParams
+  @test !(qf.UniversalParams === qf2.UniversalParams)
+  @test qf.L == 0.5
+  @test qf2.L == 1
+  @test qf.s == 0
+  @test qf.s_downstream == 0.5
+  @test qf2.s == 3
+  @test qf2.s_downstream == 4
+  @test fodo.line[end].s_downstream == 6.5
+  @test qf2.Kn2L == qf2.Kn2*qf2.L
+  @test qf.Kn2L == qf2.Kn2L # Note Kn2L was made independent variable above thru child
+  @test qf2.Kn2 != qf.Kn2
+    
+  qf.Kn3L = 1
+  @test qf2.Kn3L == 1
+  @test qf2.Kn3L == qf2.Kn3*qf2.L
+  @test qf2.Kn3*qf2.L == qf.Kn3*qf.L
+
+  # ProtectParams
+  getfield(qf2, :pdict)[Beamlines.ProtectParams] = Beamlines.ProtectParams([:L, :UniversalParams])
+  @test qf2.L == 1 # get property (allowed)
+  @test_throws ErrorException qf2.L = 2 # reset property (not allowed)
+  @test_throws ErrorException qf2.UniversalParams # get parameter group (not allowed)
+  @test_throws ErrorException qf2.UniversalParams = UniversalParams() # reset parameter group (not allowed)
+
+  # Deferred Expressions
+  # Function
+  let 
+    local a = 0.36
+    da = DefExpr(()->a)
+    @test da() == a
+    a = 0.1
+    @test da() == a
+    local b = 0.2
+    db = DefExpr(()->b)
+    dc = da+db
+    @test dc() ≈ 0.3
+    dd = DefExpr{ComplexF64}(dc)
+    @test dd() ≈ 0.3 && typeof(dd()) == ComplexF64
+
+    a = 0.2
+    @test dc() ≈ 0.4
+    @test dd() ≈ 0.4 && typeof(dd()) == ComplexF64
+    b = 0.3
+    @test dc() ≈ 0.5
+    @test dd() ≈ 0.5 && typeof(dd()) == ComplexF64
+
+    local p_over_q_ref = 60.
+    local Kn1 = 0.36
+    local L = 0.5
+    qf = Quadrupole(Kn1=DefExpr(()->Kn1), L=DefExpr(()->L))
     d = Drift(L=1)
-    qd = Quadrupole(Kn1=-0.36, L=0.5)
+    qd = Quadrupole(Kn1=DefExpr(()->-qf.Kn1), L=DefExpr(()->L))
 
-    fodo = Beamline([qf, d, qd, d, qf, d, qd, d], p_over_q_ref=60)
-    @test !(qf === fodo.line[1])
-    @test !(d === fodo.line[2])
-    @test !(qd === fodo.line[3])
-    @test !(d === fodo.line[4] )
-    @test !(qf === fodo.line[5])
-    @test !(qd === fodo.line[7])
+    fodo = Beamline([qf, d, qd, d], p_over_q_ref=DefExpr(()->p_over_q_ref))
 
-    @test qf ≈ fodo.line[5]
-    @test d ≈ fodo.line[4]
-    @test qd ≈ fodo.line[7]
-
-    qf2 = fodo.line[5]
-    qf2.L = 2
-    @test qf.L == 2
-    @test qf2.L == 2
-    @test qf2 ≈ qf
-    qf.L = 0.5
-    @test qf.L == 0.5
-    @test qf2.L == 0.5
-    @test qf2 ≈ qf
-    qf.Kn1 = 0.1
-    @test qf.Kn1 == 0.1
-    @test qf2.Kn1 == 0.1
-    
-    qf2.Kn2 = 1.23
-    @test qf.Kn2 == 1.23
-    @test qf2.Kn2 == 1.23
-    
-    # Promote through child
-    qf2.Kn2L = 1.23*im
-
-    @test typeof(qf.Kn2L) == ComplexF64
-    @test qf.Kn2L == 1.23*im
-    @test typeof(qf2.Kn2L) == ComplexF64
-    @test qf2.Kn2L == 1.23*im
-    @test qf ≈ qf2 
-
-    @test qf2.BMultipoleParams === qf.BMultipoleParams
-
-    # Add new group through child
-    qf2.x_rot = 0f0
-    @test qf.AlignmentParams === qf2.AlignmentParams
-    @test qf ≈ qf2
-
-    qf2.AlignmentParams = AlignmentParams(1,2,3,4,5,6)
-    @test qf.AlignmentParams === qf2.AlignmentParams
-    @test qf ≈ qf2
-
-    # s-position
     qf = fodo.line[1]
-    @test qf.s == 0
-    @test qf.s_downstream == 0.5
-    @test qf2.s == 3
-    @test qf2.s_downstream == 3.5
-    @test fodo.line[end].s_downstream == 6
+    qd = fodo.line[3]
+    @test fodo.p_over_q_ref == p_over_q_ref
+    @test qf.p_over_q_ref == p_over_q_ref
 
-    # Manual override 
-    getfield(qf2, :pdict)[UniversalParams] = UniversalParams(L=1)
-    @test qf2.BMultipoleParams === qf.BMultipoleParams
-    @test !(qf.UniversalParams === qf2.UniversalParams)
-    @test qf.L == 0.5
-    @test qf2.L == 1
-    @test qf.s == 0
-    @test qf.s_downstream == 0.5
-    @test qf2.s == 3
-    @test qf2.s_downstream == 4
-    @test fodo.line[end].s_downstream == 6.5
-    @test qf2.Kn2L == qf2.Kn2*qf2.L
-    @test qf.Kn2L == qf2.Kn2L # Note Kn2L was made independent variable above thru child
-    @test qf2.Kn2 != qf.Kn2
-    
-    qf.Kn3L = 1
-    @test qf2.Kn3L == 1
-    @test qf2.Kn3L == qf2.Kn3*qf2.L
-    @test qf2.Kn3*qf2.L == qf.Kn3*qf.L
+    p_over_q_ref = 40.
+    @test fodo.p_over_q_ref == p_over_q_ref
+    @test qf.p_over_q_ref == p_over_q_ref
 
-    # ProtectParams
-    getfield(qf2, :pdict)[Beamlines.ProtectParams] = Beamlines.ProtectParams([:L, :UniversalParams])
-    @test qf2.L == 1 # get property (allowed)
-    @test_throws ErrorException qf2.L = 2 # reset property (not allowed)
-    @test_throws ErrorException qf2.UniversalParams # get parameter group (not allowed)
-    @test_throws ErrorException qf2.UniversalParams = UniversalParams() # reset parameter group (not allowed)
-
-    # Deferred Expressions
-    # Function
-    let 
-      local a = 0.36
-      da = DefExpr(()->a)
-      @test da() == a
-      a = 0.1
-      @test da() == a
-      local b = 0.2
-      db = DefExpr(()->b)
-      dc = da+db
-      @test dc() ≈ 0.3
-      dd = DefExpr{ComplexF64}(dc)
-      @test dd() ≈ 0.3 && typeof(dd()) == ComplexF64
-
-      a = 0.2
-      @test dc() ≈ 0.4
-      @test dd() ≈ 0.4 && typeof(dd()) == ComplexF64
-      b = 0.3
-      @test dc() ≈ 0.5
-      @test dd() ≈ 0.5 && typeof(dd()) == ComplexF64
-
-      local p_over_q_ref = 60.
-      local Kn1 = 0.36
-      local L = 0.5
-      qf = Quadrupole(Kn1=DefExpr(()->Kn1), L=DefExpr(()->L))
-      d = Drift(L=1)
-      qd = Quadrupole(Kn1=DefExpr(()->-qf.Kn1), L=DefExpr(()->L))
-
-      fodo = Beamline([qf, d, qd, d], p_over_q_ref=DefExpr(()->p_over_q_ref))
-
-      qf = fodo.line[1]
-      qd = fodo.line[3]
-      @test fodo.p_over_q_ref == p_over_q_ref
-      @test qf.p_over_q_ref == p_over_q_ref
-
-      p_over_q_ref = 40.
-      @test fodo.p_over_q_ref == p_over_q_ref
-      @test qf.p_over_q_ref == p_over_q_ref
-
-      @test qf.Kn1L ≈ Kn1*L
-      @test qd.Kn1L ≈ -Kn1*L
-      @test qf.Bn1L ≈ Kn1*p_over_q_ref*L
-      @test qd.Bn1L ≈ -Kn1*p_over_q_ref*L
-      @test qf.Bn1 ≈ Kn1*p_over_q_ref
-      @test qd.Bn1 ≈ -Kn1*p_over_q_ref
-      @test qf.L ≈ L
-      @test qd.L ≈ L
-      @test fodo.line[end].s_downstream ≈ 3
-      L = 1
-      @test qf.L == 1
-      @test qd.L == 1
-      @test fodo.line[end].s_downstream ≈ 4
+    @test qf.Kn1L ≈ Kn1*L
+    @test qd.Kn1L ≈ -Kn1*L
+    @test qf.Bn1L ≈ Kn1*p_over_q_ref*L
+    @test qd.Bn1L ≈ -Kn1*p_over_q_ref*L
+    @test qf.Bn1 ≈ Kn1*p_over_q_ref
+    @test qd.Bn1 ≈ -Kn1*p_over_q_ref
+    @test qf.L ≈ L
+    @test qd.L ≈ L
+    @test fodo.line[end].s_downstream ≈ 3
+    L = 1
+    @test qf.L == 1
+    @test qd.L == 1
+    @test fodo.line[end].s_downstream ≈ 4
       
-      @test qf.Kn1L ≈ Kn1*L
-      @test qd.Kn1L ≈ -Kn1*L
-      @test qf.Bn1L ≈ Kn1*p_over_q_ref*L
-      @test qd.Bn1L ≈ -Kn1*p_over_q_ref*L
-      @test qf.Bn1 ≈ Kn1*p_over_q_ref
-      @test qd.Bn1 ≈ -Kn1*p_over_q_ref
+    @test qf.Kn1L ≈ Kn1*L
+    @test qd.Kn1L ≈ -Kn1*L
+    @test qf.Bn1L ≈ Kn1*p_over_q_ref*L
+    @test qd.Bn1L ≈ -Kn1*p_over_q_ref*L
+    @test qf.Bn1 ≈ Kn1*p_over_q_ref
+    @test qd.Bn1 ≈ -Kn1*p_over_q_ref
   
-      Kn1 = 0.2
-      @test qf.Kn1L ≈ Kn1*L
-      @test qd.Kn1L ≈ -Kn1*L
-      @test qf.Bn1L ≈ Kn1*p_over_q_ref*L
-      @test qd.Bn1L ≈ -Kn1*p_over_q_ref*L
-      @test qf.Bn1 ≈ Kn1*p_over_q_ref
-      @test qd.Bn1 ≈ -Kn1*p_over_q_ref
+    Kn1 = 0.2
+    @test qf.Kn1L ≈ Kn1*L
+    @test qd.Kn1L ≈ -Kn1*L
+    @test qf.Bn1L ≈ Kn1*p_over_q_ref*L
+    @test qd.Bn1L ≈ -Kn1*p_over_q_ref*L
+    @test qf.Bn1 ≈ Kn1*p_over_q_ref
+    @test qd.Bn1 ≈ -Kn1*p_over_q_ref
 
-      p_over_q_ref = 3*im
-      @test qf.Kn1L ≈ Kn1*L
-      @test qd.Kn1L ≈ -Kn1*L
-      @test qf.Bn1L ≈ Kn1*p_over_q_ref*L
-      @test qd.Bn1L ≈ -Kn1*p_over_q_ref*L
-      @test qf.Bn1 ≈ Kn1*p_over_q_ref
-      @test qd.Bn1 ≈ -Kn1*p_over_q_ref
+    p_over_q_ref = 3*im
+    @test qf.Kn1L ≈ Kn1*L
+    @test qd.Kn1L ≈ -Kn1*L
+    @test qf.Bn1L ≈ Kn1*p_over_q_ref*L
+    @test qd.Bn1L ≈ -Kn1*p_over_q_ref*L
+    @test qf.Bn1 ≈ Kn1*p_over_q_ref
+    @test qd.Bn1 ≈ -Kn1*p_over_q_ref
 
-      Kn1 = 4*im
-      @test qf.Kn1L ≈ Kn1*L
-      @test qd.Kn1L ≈ -Kn1*L
-      @test qf.Bn1L ≈ Kn1*p_over_q_ref*L
-      @test qd.Bn1L ≈ -Kn1*p_over_q_ref*L
-      @test qf.Bn1 ≈ Kn1*p_over_q_ref
-      @test qd.Bn1 ≈ -Kn1*p_over_q_ref
-    end
+    Kn1 = 4*im
+    @test qf.Kn1L ≈ Kn1*L
+    @test qd.Kn1L ≈ -Kn1*L
+    @test qf.Bn1L ≈ Kn1*p_over_q_ref*L
+    @test qd.Bn1L ≈ -Kn1*p_over_q_ref*L
+    @test qf.Bn1 ≈ Kn1*p_over_q_ref
+    @test qd.Bn1 ≈ -Kn1*p_over_q_ref
+  end
 
-    # CFunction
-    let 
-      local a::Float64 = 0.36
-      da = DefExpr(()->a)
-      @test da() == a
-      a = 0.1
-      @test da() == a
-      local b::Float64 = 0.2
-      db = DefExpr(()->b)
-      dc = da+db
-      @test dc() ≈ 0.3
-      dd = DefExpr{ComplexF64}(dc)
-      @test dd() ≈ 0.3 && typeof(dd()) == ComplexF64
+  # CFunction
+  let 
+    local a::Float64 = 0.36
+    da = DefExpr(()->a)
+    @test da() == a
+    a = 0.1
+    @test da() == a
+    local b::Float64 = 0.2
+    db = DefExpr(()->b)
+    dc = da+db
+    @test dc() ≈ 0.3
+    dd = DefExpr{ComplexF64}(dc)
+    @test dd() ≈ 0.3 && typeof(dd()) == ComplexF64
 
-      a = 0.2
-      @test dc() ≈ 0.4
-      @test dd() ≈ 0.4 && typeof(dd()) == ComplexF64
-      b = 0.3
-      @test dc() ≈ 0.5
-      @test dd() ≈ 0.5 && typeof(dd()) == ComplexF64
+    a = 0.2
+    @test dc() ≈ 0.4
+    @test dd() ≈ 0.4 && typeof(dd()) == ComplexF64
+    b = 0.3
+    @test dc() ≈ 0.5
+    @test dd() ≈ 0.5 && typeof(dd()) == ComplexF64
       
-      local p_over_q_ref::Float64 = 60.
-      local Kn1::Float64 = 0.36
-      local L::Float64 = 0.5
-      qf = Quadrupole(Kn1=DefExpr(()->Kn1), L=DefExpr(()->L))
-      d = Drift(L=1)
-      qd = Quadrupole(Kn1=DefExpr(()->-qf.Kn1), L=DefExpr(()->L))
+    local p_over_q_ref::Float64 = 60.
+    local Kn1::Float64 = 0.36
+    local L::Float64 = 0.5
+    qf = Quadrupole(Kn1=DefExpr(()->Kn1), L=DefExpr(()->L))
+    d = Drift(L=1)
+    qd = Quadrupole(Kn1=DefExpr(()->-qf.Kn1), L=DefExpr(()->L))
 
-      fodo = Beamline([qf, d, qd, d], p_over_q_ref=DefExpr(()->p_over_q_ref))
+    fodo = Beamline([qf, d, qd, d], p_over_q_ref=DefExpr(()->p_over_q_ref))
 
-      @test fodo.p_over_q_ref == p_over_q_ref
-      @test_throws ErrorException qf.p_over_q_ref
-      qf = fodo.line[1]
-      qd = fodo.line[3]
-      @test qf.p_over_q_ref == p_over_q_ref
+    @test fodo.p_over_q_ref == p_over_q_ref
+    @test_throws ErrorException qf.p_over_q_ref
+    qf = fodo.line[1]
+    qd = fodo.line[3]
+    @test qf.p_over_q_ref == p_over_q_ref
 
-      p_over_q_ref = 40.
-      @test fodo.p_over_q_ref == p_over_q_ref
-      @test qf.p_over_q_ref == p_over_q_ref
+    p_over_q_ref = 40.
+    @test fodo.p_over_q_ref == p_over_q_ref
+    @test qf.p_over_q_ref == p_over_q_ref
 
-      @test qf.Kn1L ≈ Kn1*L
-      @test qd.Kn1L ≈ -Kn1*L
-      @test qf.Bn1L ≈ Kn1*p_over_q_ref*L
-      @test qd.Bn1L ≈ -Kn1*p_over_q_ref*L
-      @test qf.Bn1 ≈ Kn1*p_over_q_ref
-      @test qd.Bn1 ≈ -Kn1*p_over_q_ref
-      @test qf.L ≈ L
-      @test qd.L ≈ L
-      @test fodo.line[end].s_downstream ≈ 3
-      L = 1.
-      @test qf.L == 1.
-      @test qd.L == 1.
-      @test fodo.line[end].s_downstream ≈ 4
+    @test qf.Kn1L ≈ Kn1*L
+    @test qd.Kn1L ≈ -Kn1*L
+    @test qf.Bn1L ≈ Kn1*p_over_q_ref*L
+    @test qd.Bn1L ≈ -Kn1*p_over_q_ref*L
+    @test qf.Bn1 ≈ Kn1*p_over_q_ref
+    @test qd.Bn1 ≈ -Kn1*p_over_q_ref
+    @test qf.L ≈ L
+    @test qd.L ≈ L
+    @test fodo.line[end].s_downstream ≈ 3
+    L = 1.
+    @test qf.L == 1.
+    @test qd.L == 1.
+    @test fodo.line[end].s_downstream ≈ 4
       
-      @test qf.Kn1L ≈ Kn1*L
-      @test qd.Kn1L ≈ -Kn1*L
-      @test qf.Bn1L ≈ Kn1*p_over_q_ref*L
-      @test qd.Bn1L ≈ -Kn1*p_over_q_ref*L
-      @test qf.Bn1 ≈ Kn1*p_over_q_ref
-      @test qd.Bn1 ≈ -Kn1*p_over_q_ref
+    @test qf.Kn1L ≈ Kn1*L
+    @test qd.Kn1L ≈ -Kn1*L
+    @test qf.Bn1L ≈ Kn1*p_over_q_ref*L
+    @test qd.Bn1L ≈ -Kn1*p_over_q_ref*L
+    @test qf.Bn1 ≈ Kn1*p_over_q_ref
+    @test qd.Bn1 ≈ -Kn1*p_over_q_ref
   
-      Kn1 = 0.2
-      @test qf.Kn1L ≈ Kn1*L
-      @test qd.Kn1L ≈ -Kn1*L
-      @test qf.Bn1L ≈ Kn1*p_over_q_ref*L
-      @test qd.Bn1L ≈ -Kn1*p_over_q_ref*L
-      @test qf.Bn1 ≈ Kn1*p_over_q_ref
-      @test qd.Bn1 ≈ -Kn1*p_over_q_ref
+    Kn1 = 0.2
+    @test qf.Kn1L ≈ Kn1*L
+    @test qd.Kn1L ≈ -Kn1*L
+    @test qf.Bn1L ≈ Kn1*p_over_q_ref*L
+    @test qd.Bn1L ≈ -Kn1*p_over_q_ref*L
+    @test qf.Bn1 ≈ Kn1*p_over_q_ref
+    @test qd.Bn1 ≈ -Kn1*p_over_q_ref
 
-      p_over_q_ref = 3.0
-      @test qf.Kn1L ≈ Kn1*L
-      @test qd.Kn1L ≈ -Kn1*L
-      @test qf.Bn1L ≈ Kn1*p_over_q_ref*L
-      @test qd.Bn1L ≈ -Kn1*p_over_q_ref*L
-      @test qf.Bn1 ≈ Kn1*p_over_q_ref
-      @test qd.Bn1 ≈ -Kn1*p_over_q_ref
+    p_over_q_ref = 3.0
+    @test qf.Kn1L ≈ Kn1*L
+    @test qd.Kn1L ≈ -Kn1*L
+    @test qf.Bn1L ≈ Kn1*p_over_q_ref*L
+    @test qd.Bn1L ≈ -Kn1*p_over_q_ref*L
+    @test qf.Bn1 ≈ Kn1*p_over_q_ref
+    @test qd.Bn1 ≈ -Kn1*p_over_q_ref
 
-      Kn1 = 4.0
-      @test qf.Kn1L ≈ Kn1*L
-      @test qd.Kn1L ≈ -Kn1*L
-      @test qf.Bn1L ≈ Kn1*p_over_q_ref*L
-      @test qd.Bn1L ≈ -Kn1*p_over_q_ref*L
-      @test qf.Bn1 ≈ Kn1*p_over_q_ref
-      @test qd.Bn1 ≈ -Kn1*p_over_q_ref
+    Kn1 = 4.0
+    @test qf.Kn1L ≈ Kn1*L
+    @test qd.Kn1L ≈ -Kn1*L
+    @test qf.Bn1L ≈ Kn1*p_over_q_ref*L
+    @test qd.Bn1L ≈ -Kn1*p_over_q_ref*L
+    @test qf.Bn1 ≈ Kn1*p_over_q_ref
+    @test qd.Bn1 ≈ -Kn1*p_over_q_ref
 
-      @test (+DefExpr(()->L))() == +L
-      @test (-DefExpr(()->L))() == -L
-      m = Marker()
-      bl = Beamline(LatElement[m], species_ref=Species("proton"), p_over_q_ref=DefExpr(() -> 123))
-      @test bl.p_over_q_ref == 123
+    @test (+DefExpr(()->L))() == +L
+    @test (-DefExpr(()->L))() == -L
+    m = Marker()
+    bl = Beamline(LatElement[m], species_ref=Species("proton"), p_over_q_ref=DefExpr(() -> 123))
+    @test bl.p_over_q_ref == 123
 
-      ele = LatElement(Kn1L = DefExpr(()->1))
-      @test ele.Kn2L == 0
-      @test one(DefExpr(()->2))() == 1
-      @test abs(DefExpr(()->-L))() == abs(L)
-      @test abs(DefExpr(()->L))() == abs(L)
-    end
-    ele = LatElement(x1_limit=123,
-                      x2_limit=456,
-                      y1_limit=789, 
-                      y2_limit=012, 
-                      aperture_shape=ApertureShape.Elliptical, 
-                      aperture_at=ApertureAt.Exit, 
-                      aperture_shifts_with_body=false)
-    @test isactive(ele.ApertureParams)
-    @test ele.x1_limit == 123
-    @test ele.x1_limit == 123
-    @test ele.x2_limit == 456
-    @test ele.y1_limit == 789 
-    @test ele.y2_limit == 012 
-    @test ele.aperture_shape == ApertureShape.Elliptical
-    @test ele.aperture_at == ApertureAt.Exit 
-    @test ele.aperture_shifts_with_body == false
+    ele = LatElement(Kn1L = DefExpr(()->1))
+    @test ele.Kn2L == 0
+    @test one(DefExpr(()->2))() == 1
+    @test abs(DefExpr(()->-L))() == abs(L)
+    @test abs(DefExpr(()->L))() == abs(L)
+  end
+  ele = LatElement(x1_limit=123,
+                    x2_limit=456,
+                    y1_limit=789, 
+                    y2_limit=012, 
+                    aperture_shape=ApertureShape.Elliptical, 
+                    aperture_at=ApertureAt.Exit, 
+                    aperture_shifts_with_body=false)
+  @test isactive(ele.ApertureParams)
+  @test ele.x1_limit == 123
+  @test ele.x1_limit == 123
+  @test ele.x2_limit == 456
+  @test ele.y1_limit == 789 
+  @test ele.y2_limit == 012 
+  @test ele.aperture_shape == ApertureShape.Elliptical
+  @test ele.aperture_at == ApertureAt.Exit 
+  @test ele.aperture_shifts_with_body == false
     
-    ele.x1_limit = 12*im
-    @test eltype(ele.ApertureParams) == ComplexF32
-    @test eltype(typeof(ele.ApertureParams)) == ComplexF32
-    @test ele.ApertureParams ≈ ApertureParams(12*im, 456, 789, 012, ApertureShape.Elliptical, ApertureAt.Exit, false)
-    @test ele.x1_limit == 12*im
-    @test ele.x1_limit == ComplexF32(12*im)
-    @test ele.x2_limit == ComplexF32(456)
-    @test ele.y1_limit == ComplexF32(789 )
-    @test ele.y2_limit == ComplexF32(012 )
-    @test ele.aperture_shape == ApertureShape.Elliptical
-    @test ele.aperture_at == ApertureAt.Exit 
-    @test ele.aperture_shifts_with_body == false
+  ele.x1_limit = 12*im
+  @test eltype(ele.ApertureParams) == ComplexF32
+  @test eltype(typeof(ele.ApertureParams)) == ComplexF32
+  @test ele.ApertureParams ≈ ApertureParams(12*im, 456, 789, 012, ApertureShape.Elliptical, ApertureAt.Exit, false)
+  @test ele.x1_limit == 12*im
+  @test ele.x1_limit == ComplexF32(12*im)
+  @test ele.x2_limit == ComplexF32(456)
+  @test ele.y1_limit == ComplexF32(789 )
+  @test ele.y2_limit == ComplexF32(012 )
+  @test ele.aperture_shape == ApertureShape.Elliptical
+  @test ele.aperture_at == ApertureAt.Exit 
+  @test ele.aperture_shifts_with_body == false
 
-    # RFParams tests
-    @test !isactive(qf.RFParams)
+  # RFParams tests
+  @test !isactive(qf.RFParams)
 
-    @test_throws ErrorException RFParams().harmon_master
-    @test RFParams(harmon_master=true).harmon_master
-    @test !(RFParams(harmon_master=false).harmon_master)
-    @test RFParams(harmon_master=true).rate_meaning == RateMeaning.Harmon
-    @test RFParams(harmon_master=false).rate_meaning == RateMeaning.RFFrequency
-    @test_throws ErrorException RFParams(rate=10)
-    @test_throws ErrorException RFParams().harmon_master = true
-    @test_throws ErrorException RFParams().rate = 10
+  @test_throws ErrorException RFParams().harmon_master
+  @test RFParams(harmon_master=true).harmon_master
+  @test !(RFParams(harmon_master=false).harmon_master)
+  @test RFParams(harmon_master=true).rate_meaning == RateMeaning.Harmon
+  @test RFParams(harmon_master=false).rate_meaning == RateMeaning.RFFrequency
+  @test_throws ErrorException RFParams(rate=10)
+  @test_throws ErrorException RFParams().harmon_master = true
+  @test_throws ErrorException RFParams().rate = 10
 
-    # Basic RF frequency mode
-    cav = RFCavity(rf_frequency=352e6, voltage=1e6, zero_phase=PhaseRef.AboveTransition)
-    @test isactive(cav.RFParams)
-    cav.voltage = 0
-    @test !isactive(cav.RFParams)
-    cav.voltage=1e6
-    @test isactive(cav.RFParams)
-    @test cav.RFParams.harmon_master == false
-    @test cav.harmon_master == false && cav.rf_frequency == 352e6
-    @test_throws ErrorException cav.harmon
-    cav.rf_frequency = 500e6 + 1e3im
-    @test cav.zero_phase == PhaseRef.AboveTransition
-    @test cav.traveling_wave == false
-    @test cav.is_crabcavity == false
-    @test eltype(cav.RFParams) == ComplexF64
-    @test eltype(typeof(cav.RFParams)) == ComplexF64
-    @test cav.RFParams.rate_meaning == RateMeaning.RFFrequency
-    @test cav.rate_meaning == RateMeaning.RFFrequency
+  # Basic RF frequency mode
+  cav = RFCavity(rf_frequency=352e6, voltage=1e6, zero_phase=PhaseRef.AboveTransition)
+  @test isactive(cav.RFParams)
+  cav.voltage = 0
+  @test !isactive(cav.RFParams)
+  cav.voltage=1e6
+  @test isactive(cav.RFParams)
+  @test cav.RFParams.harmon_master == false
+  @test cav.harmon_master == false && cav.rf_frequency == 352e6
+  @test_throws ErrorException cav.harmon
+  cav.rf_frequency = 500e6 + 1e3im
+  @test cav.zero_phase == PhaseRef.AboveTransition
+  @test cav.traveling_wave == false
+  @test cav.is_crabcavity == false
+  @test eltype(cav.RFParams) == ComplexF64
+  @test eltype(typeof(cav.RFParams)) == ComplexF64
+  @test cav.RFParams.rate_meaning == RateMeaning.RFFrequency
+  @test cav.rate_meaning == RateMeaning.RFFrequency
 
-    # Basic Crab RF frequency mode
-    cav = CrabCavity(rf_frequency=352e6, voltage=1e6)
-    @test isactive(cav.RFParams)
-    cav.voltage = 0
-    @test !isactive(cav.RFParams)
-    cav.voltage=1e6
-    @test isactive(cav.RFParams)
-    @test cav.harmon_master == false && cav.rf_frequency == 352e6
-    @test_throws ErrorException cav.harmon
-    cav.rf_frequency = 500e6 + 1e3im
-    @test cav.zero_phase == PhaseRef.Accelerating
-    @test cav.traveling_wave == false
-    @test cav.is_crabcavity == true
-    @test eltype(cav.RFParams) == ComplexF64
-    @test eltype(typeof(cav.RFParams)) == ComplexF64
+  # Basic Crab RF frequency mode
+  cav = CrabCavity(rf_frequency=352e6, voltage=1e6)
+  @test isactive(cav.RFParams)
+  cav.voltage = 0
+  @test !isactive(cav.RFParams)
+  cav.voltage=1e6
+  @test isactive(cav.RFParams)
+  @test cav.harmon_master == false && cav.rf_frequency == 352e6
+  @test_throws ErrorException cav.harmon
+  cav.rf_frequency = 500e6 + 1e3im
+  @test cav.zero_phase == PhaseRef.Accelerating
+  @test cav.traveling_wave == false
+  @test cav.is_crabcavity == true
+  @test eltype(cav.RFParams) == ComplexF64
+  @test eltype(typeof(cav.RFParams)) == ComplexF64
 
-    # Harmonic number mode
-    cav2 = RFCavity(voltage = 200e6)
-    @test_throws ErrorException cav2.harmon_master
-    @test cav2.rate_meaning == RateMeaning.Indeterminate
-    cav2.harmon_master = true
-    @test cav2.rate_meaning == RateMeaning.Harmon
-    @test cav2.harmon_master == true
-    cav2.harmon = 1160
-    @test cav2.harmon == 1160 && cav2.harmon_master == true
-    @test_throws ErrorException cav2.harmon_master = false # Can't switch unless in Beamline
-    cav2.rf_frequency = 1e6 # switches independent variable to rf_frequency
-    @test cav2.harmon_master == false
-    @test cav2.rf_frequency == 1e6
+  # Harmonic number mode
+  cav2 = RFCavity(voltage = 200e6)
+  @test_throws ErrorException cav2.harmon_master
+  @test cav2.rate_meaning == RateMeaning.Indeterminate
+  cav2.harmon_master = true
+  @test cav2.rate_meaning == RateMeaning.Harmon
+  @test cav2.harmon_master == true
+  cav2.harmon = 1160
+  @test cav2.harmon == 1160 && cav2.harmon_master == true
+  @test_throws ErrorException cav2.harmon_master = false # Can't switch unless in Beamline
+  cav2.rf_frequency = 1e6 # switches independent variable to rf_frequency
+  @test cav2.harmon_master == false
+  @test cav2.rf_frequency == 1e6
     
-    # RFParams in Beamline
-    rf0 = RFCavity(L=10, harmon=20)
-    fline = Beamline([rf0, Drift(L=20)], species_ref=Species("proton"), pc_ref=1e8)
-    @test rf0.harmon_master == true
-    @test rf0.harmon == 20
-    rf0 = fline.line[1]
-    @test rf0.rf_frequency ≈ 0.2118107321845737E+08
-    rf0.harmon_master = false
-    @test rf0.harmon_master == false
-    @test rf0.harmon ≈ 20
-    @test rf0.rf_frequency ≈ 0.2118107321845737E+08
+  # RFParams in Beamline
+  rf0 = RFCavity(L=10, harmon=20)
+  fline = Beamline([rf0, Drift(L=20)], species_ref=Species("proton"), pc_ref=1e8)
+  @test rf0.harmon_master == true
+  @test rf0.harmon == 20
+  rf0 = fline.line[1]
+  @test rf0.rf_frequency ≈ 0.2118107321845737E+08
+  rf0.harmon_master = false
+  @test rf0.harmon_master == false
+  @test rf0.harmon ≈ 20
+  @test rf0.rf_frequency ≈ 0.2118107321845737E+08
 
-    rf0.rf_frequency = 0.2118107321845737E+08
-    @test rf0.harmon_master == false
-    @test rf0.rf_frequency ≈ 0.2118107321845737E+08
-    @test rf0.harmon ≈ 20
+  rf0.rf_frequency = 0.2118107321845737E+08
+  @test rf0.harmon_master == false
+  @test rf0.rf_frequency ≈ 0.2118107321845737E+08
+  @test rf0.harmon ≈ 20
 
-    rf0.harmon = 20
-    @test rf0.harmon_master == true
-    @test rf0.rf_frequency ≈ 0.2118107321845737E+08
-    @test rf0.harmon ≈ 20
+  rf0.harmon = 20
+  @test rf0.harmon_master == true
+  @test rf0.rf_frequency ≈ 0.2118107321845737E+08
+  @test rf0.harmon ≈ 20
 
-    rf0.harmon_master = true
-    @test rf0.harmon_master == true
-    @test rf0.rf_frequency ≈ 0.2118107321845737E+08
-    @test rf0.harmon ≈ 20
+  rf0.harmon_master = true
+  @test rf0.harmon_master == true
+  @test rf0.rf_frequency ≈ 0.2118107321845737E+08
+  @test rf0.harmon ≈ 20
 
-    rf0.harmon = 20
-    @test rf0.harmon_master == true
-    @test rf0.rf_frequency ≈ 0.2118107321845737E+08
-    @test rf0.harmon ≈ 20
+  rf0.harmon = 20
+  @test rf0.harmon_master == true
+  @test rf0.rf_frequency ≈ 0.2118107321845737E+08
+  @test rf0.harmon ≈ 20
 
-    rf0.rf_frequency = 0.2118107321845737E+08
-    @test rf0.harmon_master == false
-    @test rf0.rf_frequency ≈ 0.2118107321845737E+08
-    @test rf0.harmon ≈ 20
+  rf0.rf_frequency = 0.2118107321845737E+08
+  @test rf0.harmon_master == false
+  @test rf0.rf_frequency ≈ 0.2118107321845737E+08
+  @test rf0.harmon ≈ 20
 
-    @test LatElement(harmon_master=true).harmon_master == true
-    @test_throws ErrorException RFParams(harmon_master=false, rate_meaning=RateMeaning.Harmon)
+  @test LatElement(harmon_master=true).harmon_master == true
+  @test_throws ErrorException RFParams(harmon_master=false, rate_meaning=RateMeaning.Harmon)
 
-    # RFParams bug check
-    rf0 = RFCavity(L =  2.29999999999999982E+000, zero_phase = PhaseRef.AboveTransition,
-        rf_frequency =  5.91158776766067386E+008)
-    @test rf0.zero_phase == PhaseRef.AboveTransition
+  # RFParams bug check
+  rf0 = RFCavity(L =  2.29999999999999982E+000, zero_phase = PhaseRef.AboveTransition,
+      rf_frequency =  5.91158776766067386E+008)
+  @test rf0.zero_phase == PhaseRef.AboveTransition
 
-    bo = 1.23
-    dbo = DefExpr(()->bo)
+  bo = 1.23
+  dbo = DefExpr(()->bo)
 
-    ele = LatElement(
-      x_offset = dbo,
-      y_offset = dbo + 1,
-      z_offset = dbo + 2,
-      x_rot    = dbo + 3,
-      y_rot    = dbo + 4,
-      tilt     = dbo + 5,
-      x1_limit = dbo + 6,
-      x2_limit = dbo + 7,
-      y1_limit = dbo + 8,
-      y2_limit = dbo + 9,
-      g_ref    = dbo + 13,
-      tilt_ref = dbo + 14,
-      e1       = dbo + 15,
-      e2       = dbo + 16 ,
-      Kn1   = dbo + 17,
-      Bn2L  = dbo + 18,
-      tilt3 = dbo + 19,
-      dt     = dbo + 20,
-      dx     = dbo + 21,
-      dy     = dbo + 22,
-      dz     = dbo + 23,
-      dx_rot = dbo + 24,
-      dy_rot = dbo + 25,
-      dz_rot = dbo + 26,
-      rf_frequency = dbo + 27,
-      voltage = dbo + 28,
-      phi0 = dbo + 29,
-      edge1_int = dbo + 30,
-      edge2_int = dbo + 31,
-    )
+  ele = LatElement(
+    x_offset = dbo,
+    y_offset = dbo + 1,
+    z_offset = dbo + 2,
+    x_rot    = dbo + 3,
+    y_rot    = dbo + 4,
+    tilt     = dbo + 5,
+    x1_limit = dbo + 6,
+    x2_limit = dbo + 7,
+    y1_limit = dbo + 8,
+    y2_limit = dbo + 9,
+    g_ref    = dbo + 13,
+    tilt_ref = dbo + 14,
+    e1       = dbo + 15,
+    e2       = dbo + 16 ,
+    Kn1   = dbo + 17,
+    Bn2L  = dbo + 18,
+    tilt3 = dbo + 19,
+    dt     = dbo + 20,
+    dx     = dbo + 21,
+    dy     = dbo + 22,
+    dz     = dbo + 23,
+    dx_rot = dbo + 24,
+    dy_rot = dbo + 25,
+    dz_rot = dbo + 26,
+    rf_frequency = dbo + 27,
+    voltage = dbo + 28,
+    phi0 = dbo + 29,
+    edge1_int = dbo + 30,
+    edge2_int = dbo + 31,
+  )
 
-    bo = 2.34
-    @test Beamlines.deval(ele.AlignmentParams) ≈ AlignmentParams(bo, bo + 1, bo + 2, bo + 3, bo + 4, bo + 5)
-    @test Beamlines.deval(ele.ApertureParams ) ≈ ApertureParams(bo + 6, bo + 7, bo + 8, bo + 9, ApertureShape.Elliptical, ApertureAt.Entrance, true)
-    @test Beamlines.deval(ele.BendParams) ≈ BendParams(bo + 13, bo + 14, bo + 15, bo + 16, bo + 30, bo + 31)
-    n = Beamlines.SizedVector{3}([bo+17, bo+18, 0])
-    s = zero(n)
-    tilt = Beamlines.SizedVector{3}([0, 0, bo+19])
-    order = Beamlines.SA[2, 3, 4]
-    normalized = Beamlines.SA[true, false, true]
-    integrated = Beamlines.SA[false, true, true]
-    @test Beamlines.deval(ele.BMultipoleParams) ≈ BMultipoleParams(n, s, tilt, order, normalized, integrated)
-    @test Beamlines.deval(ele.PatchParams) ≈ PatchParams(bo + 20, bo + 21, bo + 22, bo + 23, bo + 24, bo + 25, bo + 26)
-    @test Beamlines.deval(ele.RFParams) ≈ RFParams(bo + 27, bo + 28, bo + 29, RateMeaning.RFFrequency, PhaseRef.Accelerating, false, false)
+  bo = 2.34
+  @test Beamlines.deval(ele.AlignmentParams) ≈ AlignmentParams(bo, bo + 1, bo + 2, bo + 3, bo + 4, bo + 5)
+  @test Beamlines.deval(ele.ApertureParams ) ≈ ApertureParams(bo + 6, bo + 7, bo + 8, bo + 9, ApertureShape.Elliptical, ApertureAt.Entrance, true)
+  @test Beamlines.deval(ele.BendParams) ≈ BendParams(bo + 13, bo + 14, bo + 15, bo + 16, bo + 30, bo + 31)
+  n = Beamlines.SizedVector{3}([bo+17, bo+18, 0])
+  s = zero(n)
+  tilt = Beamlines.SizedVector{3}([0, 0, bo+19])
+  order = Beamlines.SA[2, 3, 4]
+  normalized = Beamlines.SA[true, false, true]
+  integrated = Beamlines.SA[false, true, true]
+  @test Beamlines.deval(ele.BMultipoleParams) ≈ BMultipoleParams(n, s, tilt, order, normalized, integrated)
+  @test Beamlines.deval(ele.PatchParams) ≈ PatchParams(bo + 20, bo + 21, bo + 22, bo + 23, bo + 24, bo + 25, bo + 26)
+  @test Beamlines.deval(ele.RFParams) ≈ RFParams(bo + 27, bo + 28, bo + 29, RateMeaning.RFFrequency, PhaseRef.Accelerating, false, false)
 
-    # Species addition
-    bl = Beamline([LatElement(), LatElement()]; p_over_q_ref=-59.52872449027632, species_ref=Species("electron"))
-    @test bl.species_ref == Species("electron")
-    @test bl.p_over_q_ref == -59.52872449027632
-    @test bl.pc_ref ≈ 1.7846262612447e10
-    @test bl.E_ref ≈ 1.784626264386055e10
-    @test sqrt(bl.E_ref^2-bl.pc_ref^2) ≈ Beamlines.massof(bl.species_ref)
-    bl = Beamline([LatElement(), LatElement()]; pc_ref=1.7846262612447e10, species_ref=Species("electron"))
-    @test bl.species_ref == Species("electron")
-    @test bl.p_over_q_ref ≈ -59.52872449027632
-    @test bl.pc_ref ≈ 1.7846262612447e10
-    @test bl.E_ref ≈ 1.784626264386055e10
-    @test sqrt(bl.E_ref^2-bl.pc_ref^2) ≈ Beamlines.massof(bl.species_ref)
-    bl = Beamline([LatElement(), LatElement()]; E_ref=1.784626264386055e10, species_ref=Species("electron"))
-    @test bl.species_ref == Species("electron")
-    @test bl.p_over_q_ref ≈ -59.52872449027632
-    @test bl.pc_ref ≈ 1.7846262612447e10
-    @test bl.E_ref ≈ 1.784626264386055e10
-    @test abs(bl.pc_ref*sinh(acosh(bl.E_ref/bl.pc_ref)) - Beamlines.massof(bl.species_ref)) < 0.41 # Round off error here
+  # Species addition
+  bl = Beamline([LatElement(), LatElement()]; p_over_q_ref=-59.52872449027632, species_ref=Species("electron"))
+  @test bl.species_ref == Species("electron")
+  @test bl.p_over_q_ref == -59.52872449027632
+  @test bl.pc_ref ≈ 1.7846262612447e10
+  @test bl.E_ref ≈ 1.784626264386055e10
+  @test sqrt(bl.E_ref^2-bl.pc_ref^2) ≈ Beamlines.massof(bl.species_ref)
+  bl = Beamline([LatElement(), LatElement()]; pc_ref=1.7846262612447e10, species_ref=Species("electron"))
+  @test bl.species_ref == Species("electron")
+  @test bl.p_over_q_ref ≈ -59.52872449027632
+  @test bl.pc_ref ≈ 1.7846262612447e10
+  @test bl.E_ref ≈ 1.784626264386055e10
+  @test sqrt(bl.E_ref^2-bl.pc_ref^2) ≈ Beamlines.massof(bl.species_ref)
+  bl = Beamline([LatElement(), LatElement()]; E_ref=1.784626264386055e10, species_ref=Species("electron"))
+  @test bl.species_ref == Species("electron")
+  @test bl.p_over_q_ref ≈ -59.52872449027632
+  @test bl.pc_ref ≈ 1.7846262612447e10
+  @test bl.E_ref ≈ 1.784626264386055e10
+  @test abs(bl.pc_ref*sinh(acosh(bl.E_ref/bl.pc_ref)) - Beamlines.massof(bl.species_ref)) < 0.41 # Round off error here
 
-    @test_throws ErrorException bl.dp_over_q_ref
-    @test_throws ErrorException bl.dE_ref
-    @test_throws ErrorException bl.dpc_ref
-    @test bl.line[1].E_ref == bl.E_ref
-    @test bl.line[1].p_over_q_ref == bl.p_over_q_ref
-    @test bl.line[1].pc_ref == bl.pc_ref
-    @test bl.line[2].E_ref == bl.E_ref
-    @test bl.line[2].p_over_q_ref == bl.p_over_q_ref
-    @test bl.line[2].pc_ref == bl.pc_ref
+  @test_throws ErrorException bl.dp_over_q_ref
+  @test_throws ErrorException bl.dE_ref
+  @test_throws ErrorException bl.dpc_ref
+  @test bl.line[1].E_ref == bl.E_ref
+  @test bl.line[1].p_over_q_ref == bl.p_over_q_ref
+  @test bl.line[1].pc_ref == bl.pc_ref
+  @test bl.line[2].E_ref == bl.E_ref
+  @test bl.line[2].p_over_q_ref == bl.p_over_q_ref
+  @test bl.line[2].pc_ref == bl.pc_ref
 
-    @test Beamline([Marker()], species_ref=Species("electron"), p_over_q_ref = 10).p_over_q_ref == -10
-    ele = LatElement()
-    bl1 = Beamline([ele])
-    bl = Beamline([Marker()], species_ref=Species("electron"), p_over_q_ref = 10)
-    @test bl.p_over_q_ref == -10
-    @test (bl.pc_ref = 0; bl.p_over_q_ref) == 0
-    @test (bl.E_ref = Beamlines.massof(Species("electron")); bl.p_over_q_ref) == 0
-    bl.p_over_q_ref = 10
-    @test bl.p_over_q_ref == -10
+  @test Beamline([Marker()], species_ref=Species("electron"), p_over_q_ref = 10).p_over_q_ref == -10
+  ele = LatElement()
+  bl1 = Beamline([ele])
+  bl = Beamline([Marker()], species_ref=Species("electron"), p_over_q_ref = 10)
+  @test bl.p_over_q_ref == -10
+  @test (bl.pc_ref = 0; bl.p_over_q_ref) == 0
+  @test (bl.E_ref = Beamlines.massof(Species("electron")); bl.p_over_q_ref) == 0
+  bl.p_over_q_ref = 10
+  @test bl.p_over_q_ref == -10
 
-    @test_throws ErrorException Beamline([Marker()]).species_ref
+  @test_throws ErrorException Beamline([Marker()]).species_ref
 
-    # Get write-only property
-    @test_throws ErrorException LatElement(angle=1.0).angle
+  # Get write-only property
+  @test_throws ErrorException LatElement(angle=1.0).angle
 
-    # Test dR etc
-    bl = Beamline([Marker()]; dp_over_q_ref=-59.52872449027632, species_ref=Species("electron"))
-    @test bl.species_ref == Species("electron")
-    @test bl.dp_over_q_ref == -59.52872449027632
-    @test_throws ErrorException bl.dpc_ref
-    @test_throws ErrorException bl.dE_ref
-    @test_throws ErrorException bl.p_over_q_ref
-    @test_throws ErrorException bl.E_ref
-    @test_throws ErrorException bl.pc_ref
-    bl = Beamline([Marker()]; dpc_ref=1.7846262612447e10, species_ref=Species("electron"))
-    @test bl.species_ref == Species("electron")
-    @test bl.dpc_ref == 1.7846262612447e10
-    @test_throws ErrorException bl.dp_over_q_ref
-    @test_throws ErrorException bl.dE_ref
-    @test_throws ErrorException bl.p_over_q_ref
-    @test_throws ErrorException bl.E_ref
-    @test_throws ErrorException bl.pc_ref
-    bl = Beamline([Marker()]; dE_ref=1.784626264386055e10, species_ref=Species("electron"))
-    @test bl.species_ref == Species("electron")
-    @test bl.dE_ref == 1.784626264386055e10
-    @test_throws ErrorException bl.dpc_ref
-    @test_throws ErrorException bl.dp_over_q_ref
-    @test_throws ErrorException bl.E_ref 
-    @test_throws ErrorException bl.p_over_q_ref
-    @test_throws ErrorException bl.pc_ref
+  # Test dR etc
+  bl = Beamline([Marker()]; dp_over_q_ref=-59.52872449027632, species_ref=Species("electron"))
+  @test bl.species_ref == Species("electron")
+  @test bl.dp_over_q_ref == -59.52872449027632
+  @test_throws ErrorException bl.dpc_ref
+  @test_throws ErrorException bl.dE_ref
+  @test_throws ErrorException bl.p_over_q_ref
+  @test_throws ErrorException bl.E_ref
+  @test_throws ErrorException bl.pc_ref
+  bl = Beamline([Marker()]; dpc_ref=1.7846262612447e10, species_ref=Species("electron"))
+  @test bl.species_ref == Species("electron")
+  @test bl.dpc_ref == 1.7846262612447e10
+  @test_throws ErrorException bl.dp_over_q_ref
+  @test_throws ErrorException bl.dE_ref
+  @test_throws ErrorException bl.p_over_q_ref
+  @test_throws ErrorException bl.E_ref
+  @test_throws ErrorException bl.pc_ref
+  bl = Beamline([Marker()]; dE_ref=1.784626264386055e10, species_ref=Species("electron"))
+  @test bl.species_ref == Species("electron")
+  @test bl.dE_ref == 1.784626264386055e10
+  @test_throws ErrorException bl.dpc_ref
+  @test_throws ErrorException bl.dp_over_q_ref
+  @test_throws ErrorException bl.E_ref 
+  @test_throws ErrorException bl.p_over_q_ref
+  @test_throws ErrorException bl.pc_ref
 
-    # InitialBeamlineParams
-    ele = LatElement(species_ref=Species("electron"))
-    @test Beamline([ele]).species_ref == Species("electron")
-    ele = LatElement(species_ref=Species("electron"), dp_over_q_ref=-59.52872449027632)
-    @test ele.dp_over_q_ref == -59.52872449027632
-    @test_throws ErrorException ele.dpc_ref
-    @test_throws ErrorException ele.dE_ref 
-    ele.dpc_ref = 1.7846262612447e10
-    @test ele.dpc_ref == 1.7846262612447e10
-    @test_throws ErrorException ele.dp_over_q_ref
-    @test_throws ErrorException ele.dE_ref
-    ele.dE_ref = 1.784626264386055e10
-    @test ele.dE_ref == 1.784626264386055e10
-    @test_throws ErrorException ele.dp_over_q_ref 
-    @test_throws ErrorException ele.dpc_ref
-    ele.species_ref = Species("proton")
-    @test ele.species_ref == Species("proton")
-    @test ele.dE_ref == 1.784626264386055e10
-    @test_throws ErrorException ele.dp_over_q_ref 
-    @test_throws ErrorException ele.dpc_ref
-    ele.E_ref = ele.dE_ref
-    ele.species_ref = Species("electron")
-    @test ele.species_ref == Species("electron")
-    @test ele.p_over_q_ref ≈ -59.52872449027632
-    @test ele.pc_ref ≈ 1.7846262612447e10
-    @test ele.E_ref ≈ 1.784626264386055e10
-    ele.pc_ref = 1.7846262612447e10
-    @test ele.p_over_q_ref ≈ -59.52872449027632
-    @test ele.pc_ref ≈ 1.7846262612447e10
-    @test ele.E_ref ≈ 1.784626264386055e10
-    ele.p_over_q_ref = -59.52872449027632
-    @test ele.p_over_q_ref ≈ -59.52872449027632
-    @test ele.pc_ref ≈ 1.7846262612447e10
-    @test ele.E_ref ≈ 1.784626264386055e10
+  # InitialBeamlineParams
+  ele = LatElement(species_ref=Species("electron"))
+  @test Beamline([ele]).species_ref == Species("electron")
+  ele = LatElement(species_ref=Species("electron"), dp_over_q_ref=-59.52872449027632)
+  @test ele.dp_over_q_ref == -59.52872449027632
+  @test_throws ErrorException ele.dpc_ref
+  @test_throws ErrorException ele.dE_ref 
+  ele.dpc_ref = 1.7846262612447e10
+  @test ele.dpc_ref == 1.7846262612447e10
+  @test_throws ErrorException ele.dp_over_q_ref
+  @test_throws ErrorException ele.dE_ref
+  ele.dE_ref = 1.784626264386055e10
+  @test ele.dE_ref == 1.784626264386055e10
+  @test_throws ErrorException ele.dp_over_q_ref 
+  @test_throws ErrorException ele.dpc_ref
+  ele.species_ref = Species("proton")
+  @test ele.species_ref == Species("proton")
+  @test ele.dE_ref == 1.784626264386055e10
+  @test_throws ErrorException ele.dp_over_q_ref 
+  @test_throws ErrorException ele.dpc_ref
+  ele.E_ref = ele.dE_ref
+  ele.species_ref = Species("electron")
+  @test ele.species_ref == Species("electron")
+  @test ele.p_over_q_ref ≈ -59.52872449027632
+  @test ele.pc_ref ≈ 1.7846262612447e10
+  @test ele.E_ref ≈ 1.784626264386055e10
+  ele.pc_ref = 1.7846262612447e10
+  @test ele.p_over_q_ref ≈ -59.52872449027632
+  @test ele.pc_ref ≈ 1.7846262612447e10
+  @test ele.E_ref ≈ 1.784626264386055e10
+  ele.p_over_q_ref = -59.52872449027632
+  @test ele.p_over_q_ref ≈ -59.52872449027632
+  @test ele.pc_ref ≈ 1.7846262612447e10
+  @test ele.E_ref ≈ 1.784626264386055e10
 
-    # Get before setting anything
-    @test_throws ErrorException LatElement().E_ref
-    @test_throws ErrorException LatElement().species_ref
-    @test_throws ErrorException LatElement(E_ref=18e9).species_ref
-    @test_throws ErrorException LatElement(species_ref=Species("electron")).p_over_q_ref
+  # Get before setting anything
+  @test_throws ErrorException LatElement().E_ref
+  @test_throws ErrorException LatElement().species_ref
+  @test_throws ErrorException LatElement(E_ref=18e9).species_ref
+  @test_throws ErrorException LatElement(species_ref=Species("electron")).p_over_q_ref
 
-     # Only valid at first element
-    bl = Beamline([LatElement(), LatElement()], E_ref=10e9, species_ref=Species("electron"))
-    @test_throws ErrorException bl.line[2].E_ref = 2e9
-    bl.line[1].E_ref = 2e9
-    @test bl.line[1].E_ref == 2e9
-    @test bl.line[2].E_ref == 2e9
-    @test bl.line[2].dp_over_q_ref == 0
-    @test bl.line[2].dE_ref == 0
-    @test bl.line[2].dpc_ref == 0
-    @test_throws ErrorException bl.line[1].dp_over_q_ref
-    @test_throws ErrorException bl.line[1].dE_ref
-    @test_throws ErrorException bl.line[1].dpc_ref
-    @test_throws ErrorException bl.dp_over_q_ref
-    @test_throws ErrorException bl.dE_ref
-    @test_throws ErrorException bl.dpc_ref
-    @test_throws ErrorException Beamline([LatElement(), LatElement(species_ref=Species("electron"))])
-    @test_throws ErrorException Beamline([LatElement(), LatElement(p_over_q_ref=-39.)])
-    @test_throws ErrorException Beamline([LatElement(), LatElement(E_ref=10e9, species_ref=Species("electron"))])
+   # Only valid at first element
+  bl = Beamline([LatElement(), LatElement()], E_ref=10e9, species_ref=Species("electron"))
+  @test_throws ErrorException bl.line[2].E_ref = 2e9
+  bl.line[1].E_ref = 2e9
+  @test bl.line[1].E_ref == 2e9
+  @test bl.line[2].E_ref == 2e9
+  @test bl.line[2].dp_over_q_ref == 0
+  @test bl.line[2].dE_ref == 0
+  @test bl.line[2].dpc_ref == 0
+  @test_throws ErrorException bl.line[1].dp_over_q_ref
+  @test_throws ErrorException bl.line[1].dE_ref
+  @test_throws ErrorException bl.line[1].dpc_ref
+  @test_throws ErrorException bl.dp_over_q_ref
+  @test_throws ErrorException bl.dE_ref
+  @test_throws ErrorException bl.dpc_ref
+  @test_throws ErrorException Beamline([LatElement(), LatElement(species_ref=Species("electron"))])
+  @test_throws ErrorException Beamline([LatElement(), LatElement(p_over_q_ref=-39.)])
+  @test_throws ErrorException Beamline([LatElement(), LatElement(E_ref=10e9, species_ref=Species("electron"))])
 
-    # Overriding InitialBeamlineParams at Beamline level
-    ele = LatElement(species_ref=Species("electron"), pc_ref=1.0)
-    bl = Beamline([ele]; species_ref=Species("proton"), pc_ref=2.0)
-    @test ele.species_ref == Species("electron")
-    @test bl.line[1].species_ref == Species("proton")
-    @test bl.line[1].pc_ref == 2.0
-    @test ele.pc_ref == 1.0
-    # set thru first element
-    ele.pc_ref = 3.0
-    @test ele.pc_ref == 3.0
-    # last cov
-    bl.line[1].InitialBeamlineParams.ref = 4.0
-    @test bl.pc_ref == 4.0
-    @test bl.line[1].InitialBeamlineParams.ref == 4.0
-    @test ele.pc_ref == 3.0
+  # Overriding InitialBeamlineParams at Beamline level
+  ele = LatElement(species_ref=Species("electron"), pc_ref=1.0)
+  bl = Beamline([ele]; species_ref=Species("proton"), pc_ref=2.0)
+  @test ele.species_ref == Species("electron")
+  @test bl.line[1].species_ref == Species("proton")
+  @test bl.line[1].pc_ref == 2.0
+  @test ele.pc_ref == 1.0
+  # set thru first element
+  ele.pc_ref = 3.0
+  @test ele.pc_ref == 3.0
+  # last cov
+  bl.line[1].InitialBeamlineParams.ref = 4.0
+  @test bl.pc_ref == 4.0
+  @test bl.line[1].InitialBeamlineParams.ref == 4.0
+  @test ele.pc_ref == 3.0
 
-    # Branches now
-    bl1 = Beamline([Marker()]; E_ref=10e9, species_ref=Species("electron"))
-    bl2 = Beamline([Marker()]; dE_ref=-3e9, species_ref=Species("proton"))
-    @test_throws ErrorException bl1.dE_ref
-    @test_throws ErrorException bl2.dpc_ref
-    @test_throws ErrorException bl2.dp_over_q_ref
-    @test bl2.dE_ref == -3e9
-    branch = Branch([bl1, bl2])
-    bl1, bl2 = branch.beamlines # The Branch holds copies of the Beamlines
-    @test bl2.E_ref == 7e9
-    @test bl2.species_ref == Species("proton")
-    @test bl2.dE_ref == -3e9
-    @test bl1.dE_ref == 10e9 - Beamlines.massof(Species("electron"))
-    @test bl2.p_over_q_ref - bl1.p_over_q_ref ≈ bl2.dp_over_q_ref
-    @test bl2.E_ref - bl1.E_ref ≈ bl2.dE_ref
-    @test bl2.pc_ref - bl1.pc_ref ≈ bl2.dpc_ref
-    @test bl2.p_over_q_ref ≈ Beamlines.E_to_R(bl2.species_ref, bl2.E_ref)
-    @test bl2.pc_ref ≈ Beamlines.E_to_pc(bl2.species_ref, bl2.E_ref)
+  # Branches now
+  bl1 = Beamline([Marker()]; E_ref=10e9, species_ref=Species("electron"))
+  bl2 = Beamline([Marker()]; dE_ref=-3e9, species_ref=Species("proton"))
+  @test_throws ErrorException bl1.dE_ref
+  @test_throws ErrorException bl2.dpc_ref
+  @test_throws ErrorException bl2.dp_over_q_ref
+  @test bl2.dE_ref == -3e9
+  branch = Branch([bl1, bl2])
+  bl1, bl2 = branch.beamlines # The Branch holds copies of the Beamlines
+  @test bl2.E_ref == 7e9
+  @test bl2.species_ref == Species("proton")
+  @test bl2.dE_ref == -3e9
+  @test bl1.dE_ref == 10e9 - Beamlines.massof(Species("electron"))
+  @test bl2.p_over_q_ref - bl1.p_over_q_ref ≈ bl2.dp_over_q_ref
+  @test bl2.E_ref - bl1.E_ref ≈ bl2.dE_ref
+  @test bl2.pc_ref - bl1.pc_ref ≈ bl2.dpc_ref
+  @test bl2.p_over_q_ref ≈ Beamlines.E_to_R(bl2.species_ref, bl2.E_ref)
+  @test bl2.pc_ref ≈ Beamlines.E_to_pc(bl2.species_ref, bl2.E_ref)
 
-    bl2.dpc_ref = -2e9
-    bl1.p_over_q_ref = -40
-    @test bl2.dpc_ref == -2e9
-    @test bl1.p_over_q_ref == -40
-    @test bl2.pc_ref - bl1.pc_ref ≈ bl2.dpc_ref
-    @test bl2.E_ref - bl1.E_ref ≈ bl2.dE_ref
-    @test bl2.p_over_q_ref - bl1.p_over_q_ref ≈ bl2.dp_over_q_ref
+  bl2.dpc_ref = -2e9
+  bl1.p_over_q_ref = -40
+  @test bl2.dpc_ref == -2e9
+  @test bl1.p_over_q_ref == -40
+  @test bl2.pc_ref - bl1.pc_ref ≈ bl2.dpc_ref
+  @test bl2.E_ref - bl1.E_ref ≈ bl2.dE_ref
+  @test bl2.p_over_q_ref - bl1.p_over_q_ref ≈ bl2.dp_over_q_ref
 
-    bl2.dp_over_q_ref = -5
-    bl1.pc_ref = 9e9
-    @test bl2.pc_ref - bl1.pc_ref ≈ bl2.dpc_ref
-    @test bl2.E_ref - bl1.E_ref ≈ bl2.dE_ref
-    @test bl2.p_over_q_ref - bl1.p_over_q_ref ≈ bl2.dp_over_q_ref
+  bl2.dp_over_q_ref = -5
+  bl1.pc_ref = 9e9
+  @test bl2.pc_ref - bl1.pc_ref ≈ bl2.dpc_ref
+  @test bl2.E_ref - bl1.E_ref ≈ bl2.dE_ref
+  @test bl2.p_over_q_ref - bl1.p_over_q_ref ≈ bl2.dp_over_q_ref
 
-    bl2.E_ref = 10e9
-    @test bl2.E_ref == 10e9
-    @test bl2.pc_ref - bl1.pc_ref ≈ bl2.dpc_ref
-    @test bl2.E_ref - bl1.E_ref ≈ bl2.dE_ref
-    @test bl2.p_over_q_ref - bl1.p_over_q_ref ≈ bl2.dp_over_q_ref
+  bl2.E_ref = 10e9
+  @test bl2.E_ref == 10e9
+  @test bl2.pc_ref - bl1.pc_ref ≈ bl2.dpc_ref
+  @test bl2.E_ref - bl1.E_ref ≈ bl2.dE_ref
+  @test bl2.p_over_q_ref - bl1.p_over_q_ref ≈ bl2.dp_over_q_ref
 
-    @test_throws ErrorException Beamline([Marker()]; pc_ref=1, dp_over_q_ref=2)
-    @test_throws ErrorException Beamline([Marker()]).branch
-    @test (bl = Beamline([Marker()]; E_ref=10); branch = Branch([bl]); branch.beamlines[1].E_ref) == 10
-    @test_throws ErrorException Beamline([Marker()]).branch_index = 1
-    @test_throws ErrorException Beamline([Marker()]).branch = Beamlines.NULL_BRANCH
-    @test_throws ErrorException Beamline([Marker()]).ref_meaning = Beamlines.RefMeaning.p_over_q_ref
+  @test_throws ErrorException Beamline([Marker()]; pc_ref=1, dp_over_q_ref=2)
+  @test_throws ErrorException Beamline([Marker()]).branch
+  @test (bl = Beamline([Marker()]; E_ref=10); branch = Branch([bl]); branch.beamlines[1].E_ref) == 10
+  @test_throws ErrorException Beamline([Marker()]).branch_index = 1
+  @test_throws ErrorException Beamline([Marker()]).branch = Beamlines.NULL_BRANCH
+  @test_throws ErrorException Beamline([Marker()]).ref_meaning = Beamlines.RefMeaning.p_over_q_ref
     
-    bl = Beamline([Marker()])
-    branch = Branch([bl])
-    @test getfield(bl, :branch_index) == -1 # Original is not put in the Branch
-    @test branch.beamlines[1].line[1].parent === bl.line[1] # Elements are children of bl's
-    @test bl.line[1].beamline === bl                        # bl is not modified
+  bl = Beamline([Marker()])
+  branch = Branch([bl])
+  @test getfield(bl, :branch_index) == -1 # Original is not put in the Branch
+  @test branch.beamlines[1].line[1].parent === bl.line[1] # Elements are children of bl's
+  @test bl.line[1].beamline === bl                        # bl is not modified
 
-    @test Branch([Beamline([Marker()]; dp_over_q_ref=10.)]).beamlines[1].p_over_q_ref == 10.
+  @test Branch([Beamline([Marker()]; dp_over_q_ref=10.)]).beamlines[1].p_over_q_ref == 10.
 
-    # Branch LatElement ctor:
-    ele1 = LatElement(E_ref=10e9, species_ref=Species("electron"))
-    ele1a = LatElement()
-    ele2 = LatElement(dE_ref=-3e9, species_ref=Species("proton"))
-    ele2a = LatElement()
-    ele2b = LatElement()
-    branch = Branch([ele1, ele1a, ele2, ele2a, ele2b])
-    @test all(branch.beamlines[1].line .≈ [ele1, ele1a])
-    @test all(branch.beamlines[2].line .≈ [ele2, ele2a, ele2b])
-    bl1 = branch.beamlines[1]
-    bl2 = branch.beamlines[2]
-    @test bl2.E_ref == 7e9
-    @test bl2.species_ref == Species("proton")
-    @test bl2.dE_ref == -3e9
-    @test bl1.dE_ref == 10e9 - Beamlines.massof(Species("electron"))
-    @test bl2.p_over_q_ref - bl1.p_over_q_ref ≈ bl2.dp_over_q_ref
-    @test bl2.E_ref - bl1.E_ref ≈ bl2.dE_ref
-    @test bl2.pc_ref - bl1.pc_ref ≈ bl2.dpc_ref
-    @test bl2.p_over_q_ref ≈ Beamlines.E_to_R(bl2.species_ref, bl2.E_ref)
-    @test bl2.pc_ref ≈ Beamlines.E_to_pc(bl2.species_ref, bl2.E_ref)
-    bl2.dpc_ref = -2e9
-    bl1.p_over_q_ref = -40
-    @test bl2.dpc_ref == -2e9
-    @test bl1.p_over_q_ref == -40
-    @test bl2.pc_ref - bl1.pc_ref ≈ bl2.dpc_ref
-    @test bl2.E_ref - bl1.E_ref ≈ bl2.dE_ref
-    @test bl2.p_over_q_ref - bl1.p_over_q_ref ≈ bl2.dp_over_q_ref
-    bl2.dp_over_q_ref = -5
-    bl1.pc_ref = 9e9
-    @test bl2.pc_ref - bl1.pc_ref ≈ bl2.dpc_ref
-    @test bl2.E_ref - bl1.E_ref ≈ bl2.dE_ref
-    @test bl2.p_over_q_ref - bl1.p_over_q_ref ≈ bl2.dp_over_q_ref
-    bl2.E_ref = 10e9
-    @test bl2.E_ref == 10e9
-    @test bl2.pc_ref - bl1.pc_ref ≈ bl2.dpc_ref
-    @test bl2.E_ref - bl1.E_ref ≈ bl2.dE_ref
-    @test bl2.p_over_q_ref - bl1.p_over_q_ref ≈ bl2.dp_over_q_ref
-
-
-    # Check that InitialBeamlineParams is overridden:
-    ele1 = LatElement(E_ref=10e9, species_ref=Species("electron"))
-    ele1a = LatElement()
-    branch = Branch([ele1, ele1a]; species_ref0=Species("proton"), E_ref0=20e9)
-    @test all(isapprox_ignoring.(branch.beamlines[1].line, [ele1, ele1a], InitialBeamlineParams))
-    bl1 = branch.beamlines[1]
-    @test bl1.E_ref == 20e9
-    @test bl1.species_ref == Species("proton")
-
-    ele1 = LatElement(E_ref=10e9, species_ref=Species("electron"))
-    ele1a = LatElement()
-    ele2 = LatElement(dE_ref=-3e9, species_ref=Species("proton"))
-    ele2a = LatElement()
-    ele2b = LatElement()
-    branch = Branch([ele1, ele1a, ele2, ele2a, ele2b]; species_ref0=Species("proton"), E_ref0=20e9)
-    @test all(isapprox_ignoring.(branch.beamlines[1].line, [ele1, ele1a], InitialBeamlineParams))
-    @test all(branch.beamlines[2].line .≈ [ele2, ele2a, ele2b])
-    bl1 = branch.beamlines[1]
-    bl2 = branch.beamlines[2]
-    @test bl1.E_ref == 20e9
-    @test bl1.species_ref == Species("proton")
+  # Branch LatElement ctor:
+  ele1 = LatElement(E_ref=10e9, species_ref=Species("electron"))
+  ele1a = LatElement()
+  ele2 = LatElement(dE_ref=-3e9, species_ref=Species("proton"))
+  ele2a = LatElement()
+  ele2b = LatElement()
+  branch = Branch([ele1, ele1a, ele2, ele2a, ele2b])
+  @test all(branch.beamlines[1].line .≈ [ele1, ele1a])
+  @test all(branch.beamlines[2].line .≈ [ele2, ele2a, ele2b])
+  bl1 = branch.beamlines[1]
+  bl2 = branch.beamlines[2]
+  @test bl2.E_ref == 7e9
+  @test bl2.species_ref == Species("proton")
+  @test bl2.dE_ref == -3e9
+  @test bl1.dE_ref == 10e9 - Beamlines.massof(Species("electron"))
+  @test bl2.p_over_q_ref - bl1.p_over_q_ref ≈ bl2.dp_over_q_ref
+  @test bl2.E_ref - bl1.E_ref ≈ bl2.dE_ref
+  @test bl2.pc_ref - bl1.pc_ref ≈ bl2.dpc_ref
+  @test bl2.p_over_q_ref ≈ Beamlines.E_to_R(bl2.species_ref, bl2.E_ref)
+  @test bl2.pc_ref ≈ Beamlines.E_to_pc(bl2.species_ref, bl2.E_ref)
+  bl2.dpc_ref = -2e9
+  bl1.p_over_q_ref = -40
+  @test bl2.dpc_ref == -2e9
+  @test bl1.p_over_q_ref == -40
+  @test bl2.pc_ref - bl1.pc_ref ≈ bl2.dpc_ref
+  @test bl2.E_ref - bl1.E_ref ≈ bl2.dE_ref
+  @test bl2.p_over_q_ref - bl1.p_over_q_ref ≈ bl2.dp_over_q_ref
+  bl2.dp_over_q_ref = -5
+  bl1.pc_ref = 9e9
+  @test bl2.pc_ref - bl1.pc_ref ≈ bl2.dpc_ref
+  @test bl2.E_ref - bl1.E_ref ≈ bl2.dE_ref
+  @test bl2.p_over_q_ref - bl1.p_over_q_ref ≈ bl2.dp_over_q_ref
+  bl2.E_ref = 10e9
+  @test bl2.E_ref == 10e9
+  @test bl2.pc_ref - bl1.pc_ref ≈ bl2.dpc_ref
+  @test bl2.E_ref - bl1.E_ref ≈ bl2.dE_ref
+  @test bl2.p_over_q_ref - bl1.p_over_q_ref ≈ bl2.dp_over_q_ref
 
 
-    branch = Branch([LatElement(), LatElement()]; species_ref0=Species("proton"), E_ref0=10e9)
-    @test branch.beamlines[1].E_ref == 10e9
-    @test branch.beamlines[1].species_ref == Species("proton")
+  # Check that InitialBeamlineParams is overridden:
+  ele1 = LatElement(E_ref=10e9, species_ref=Species("electron"))
+  ele1a = LatElement()
+  branch = Branch([ele1, ele1a]; species_ref0=Species("proton"), E_ref0=20e9)
+  @test all(isapprox_ignoring.(branch.beamlines[1].line, [ele1, ele1a], InitialBeamlineParams))
+  bl1 = branch.beamlines[1]
+  @test bl1.E_ref == 20e9
+  @test bl1.species_ref == Species("proton")
 
-    ele1 = LatElement()
-    bl1 = Beamline([ele1])
-    @test_throws ErrorException Branch([Marker()]; E_ref0=10e9, pc_ref0=3e9)
+  ele1 = LatElement(E_ref=10e9, species_ref=Species("electron"))
+  ele1a = LatElement()
+  ele2 = LatElement(dE_ref=-3e9, species_ref=Species("proton"))
+  ele2a = LatElement()
+  ele2b = LatElement()
+  branch = Branch([ele1, ele1a, ele2, ele2a, ele2b]; species_ref0=Species("proton"), E_ref0=20e9)
+  @test all(isapprox_ignoring.(branch.beamlines[1].line, [ele1, ele1a], InitialBeamlineParams))
+  @test all(branch.beamlines[2].line .≈ [ele2, ele2a, ele2b])
+  bl1 = branch.beamlines[1]
+  bl2 = branch.beamlines[2]
+  @test bl1.E_ref == 20e9
+  @test bl1.species_ref == Species("proton")
 
-    # Elements before the first InitialBeamlineParams are kept
-    brk = Branch([Drift(L=1.0), Marker(E_ref=1e9, species_ref=Species("electron")), Drift(L=2.0)])
-    @test length(brk) == 3
-    @test length(brk.beamlines) == 2
-    @test brk[3].s == 1.0
 
-    # Branch(elements) with a mix of LatElements, Beamlines, and Branches
-    mbeg = Marker(E_ref=10e9, species_ref=Species("electron"))
-    arc = Beamline([Drift(L=1.0), SBend(L=2.0)]; context=Context(a=1))
-    qcell = Quadrupole(L=0.5)
-    cell = Branch([qcell, Drift(L=1.0)]; context=Context(b=2))
-    brm = Branch(Any[mbeg, Drift(L=0.5), arc, cell, cell, Marker()]; name="mixed", context=Context(a=3))
-    @test brm.name == "mixed"
-    @test length(brm.beamlines) == 5
-    @test length(brm) == 9
-    @test brm.beamlines[2].line[1].parent === arc.line[1] # Elements are children of arc's
-    @test brm.beamlines[3].line !== cell.beamlines[1].line
-    @test brm.beamlines[3].line !== brm.beamlines[4].line
-    @test brm[5].L == 0.5 && brm[7].L == 0.5
-    @test brm[9].s == 6.5
-    @test brm[end] === brm[9]
-    @test all(bl -> bl.E_ref == 10e9, brm.beamlines)    # Reference energy is inferred
-    @test brm.context.a == 3 && brm.context.b == 2
-    @test all(bl -> bl.context === brm.context, brm.beamlines)
-    qcell.L = 0.7                                       # Branch entries are children
-    @test brm[5].L == 0.7 && brm[7].L == 0.7
-    @test cell.beamlines[1].line[1].beamline === cell.beamlines[1] # cell is untouched
-    @test Branch([cell]).beamlines[1].line[1].L == 0.7
-    bla = Beamline([Drift()])
-    brr = Branch([bla, Drift(L=2.0), bla])                   # Repeated Beamline
-    @test length(brr) == 3
-    @test brr[1].parent === bla.line[1] && brr[3].parent === bla.line[1]
-    @test brr[1] !== brr[3]
-    @test bla.line[1].beamline === bla                       # bla is not modified
-    @test brr[1].beamline === brr.beamlines[1]
-    @test brr[3].beamline === brr.beamlines[3]
-    @test brr[3].parent === bla.line[1]
-    @test brr[3].s == 2.0
-    blr = Beamline([Drift(L=1.0)]; context=Context(r=1))
-    brr2 = Branch([blr, blr])
-    @test length(brr2) == 2
-    @test brr2[2].s == 1.0
-    @test brr2.context.r == 1
-    @test all(bl -> bl.context === brr2.context, brr2.beamlines)
+  branch = Branch([LatElement(), LatElement()]; species_ref0=Species("proton"), E_ref0=10e9)
+  @test branch.beamlines[1].E_ref == 10e9
+  @test branch.beamlines[1].species_ref == Species("proton")
 
-    # Repeated Beamlines: reference energy accumulates over the repeats
-    rfr = RFCavity(L=1.0)
-    secr = Beamline([rfr, Drift(L=1.0)]; dE_ref=1e9)
-    injr = Beamline([Marker()]; E_ref=10e9, species_ref=Species("electron"))
-    brE = Branch([injr, secr, secr, secr])
-    @test length(brE) == 7
-    @test [bl.E_ref for bl in brE.beamlines] == [10e9, 11e9, 12e9, 13e9]
-    @test [bl.dE_ref for bl in brE.beamlines[2:end]] == [1e9, 1e9, 1e9]
-    @test [brE[i].E_ref for i in (2, 4, 6)] == [11e9, 12e9, 13e9]
+  ele1 = LatElement()
+  bl1 = Beamline([ele1])
+  @test_throws ErrorException Branch([Marker()]; E_ref0=10e9, pc_ref0=3e9)
 
-    # Repeated Beamlines: every occurrence has its own elements and positions
-    @test [brE[i].s for i in 1:7] == [0, 0, 1, 2, 3, 4, 5]
-    @test [(brE[i].beamline_index, brE[i].branch_index) for i in 1:7] ==
-          [(1, 1), (1, 2), (2, 2), (1, 3), (2, 3), (1, 4), (2, 4)]
-    @test all(i -> brE[i].beamline.branch === brE, 1:7)
-    @test length(unique(objectid, [brE[i] for i in 1:7])) == 7
-    @test length(unique(objectid, [bl.line for bl in brE.beamlines])) == 4
+  # Elements before the first InitialBeamlineParams are kept
+  brk = Branch([Drift(L=1.0), Marker(E_ref=1e9, species_ref=Species("electron")), Drift(L=2.0)])
+  @test length(brk) == 3
+  @test length(brk.beamlines) == 2
+  @test brk[3].s == 1.0
 
-    # Repeated Beamlines: setting a parameter through any occurrence sets it for all of them,
-    # including reference quantities, which are stored in the first element of `secr`
-    brE.beamlines[4].line[1].L = 2.0
-    @test rfr.L == 2.0
-    @test [brE[i].L for i in (2, 4, 6)] == [2.0, 2.0, 2.0]
-    brE.beamlines[3].dE_ref = 2e9
-    @test [bl.dE_ref for bl in brE.beamlines[2:end]] == [2e9, 2e9, 2e9]
-    @test [bl.E_ref for bl in brE.beamlines] == [10e9, 12e9, 14e9, 16e9]
+  # Branch(elements) with a mix of LatElements, Beamlines, and Branches
+  mbeg = Marker(E_ref=10e9, species_ref=Species("electron"))
+  arc = Beamline([Drift(L=1.0), SBend(L=2.0)]; context=Context(a=1))
+  qcell = Quadrupole(L=0.5)
+  cell = Branch([qcell, Drift(L=1.0)]; context=Context(b=2))
+  brm = Branch(Any[mbeg, Drift(L=0.5), arc, cell, cell, Marker()]; name="mixed", context=Context(a=3))
+  @test brm.name == "mixed"
+  @test length(brm.beamlines) == 5
+  @test length(brm) == 9
+  @test brm.beamlines[2].line[1].parent === arc.line[1] # Elements are children of arc's
+  @test brm.beamlines[3].line !== cell.beamlines[1].line
+  @test brm.beamlines[3].line !== brm.beamlines[4].line
+  @test brm[5].L == 0.5 && brm[7].L == 0.5
+  @test brm[9].s == 6.5
+  @test brm[end] === brm[9]
+  @test all(bl -> bl.E_ref == 10e9, brm.beamlines)    # Reference energy is inferred
+  @test brm.context.a == 3 && brm.context.b == 2
+  @test all(bl -> bl.context === brm.context, brm.beamlines)
+  qcell.L = 0.7                                       # Branch entries are children
+  @test brm[5].L == 0.7 && brm[7].L == 0.7
+  @test cell.beamlines[1].line[1].beamline === cell.beamlines[1] # cell is untouched
+  @test Branch([cell]).beamlines[1].line[1].L == 0.7
+  bla = Beamline([Drift()])
+  brr = Branch([bla, Drift(L=2.0), bla])                   # Repeated Beamline
+  @test length(brr) == 3
+  @test brr[1].parent === bla.line[1] && brr[3].parent === bla.line[1]
+  @test brr[1] !== brr[3]
+  @test bla.line[1].beamline === bla                       # bla is not modified
+  @test brr[1].beamline === brr.beamlines[1]
+  @test brr[3].beamline === brr.beamlines[3]
+  @test brr[3].parent === bla.line[1]
+  @test brr[3].s == 2.0
+  blr = Beamline([Drift(L=1.0)]; context=Context(r=1))
+  brr2 = Branch([blr, blr])
+  @test length(brr2) == 2
+  @test brr2[2].s == 1.0
+  @test brr2.context.r == 1
+  @test all(bl -> bl.context === brr2.context, brr2.beamlines)
 
-    # Repeated Beamlines in a Lattice use the Lattice context
-    qr = Quadrupole(L=1.0, Kn1=DefExpr(c -> c.k))
-    cellr = Beamline([qr, Drift(L=1.0)])
-    brL = Branch([cellr, cellr]; context=Context(k=0.1))
-    latr = Lattice([brL]; context=Context(k=0.2))
-    brLl = latr.branches[1] # The Lattice holds a copy of the Branch
-    @test [brLl[i].Kn1 for i in (1, 3)] == [0.2, 0.2]
-    latr.context = Context(k=0.3)
-    @test [brLl[i].Kn1 for i in (1, 3)] == [0.3, 0.3]
-    @test all(bl -> bl.context === latr.context, brLl.beamlines)
-    @test [brL[i].Kn1 for i in (1, 3)] == [0.1, 0.1] # Original is untouched
+  # Repeated Beamlines: reference energy accumulates over the repeats
+  rfr = RFCavity(L=1.0)
+  secr = Beamline([rfr, Drift(L=1.0)]; dE_ref=1e9)
+  injr = Beamline([Marker()]; E_ref=10e9, species_ref=Species("electron"))
+  brE = Branch([injr, secr, secr, secr])
+  @test length(brE) == 7
+  @test [bl.E_ref for bl in brE.beamlines] == [10e9, 11e9, 12e9, 13e9]
+  @test [bl.dE_ref for bl in brE.beamlines[2:end]] == [1e9, 1e9, 1e9]
+  @test [brE[i].E_ref for i in (2, 4, 6)] == [11e9, 12e9, 13e9]
 
-    # copy(::Branch) of a Branch with repeated Beamlines
-    brLc = copy(brL)
-    @test [brLc[i].s for i in 1:4] == [0, 1, 2, 3]
-    @test brLc[1] !== brLc[3]
-    @test brLc[3].beamline === brLc.beamlines[2]
+  # Repeated Beamlines: every occurrence has its own elements and positions
+  @test [brE[i].s for i in 1:7] == [0, 0, 1, 2, 3, 4, 5]
+  @test [(brE[i].beamline_index, brE[i].branch_index) for i in 1:7] ==
+        [(1, 1), (1, 2), (2, 2), (1, 3), (2, 3), (1, 4), (2, 4)]
+  @test all(i -> brE[i].beamline.branch === brE, 1:7)
+  @test length(unique(objectid, [brE[i] for i in 1:7])) == 7
+  @test length(unique(objectid, [bl.line for bl in brE.beamlines])) == 4
 
-    # Branch(elements) with a Beamline repeated three times and a LatElement between
-    c3r = Beamline([Drift(L=1.0)])
-    br3r = Branch(Any[c3r, c3r, Drift(L=5.0), c3r])
-    @test [br3r[i].s for i in 1:4] == [0, 1, 2, 7]
-    @test length(unique(objectid, [bl.line for bl in br3r.beamlines])) == 4
+  # Repeated Beamlines: setting a parameter through any occurrence sets it for all of them,
+  # including reference quantities, which are stored in the first element of `secr`
+  brE.beamlines[4].line[1].L = 2.0
+  @test rfr.L == 2.0
+  @test [brE[i].L for i in (2, 4, 6)] == [2.0, 2.0, 2.0]
+  brE.beamlines[3].dE_ref = 2e9
+  @test [bl.dE_ref for bl in brE.beamlines[2:end]] == [2e9, 2e9, 2e9]
+  @test [bl.E_ref for bl in brE.beamlines] == [10e9, 12e9, 14e9, 16e9]
 
-    # Repeated empty Beamline infers its reference energy from the Beamline before it
-    ber = Beamline(LatElement[])
-    brer = Branch([Beamline([Marker()]; E_ref=1e9, species_ref=Species("electron")), ber, ber])
-    @test length(brer) == 1
-    @test [bl.E_ref for bl in brer.beamlines] == [1e9, 1e9, 1e9]
+  # Repeated Beamlines in a Lattice use the Lattice context
+  qr = Quadrupole(L=1.0, Kn1=DefExpr(c -> c.k))
+  cellr = Beamline([qr, Drift(L=1.0)])
+  brL = Branch([cellr, cellr]; context=Context(k=0.1))
+  latr = Lattice([brL]; context=Context(k=0.2))
+  brLl = latr.branches[1] # The Lattice holds a copy of the Branch
+  @test [brLl[i].Kn1 for i in (1, 3)] == [0.2, 0.2]
+  latr.context = Context(k=0.3)
+  @test [brLl[i].Kn1 for i in (1, 3)] == [0.3, 0.3]
+  @test all(bl -> bl.context === latr.context, brLl.beamlines)
+  @test [brL[i].Kn1 for i in (1, 3)] == [0.1, 0.1] # Original is untouched
 
-    @test_throws ErrorException Branch([Drift(), 1.0])
-    @test_throws ErrorException Branch(Any[bla]; E_ref0=1e9)  # ref0 needs a leading LatElement
-    @test_throws ErrorException Branch(LatElement[]; E_ref0=1e9)
-    @test length(Branch([cell, Beamline([Drift(L=3.0)])])) == 3
+  # copy(::Branch) of a Branch with repeated Beamlines
+  brLc = copy(brL)
+  @test [brLc[i].s for i in 1:4] == [0, 1, 2, 3]
+  @test brLc[1] !== brLc[3]
+  @test brLc[3].beamline === brLc.beamlines[2]
 
-    # MapParams
-    f = (v,q=nothing)->((1,2,3,4,5,6),(7,8,9,10))
-    g = (v,q=nothing)->((11,12,13,14,15,16),(17,18,19,20))
-    ele1 = LatElement(transport_map=f)
-    ele2 = LatElement(transport_map=f)
-    @test !isnothing(ele1.MapParams)
-    @test ele1.MapParams isa MapParams{typeof(f)}
-    @test ele1.transport_map == f
-    @test ele2.transport_map == f
-    @test ele1 ≈ ele2
-    ele1.transport_map = g
-    ele2.transport_map = g
-    @test ele1.MapParams isa MapParams{typeof(g)}
-    @test ele1.transport_map == g
-    @test ele2.transport_map == g
-    @test ele1 ≈ ele2
-    let
-      local a = 1
-      ele1.transport_map_params = (DefExpr(()->10*sin(a)), 100)
-      @test Beamlines.deval(ele1.MapParams) ≈ MapParams(ele1.transport_map, (10*sin(1),100.))
+  # Branch(elements) with a Beamline repeated three times and a LatElement between
+  c3r = Beamline([Drift(L=1.0)])
+  br3r = Branch(Any[c3r, c3r, Drift(L=5.0), c3r])
+  @test [br3r[i].s for i in 1:4] == [0, 1, 2, 7]
+  @test length(unique(objectid, [bl.line for bl in br3r.beamlines])) == 4
+
+  # Repeated empty Beamline infers its reference energy from the Beamline before it
+  ber = Beamline(LatElement[])
+  brer = Branch([Beamline([Marker()]; E_ref=1e9, species_ref=Species("electron")), ber, ber])
+  @test length(brer) == 1
+  @test [bl.E_ref for bl in brer.beamlines] == [1e9, 1e9, 1e9]
+
+  @test_throws ErrorException Branch([Drift(), 1.0])
+  @test_throws ErrorException Branch(Any[bla]; E_ref0=1e9)  # ref0 needs a leading LatElement
+  @test_throws ErrorException Branch(LatElement[]; E_ref0=1e9)
+  @test length(Branch([cell, Beamline([Drift(L=3.0)])])) == 3
+
+  # MapParams
+  f = (v,q=nothing)->((1,2,3,4,5,6),(7,8,9,10))
+  g = (v,q=nothing)->((11,12,13,14,15,16),(17,18,19,20))
+  ele1 = LatElement(transport_map=f)
+  ele2 = LatElement(transport_map=f)
+  @test !isnothing(ele1.MapParams)
+  @test ele1.MapParams isa MapParams{typeof(f)}
+  @test ele1.transport_map == f
+  @test ele2.transport_map == f
+  @test ele1 ≈ ele2
+  ele1.transport_map = g
+  ele2.transport_map = g
+  @test ele1.MapParams isa MapParams{typeof(g)}
+  @test ele1.transport_map == g
+  @test ele2.transport_map == g
+  @test ele1 ≈ ele2
+  let
+    local a = 1
+    ele1.transport_map_params = (DefExpr(()->10*sin(a)), 100)
+    @test Beamlines.deval(ele1.MapParams) ≈ MapParams(ele1.transport_map, (10*sin(1),100.))
+  end
+
+  # FourPotentialParams
+  f = (x,y,s,t)->((1,2,3,4), nothing)
+  g = (x,y,s,t)->((5,6,7,8), (9,  10, 11, -1,
+                              12, 13, 14, -2,
+                              15, 16, 17, -3,
+                              18, 19, 20, -4))
+  ele1 = LatElement(four_potential=f)
+  ele2 = LatElement(four_potential=f)
+  @test !isnothing(ele1.FourPotentialParams)
+  @test ele1.FourPotentialParams isa FourPotentialParams{typeof(f)}
+  @test ele1.four_potential == f
+  @test ele2.four_potential == f
+  @test ele1 ≈ ele2
+  ele1.four_potential = g
+  ele2.four_potential = g
+  @test ele1.FourPotentialParams isa FourPotentialParams{typeof(g)}
+  @test ele1.four_potential == g
+  @test ele2.four_potential == g
+  @test ele1 ≈ ele2
+  ele1.four_potential_normalized = true 
+  @test ele1.four_potential_normalized    
+  @test !ele2.four_potential_normalized
+  @test !(ele1 ≈ ele2)
+  @test ele1.four_potential_params == nothing
+  h = (x,y,s,t,p)->((p[1],p[2],p[3],p[4]), nothing)
+  ele1.four_potential = h
+  ele1.four_potential_params = [100, 200, 300, 400]
+  @test ele1.four_potential_params == [100, 200, 300, 400]
+  @test !(ele1 ≈ ele2)
+  ele2.four_potential = h
+  ele2.four_potential_params = [100, 200, 300, 500]
+  @test !(ele1 ≈ ele2)
+  ele2.four_potential_params = [100, 200, 300, 400]
+  @test !(ele1 ≈ ele2)
+  ele1.four_potential_normalized = false
+  @test ele1 ≈ ele2
+
+  # EMFieldParams
+  struct TestEMField{T}
+    strength::T
+  end
+  (f::TestEMField)(x, y, s, t, p=nothing) = (0, 0, 0, 0, f.strength, 0)
+
+  default = EMFieldParams()
+  @test default.em_field(0, 0, 0, 0) === (0, 0, 0, 0, 0, 0)
+  @test default.em_field(0, 0, 0, 0, nothing) === (0, 0, 0, 0, 0, 0)
+  @test isnothing(default.em_field_params)
+  @test !default.em_field_normalized
+  @test isnothing(Drift().EMFieldParams)
+  @test Drift().em_field(0, 0, 0, 0) === (0, 0, 0, 0, 0, 0)
+
+  callback = (x,y,s,t,p=nothing) -> isnothing(p) ? (1,2,3,4,5,6) : Tuple(p)
+  for normalized in (false, true)
+    parameter_free = EMFieldParams(em_field=callback, em_field_normalized=normalized)
+    @test parameter_free.em_field(0,0,0,0,parameter_free.em_field_params) === (1,2,3,4,5,6)
+    @test Beamlines.deval(parameter_free).em_field === callback
+    @test scalarize(parameter_free).em_field === callback
+    @test parameter_free ≈ deepcopy(parameter_free)
+
+    # EMFieldParams currently supports tuple parameters.
+    context = Context(strength=5.0)
+    params = (1,2,3,4,DefExpr{Float64}(c -> c.strength),6)
+    group = EMFieldParams(callback, params, normalized)
+    for strength in (5.0, 7.0)
+      context.strength = strength
+      evaluated = Beamlines.deval(group, context)
+      @test evaluated.em_field_params === (1,2,3,4,strength,6)
+      @test evaluated.em_field === callback
+      @test evaluated.em_field_normalized == normalized
+      @test evaluated ≈ deepcopy(evaluated)
     end
 
-    # FourPotentialParams
-    f = (x,y,s,t)->((1,2,3,4), nothing)
-    g = (x,y,s,t)->((5,6,7,8), (9,  10, 11, -1,
-                                12, 13, 14, -2,
-                                15, 16, 17, -3,
-                                18, 19, 20, -4))
-    ele1 = LatElement(four_potential=f)
-    ele2 = LatElement(four_potential=f)
-    @test !isnothing(ele1.FourPotentialParams)
-    @test ele1.FourPotentialParams isa FourPotentialParams{typeof(f)}
-    @test ele1.four_potential == f
-    @test ele2.four_potential == f
-    @test ele1 ≈ ele2
-    ele1.four_potential = g
-    ele2.four_potential = g
-    @test ele1.FourPotentialParams isa FourPotentialParams{typeof(g)}
-    @test ele1.four_potential == g
-    @test ele2.four_potential == g
-    @test ele1 ≈ ele2
-    ele1.four_potential_normalized = true 
-    @test ele1.four_potential_normalized    
-    @test !ele2.four_potential_normalized
-    @test !(ele1 ≈ ele2)
-    @test ele1.four_potential_params == nothing
-    h = (x,y,s,t,p)->((p[1],p[2],p[3],p[4]), nothing)
-    ele1.four_potential = h
-    ele1.four_potential_params = [100, 200, 300, 400]
-    @test ele1.four_potential_params == [100, 200, 300, 400]
-    @test !(ele1 ≈ ele2)
-    ele2.four_potential = h
-    ele2.four_potential_params = [100, 200, 300, 500]
-    @test !(ele1 ≈ ele2)
-    ele2.four_potential_params = [100, 200, 300, 400]
-    @test !(ele1 ≈ ele2)
-    ele1.four_potential_normalized = false
-    @test ele1 ≈ ele2
+    params = (ForwardDiff.Dual(5.0, 1.0),)
+    group = EMFieldParams(callback, params, normalized)
+    result = @inferred scalarize(group)
+    @test result.em_field_params === (5.0,)
+    @test result.em_field === callback
+    @test result.em_field_normalized == normalized
 
-    # EMFieldParams
-    struct TestEMField{T}
-        strength::T
-    end
-    (f::TestEMField)(x, y, s, t, p=nothing) = (0, 0, 0, 0, f.strength, 0)
+    group = EMFieldParams(callback, (), normalized)
+    @test Beamlines.deval(group).em_field_params === ()
+    @test scalarize(group).em_field_params === ()
+  end
 
-    default = EMFieldParams()
-    @test default.em_field(0, 0, 0, 0) === (0, 0, 0, 0, 0, 0)
-    @test default.em_field(0, 0, 0, 0, nothing) === (0, 0, 0, 0, 0, 0)
-    @test isnothing(default.em_field_params)
-    @test !default.em_field_normalized
-    @test isnothing(Drift().EMFieldParams)
-    @test Drift().em_field(0, 0, 0, 0) === (0, 0, 0, 0, 0, 0)
+  params = (0.004,)
+  group = EMFieldParams(callback, params, false)
+  @test group ≈ EMFieldParams(callback, (0.004 + eps(),), false)
+  @test !(group ≈ EMFieldParams(callback, (0.008,), false))
+  @test !(group ≈ EMFieldParams(callback, params, true))
+  @test !(group ≈ EMFieldParams(callback, nothing, false))
+  @test !(group ≈ EMFieldParams(TestEMField(0.004), params, false))
 
-    callback = (x,y,s,t,p=nothing) -> isnothing(p) ? (1,2,3,4,5,6) : Tuple(p)
-    for normalized in (false, true)
-        parameter_free = EMFieldParams(em_field=callback, em_field_normalized=normalized)
-        @test parameter_free.em_field(0,0,0,0,parameter_free.em_field_params) === (1,2,3,4,5,6)
-        @test Beamlines.deval(parameter_free).em_field === callback
-        @test scalarize(parameter_free).em_field === callback
-        @test parameter_free ≈ deepcopy(parameter_free)
+  parent = Drift(EMFieldParams=group)
+  line = Beamline([parent])
+  child = only(line.line)
+  @test child.em_field === callback
+  @test child.em_field_params === params
+  parent.em_field = TestEMField(0.008)
+  parent.em_field_params = nothing
+  parent.em_field_normalized = true
+  @test child.em_field isa TestEMField
+  @test child.em_field(0,0,0,0) === (0,0,0,0,0.008,0)
+  @test isnothing(child.em_field_params)
+  @test child.em_field_normalized
+  @test Beamlines.deval(child.EMFieldParams).em_field === parent.em_field
+  @test scalarize(child.EMFieldParams).em_field === parent.em_field
+  # Inherited groups forward writes as well as reads to the parent.
+  child.EMFieldParams = nothing
+  @test isnothing(child.EMFieldParams)
+  @test isnothing(parent.EMFieldParams)
 
-        # EMFieldParams currently supports tuple parameters.
-        context = Context(strength=5.0)
-        params = (1,2,3,4,DefExpr{Float64}(c -> c.strength),6)
-        group = EMFieldParams(callback, params, normalized)
-        for strength in (5.0, 7.0)
-            context.strength = strength
-            evaluated = Beamlines.deval(group, context)
-            @test evaluated.em_field_params === (1,2,3,4,strength,6)
-            @test evaluated.em_field === callback
-            @test evaluated.em_field_normalized == normalized
-            @test evaluated ≈ deepcopy(evaluated)
-        end
+  # MetaParams
+  alias = "matt"
+  label = "the matt"
+  description = "this is a matt"
+  ele = LatElement(alias=alias, label=label, description=description)
+  @test ele.alias == alias
+  @test ele.label == label
+  @test ele.description == description
 
-        params = (ForwardDiff.Dual(5.0, 1.0),)
-        group = EMFieldParams(callback, params, normalized)
-        result = @inferred scalarize(group)
-        @test result.em_field_params === (5.0,)
-        @test result.em_field === callback
-        @test result.em_field_normalized == normalized
+  alias = "david"
+  label = "the david"
+  description = "this is a david"
+  ele.alias = alias
+  ele.label = label
+  ele.description = description
+  @test ele.alias == alias
+  @test ele.label == label
+  @test ele.description == description
+  @test ele ≈ LatElement()
 
-        group = EMFieldParams(callback, (), normalized)
-        @test Beamlines.deval(group).em_field_params === ()
-        @test scalarize(group).em_field_params === ()
-    end
+  @test ele.MetaParams ≈ MetaParams()
 
-    params = (0.004,)
-    group = EMFieldParams(callback, params, false)
-    @test group ≈ EMFieldParams(callback, (0.004 + eps(),), false)
-    @test !(group ≈ EMFieldParams(callback, (0.008,), false))
-    @test !(group ≈ EMFieldParams(callback, params, true))
-    @test !(group ≈ EMFieldParams(callback, nothing, false))
-    @test !(group ≈ EMFieldParams(TestEMField(0.004), params, false))
+  # InheritParams show: short description of the parent
+  parent = Quadrupole(name="qp")
+  @test occursin("parent = LatElement(name = \"qp\", kind = \"Quadrupole\")", 
+                 sprint(show, InheritParams(parent)))
+  @test occursin("parent = LatElement with no UniversalParams", 
+                 sprint(show, InheritParams(LatElement(Beamlines.ParamDict()))))
 
-    parent = Drift(EMFieldParams=group)
-    line = Beamline([parent])
-    child = only(line.line)
-    @test child.em_field === callback
-    @test child.em_field_params === params
-    parent.em_field = TestEMField(0.008)
-    parent.em_field_params = nothing
-    parent.em_field_normalized = true
-    @test child.em_field isa TestEMField
-    @test child.em_field(0,0,0,0) === (0,0,0,0,0.008,0)
-    @test isnothing(child.em_field_params)
-    @test child.em_field_normalized
-    @test Beamlines.deval(child.EMFieldParams).em_field === parent.em_field
-    @test scalarize(child.EMFieldParams).em_field === parent.em_field
-    # Inherited groups forward writes as well as reads to the parent.
-    child.EMFieldParams = nothing
-    @test isnothing(child.EMFieldParams)
-    @test isnothing(parent.EMFieldParams)
+  ele = LatElement()
+  @test !ele.rad_damping
+  @test !ele.rad_fluctuations
 
-    # MetaParams
-    alias = "matt"
-    label = "the matt"
-    description = "this is a matt"
-    ele = LatElement(alias=alias, label=label, description=description)
-    @test ele.alias == alias
-    @test ele.label == label
-    @test ele.description == description
+  # Scalarize
+  d1 = Descriptor(1,1)
+  t = TPS(3)
+  t[1] = 4
+  adnums = (ForwardDiff.Dual(1.,2.), t, ReverseDiff.TrackedReal(5.,6.))
+  nums = [1., 3., 5.]
+  for (adnum,num) in zip(adnums,nums)
+    @test scalarize(AlignmentParams(x_offset=adnum)).x_offset == num
+    @test scalarize(ApertureParams(x1_limit=adnum)).x1_limit == num
+    @test scalarize(BendParams(g_ref=adnum)).g_ref == num
+    @test scalarize(BMultipoleParams([adnum], [adnum], [0], [0], [true], [false])).n == [num]
+    @test scalarize(PatchParams(dt=adnum)).dt == num
+    @test scalarize(RFParams(rate=adnum, rate_meaning=RateMeaning.RFFrequency)).rate == num
+    @test scalarize(InitialBeamlineParams(ref_meaning=Beamlines.RefMeaning.E_ref, ref=adnum)).E_ref == num
+    @test scalarize(InitialBeamlineParams(ref_meaning=Beamlines.RefMeaning.pc_ref, ref=adnum)).pc_ref == num
+    @test scalarize(InitialBeamlineParams(ref_meaning=Beamlines.RefMeaning.p_over_q_ref, ref=adnum)).p_over_q_ref == num
+    @test scalarize(InitialBeamlineParams(ref_meaning=Beamlines.RefMeaning.dE_ref, ref=adnum)).dE_ref == num
+    @test scalarize(InitialBeamlineParams(ref_meaning=Beamlines.RefMeaning.dpc_ref, ref=adnum)).dpc_ref == num
+    @test scalarize(InitialBeamlineParams(ref_meaning=Beamlines.RefMeaning.dp_over_q_ref, ref=adnum)).dp_over_q_ref == num
+  end
 
-    alias = "david"
-    label = "the david"
-    description = "this is a david"
-    ele.alias = alias
-    ele.label = label
-    ele.description = description
-    @test ele.alias == alias
-    @test ele.label == label
-    @test ele.description == description
-    @test ele ≈ LatElement()
+  qf = Quadrupole(Kn1=0.36, L=0.5)
+  d = Drift(L=5.0)
+  qd = Quadrupole(Kn1=-0.36, L=0.5)
+  fodo = Beamline([qf, d, qd, d])
+  branch = Branch([fodo])
 
-    @test ele.MetaParams ≈ MetaParams()
+  for (adnum,num) in zip(adnums,nums)
+    qf.Kn1 = adnum
+    scalarize!(qf)
+    @test qf.Kn1 isa Float64 
+    @test eltype(qf.BMultipoleParams) == Float64
+    @test qf.Kn1 == num
+    d.L = adnum
+    scalarize!(d)
+    @test d.L isa Float64
+    @test d.L == num
+    # Also check inheritance:
+    @test fodo.line[4].L isa Float64
+    @test fodo.line[4].L == num
 
-    # InheritParams show: short description of the parent
-    parent = Quadrupole(name="qp")
-    @test occursin("parent = LatElement(name = \"qp\", kind = \"Quadrupole\")", 
-                   sprint(show, InheritParams(parent)))
-    @test occursin("parent = LatElement with no UniversalParams", 
-                   sprint(show, InheritParams(LatElement(Beamlines.ParamDict()))))
+    qf.Kn1 = adnum
+    d.L = adnum
+    fodo.p_over_q_ref = adnum
+    scalarize!(branch)
+    @test fodo.p_over_q_ref isa Float64
+    @test d.L isa Float64
+    @test qf.Kn1 isa Float64
+    @test qf.Kn1 == num
+    # Also check inheritance:
+    @test fodo.line[4].L isa Float64
+    @test fodo.line[4].L == num
+    @test fodo.p_over_q_ref isa Float64
+    @test fodo.p_over_q_ref == num
+  end
 
-    ele = LatElement()
-    @test !ele.rad_damping
-    @test !ele.rad_fluctuations
-
-    # Scalarize
-    d1 = Descriptor(1,1)
-    t = TPS(3)
-    t[1] = 4
-    adnums = (ForwardDiff.Dual(1.,2.), t, ReverseDiff.TrackedReal(5.,6.))
-    nums = [1., 3., 5.]
-    for (adnum,num) in zip(adnums,nums)
-      @test scalarize(AlignmentParams(x_offset=adnum)).x_offset == num
-      @test scalarize(ApertureParams(x1_limit=adnum)).x1_limit == num
-      @test scalarize(BendParams(g_ref=adnum)).g_ref == num
-      @test scalarize(BMultipoleParams([adnum], [adnum], [0], [0], [true], [false])).n == [num]
-      @test scalarize(PatchParams(dt=adnum)).dt == num
-      @test scalarize(RFParams(rate=adnum, rate_meaning=RateMeaning.RFFrequency)).rate == num
-      @test scalarize(InitialBeamlineParams(ref_meaning=Beamlines.RefMeaning.E_ref, ref=adnum)).E_ref == num
-      @test scalarize(InitialBeamlineParams(ref_meaning=Beamlines.RefMeaning.pc_ref, ref=adnum)).pc_ref == num
-      @test scalarize(InitialBeamlineParams(ref_meaning=Beamlines.RefMeaning.p_over_q_ref, ref=adnum)).p_over_q_ref == num
-      @test scalarize(InitialBeamlineParams(ref_meaning=Beamlines.RefMeaning.dE_ref, ref=adnum)).dE_ref == num
-      @test scalarize(InitialBeamlineParams(ref_meaning=Beamlines.RefMeaning.dpc_ref, ref=adnum)).dpc_ref == num
-      @test scalarize(InitialBeamlineParams(ref_meaning=Beamlines.RefMeaning.dp_over_q_ref, ref=adnum)).dp_over_q_ref == num
-    end
-
-    @testset "recursive scalarize" begin
-      @test scalarize(ForwardDiff.Dual(2.0, 1.0)) === 2.0
-      dd = ForwardDiff.Dual(ForwardDiff.Dual(2.0, 1.0), 3.0)
-      @test @inferred(scalarize(dd)) === 2.0
-      @test scalarize(ReverseDiff.TrackedReal(5.0, 6.0)) === 5.0
-      @test scalarize(
-        ReverseDiff.TrackedReal(ForwardDiff.Dual(5.0, 1.0), 6.0)
-      ) === 5.0
-      @test scalarize(
-        ForwardDiff.Dual(ReverseDiff.TrackedReal(5.0, 6.0), 1.0)
-      ) === 5.0
-      tv = ReverseDiff.track([1.0, 2.0])
-      sv2 = scalarize(tv)
-      @test sv2 == [1.0, 2.0] && sv2 isa Vector{Float64}
-      dv = [ForwardDiff.Dual(ForwardDiff.Dual(1.0, 1.0), 2.0),
-            ForwardDiff.Dual(ForwardDiff.Dual(-3.0, 4.0), 5.0)]
-      sv = scalarize(dv)
-      @test sv == [1.0, -3.0]
-      @test eltype(sv) == Float64
-      bp = BendParams(g_ref = ForwardDiff.Dual(ForwardDiff.Dual(0.5, 1.0), 2.0))
-      @test scalarize(bp).g_ref === 0.5
-    end
-
-    qf = Quadrupole(Kn1=0.36, L=0.5)
-    d = Drift(L=5.0)
-    qd = Quadrupole(Kn1=-0.36, L=0.5)
-    fodo = Beamline([qf, d, qd, d])
-    branch = Branch([fodo])
-
-    for (adnum,num) in zip(adnums,nums)
-      qf.Kn1 = adnum
-      scalarize!(qf)
-      @test qf.Kn1 isa Float64 
-      @test eltype(qf.BMultipoleParams) == Float64
-      @test qf.Kn1 == num
-      d.L = adnum
-      scalarize!(d)
-      @test d.L isa Float64
-      @test d.L == num
-      # Also check inheritance:
-      @test fodo.line[4].L isa Float64
-      @test fodo.line[4].L == num
-
-      qf.Kn1 = adnum
-      d.L = adnum
-      fodo.p_over_q_ref = adnum
-      scalarize!(branch)
-      @test fodo.p_over_q_ref isa Float64
-      @test d.L isa Float64
-      @test qf.Kn1 isa Float64
-      @test qf.Kn1 == num
-      # Also check inheritance:
-      @test fodo.line[4].L isa Float64
-      @test fodo.line[4].L == num
-      @test fodo.p_over_q_ref isa Float64
-      @test fodo.p_over_q_ref == num
-    end
-
-    # test inherit species branch
-    q2 = Drift(L = 1, dE_ref=1e6)
-    m2 = Marker(E_ref = 10e9, species_ref=Species("electron"))
-    branch2 = Branch([m2, q2])
-    @test m2.species_ref == branch2.beamlines[2].line[1].species_ref
-    @test branch2.beamlines[1].species_ref == branch2.beamlines[2].species_ref
+  # test inherit species branch
+  q2 = Drift(L = 1, dE_ref=1e6)
+  m2 = Marker(E_ref = 10e9, species_ref=Species("electron"))
+  branch2 = Branch([m2, q2])
+  @test m2.species_ref == branch2.beamlines[2].line[1].species_ref
+  @test branch2.beamlines[1].species_ref == branch2.beamlines[2].species_ref
 
 
-    # Deepcopy ignores BeamlineParams
-    ele = LatElement(Kn1=0.36, L=0.5, voltage=10)
-    bl = Beamline([ele])
-    ele2 = deepcopy(bl.line[1])
-    bl2 = Beamline([ele2])
-    @test ele2.Kn1 == ele.Kn1
-    @test ele2.L == ele.L
-    @test ele2.voltage == ele.voltage
-    @test !(bl.line[1].beamline === bl2.line[1].beamline)
+  # Deepcopy ignores BeamlineParams
+  ele = LatElement(Kn1=0.36, L=0.5, voltage=10)
+  bl = Beamline([ele])
+  ele2 = deepcopy(bl.line[1])
+  bl2 = Beamline([ele2])
+  @test ele2.Kn1 == ele.Kn1
+  @test ele2.L == ele.L
+  @test ele2.voltage == ele.voltage
+  @test !(bl.line[1].beamline === bl2.line[1].beamline)
 
-    # Empty the beamline
-    ele = LatElement()
-    bl = Beamline([ele, ele, ele])
-    blele1 = bl.line[1]
-    empty!(bl)
-    @test isempty(bl.line)
-    @test isnothing(blele1.BeamlineParams)
-    bl2 = Beamline([ele, ele])
-    @test !isnothing(bl2.line[2].BeamlineParams)
+  # Empty the beamline
+  ele = LatElement()
+  bl = Beamline([ele, ele, ele])
+  blele1 = bl.line[1]
+  empty!(bl)
+  @test isempty(bl.line)
+  @test isnothing(blele1.BeamlineParams)
+  bl2 = Beamline([ele, ele])
+  @test !isnothing(bl2.line[2].BeamlineParams)
 
-    # Context tests
-    c1 = Context(a = 1)
-    c1.b = 2
-    @test c1.a == 1
-    @test c1.b == 2
-    push!(GLOBAL_CONTEXTS, c1)
-    c2 = Context()
-    @test c2.a == 1
-    @test c2.b == 2
-    c1.a = 3
-    c1.b = 4
-    @test c2.a == 3
-    @test c2.b == 4
+  # Context tests
+  c1 = Context(a = 1)
+  c1.b = 2
+  @test c1.a == 1
+  @test c1.b == 2
+  push!(GLOBAL_CONTEXTS, c1)
+  c2 = Context()
+  @test c2.a == 1
+  @test c2.b == 2
+  c1.a = 3
+  c1.b = 4
+  @test c2.a == 3
+  @test c2.b == 4
 
-    c2.b = 5
-    @test c1.b == 4
-    @test c2.b == 5
-    @test c2.a == 3
+  c2.b = 5
+  @test c1.b == 4
+  @test c2.b == 5
+  @test c2.a == 3
     
-    push!(GLOBAL_CONTEXTS, c2)
+  push!(GLOBAL_CONTEXTS, c2)
 
-    c3 = Context()
-    @test c3.a == 3
-    @test c3.b == 5
+  c3 = Context()
+  @test c3.a == 3
+  @test c3.b == 5
 
-    c3.a = 6
-    push!(GLOBAL_CONTEXTS, c3)
-    @test c3.a == 6
-    @test c3.b == 5
-    @test c2.a == 6
-    @test c2.b == 5
-    @test c1.b == 4
+  c3.a = 6
+  push!(GLOBAL_CONTEXTS, c3)
+  @test c3.a == 6
+  @test c3.b == 5
+  @test c2.a == 6
+  @test c2.b == 5
+  @test c1.b == 4
 
-    c4 = Context()
-    @test c4.a == 6
-    @test c4.b == 5
+  c4 = Context()
+  @test c4.a == 6
+  @test c4.b == 5
 
-    @test c3 === pop!(GLOBAL_CONTEXTS)
-    @test c4.a == 3
-    @test c4.b == 5
+  @test c3 === pop!(GLOBAL_CONTEXTS)
+  @test c4.a == 3
+  @test c4.b == 5
 
-    @test c2 === pop!(GLOBAL_CONTEXTS)
-    @test c4.a == 3
-    @test c4.b == 4
+  @test c2 === pop!(GLOBAL_CONTEXTS)
+  @test c4.a == 3
+  @test c4.b == 4
     
-    # Typed Context tests
-    # Note c1 is still on GLOBAL_CONTEXTS w/ a = 3 and b = 4
-    @test_throws InexactError Context{Float64}(a = im)
-    ct1::Context{Float64} = Context{Float64}(c = 1)
-    @test typeof(DefExpr(()->ct1.c)) == DefExpr{Float64}
-    @test Base.promote_op(getproperty, Context{Float64}, Symbol) == Float64
-    @test typeof(DefExpr(()->ct1.a)) == DefExpr{Float64}
-    @test ct1.a isa Float64
-    @test ct1.b isa Float64
-    c1.c = im
-    @test ct1.c == 1
-    c1.d = im
-    @test_throws InexactError ct1.d
+  # Typed Context tests
+  # Note c1 is still on GLOBAL_CONTEXTS w/ a = 3 and b = 4
+  @test_throws InexactError Context{Float64}(a = im)
+  ct1::Context{Float64} = Context{Float64}(c = 1)
+  @test typeof(DefExpr(()->ct1.c)) == DefExpr{Float64}
+  @test Base.promote_op(getproperty, Context{Float64}, Symbol) == Float64
+  @test typeof(DefExpr(()->ct1.a)) == DefExpr{Float64}
+  @test ct1.a isa Float64
+  @test ct1.b isa Float64
+  c1.c = im
+  @test ct1.c == 1
+  c1.d = im
+  @test_throws InexactError ct1.d
 
-    # Context merge tests
-    cm1 = Context(e = 1, f = 2)
-    cm2 = Context(g = 3, h = 4)
-    cm3 = merge(cm1, cm2)
-    @test cm3 isa Context{Any}
-    @test sort(collect(keys(getfield(cm3, :d)))) == [:e, :f, :g, :h]
-    @test (cm3.e, cm3.f, cm3.g, cm3.h) == (1, 2, 3, 4)
-    @test cm3 !== cm1 && cm3 !== cm2
-    cm3.e = 10
-    @test cm1.e == 1 # merge copies, so inputs are not aliased
-    @test !haskey(getfield(cm3, :d), :a) # GLOBAL_CONTEXTS variables are not pulled in
-    @test getfield(merge(cm1), :d) == getfield(cm1, :d)
-    @test merge(cm1, Context(f = 5), Context(f = 6)).f == 6 # last one wins
-    cmt = merge(Context{Int}(e = 1), Context{Float64}(f = 2.0))
-    @test cmt isa Context{Float64} # Type parameters are promoted
-    @test cmt.e === 1.0
-    @test cmt.f === 2.0
-    @test merge(Context{Float32}(e = 1f0), Context{Float64}(f = 2.0)) isa Context{Float64}
-    @test merge(Context{Float32}(e = 1f0), Context{Float32}(f = 2f0)) isa Context{Float32}
-    cma = merge(Context{Float64}(e = 1.0), Context(f = "s"))
-    @test cma isa Context{Any}
-    @test cma.e === 1.0 && cma.f == "s"
-    cmr = merge(Context{Real}(e = 1), Context{Float64}(f = 2.0))
-    @test cmr isa Context{Real}
-    @test cmr.e === 1
+  # Context merge tests
+  cm1 = Context(e = 1, f = 2)
+  cm2 = Context(g = 3, h = 4)
+  cm3 = merge(cm1, cm2)
+  @test cm3 isa Context{Any}
+  @test sort(collect(keys(getfield(cm3, :d)))) == [:e, :f, :g, :h]
+  @test (cm3.e, cm3.f, cm3.g, cm3.h) == (1, 2, 3, 4)
+  @test cm3 !== cm1 && cm3 !== cm2
+  cm3.e = 10
+  @test cm1.e == 1 # merge copies, so inputs are not aliased
+  @test !haskey(getfield(cm3, :d), :a) # GLOBAL_CONTEXTS variables are not pulled in
+  @test getfield(merge(cm1), :d) == getfield(cm1, :d)
+  @test merge(cm1, Context(f = 5), Context(f = 6)).f == 6 # last one wins
+  cmt = merge(Context{Int}(e = 1), Context{Float64}(f = 2.0))
+  @test cmt isa Context{Float64} # Type parameters are promoted
+  @test cmt.e === 1.0
+  @test cmt.f === 2.0
+  @test merge(Context{Float32}(e = 1f0), Context{Float64}(f = 2.0)) isa Context{Float64}
+  @test merge(Context{Float32}(e = 1f0), Context{Float32}(f = 2f0)) isa Context{Float32}
+  cma = merge(Context{Float64}(e = 1.0), Context(f = "s"))
+  @test cma isa Context{Any}
+  @test cma.e === 1.0 && cma.f == "s"
+  cmr = merge(Context{Real}(e = 1), Context{Float64}(f = 2.0))
+  @test cmr isa Context{Real}
+  @test cmr.e === 1
 
-    # Beamline context test
-    qf = Quadrupole(Kn1=DefExpr(c->c.a), L=DefExpr(c -> c.b))
-    @test qf.Kn1 == 3
-    bl = Beamline([qf], context=Context(a=7))
-    @test qf.Kn1 == 3
-    @test qf.L == 4
-    @test bl[qf][1].Kn1 == 7
-    @test bl[qf][1].L == 4
+  # Beamline context test
+  qf = Quadrupole(Kn1=DefExpr(c->c.a), L=DefExpr(c -> c.b))
+  @test qf.Kn1 == 3
+  bl = Beamline([qf], context=Context(a=7))
+  @test qf.Kn1 == 3
+  @test qf.L == 4
+  @test bl[qf][1].Kn1 == 7
+  @test bl[qf][1].L == 4
     
+  empty!(GLOBAL_CONTEXTS)
+  push!(GLOBAL_CONTEXTS, Context(L = 5))
+  c = Context(L = 6)
+  ele = Drift(L=DefExpr(c -> c.L))
+  bl = Beamline([ele], E_ref=18e9, species_ref=Species("electron"))
+  @test bl[ele][1].L == 5
+  bl.context = c
+  @test bl[ele][1].L == 6
+
+  # Operators must forward the Context to the operands, rather than
+  # evaluating them against NULL_CONTEXT.
+  empty!(GLOBAL_CONTEXTS)
+  ctx = Context(a = -3.0, b = 2.0)
+  d = DefExpr(c -> c.a)
+  e = DefExpr(c -> c.b)
+  @test (-d)(ctx)   == 3.0
+  @test (+d)(ctx)   == -3.0
+  @test (d + 1)(ctx) == -2.0
+  @test (1 + d)(ctx) == -2.0
+  @test (d - 1)(ctx) == -4.0
+  @test (1 - d)(ctx) == 4.0
+  @test (d * 2)(ctx) == -6.0
+  @test (2 * d)(ctx) == -6.0
+  @test (d / 2)(ctx) == -1.5
+  @test (d ^ 2)(ctx) == 9.0
+  @test (d + e)(ctx) == -1.0
+  @test (d - e)(ctx) == -5.0
+  @test (d * e)(ctx) == -6.0
+  @test (d / e)(ctx) == -1.5
+  @test abs(d)(ctx)  == 3.0
+  @test sign(d)(ctx) == -1.0
+  @test sin(d)(ctx)  == sin(-3.0)
+  # Nested/compound expressions too
+  @test (abs(d) + e * 2)(ctx) == 7.0
+
+  # A Beamline's stored context must reach parameters built from operators.
+  qq = Quadrupole(Kn1=-DefExpr(c -> c.k1), L=0.5)
+  blq = Beamline([qq], context=Context(k1 = 0.36))
+  @test blq[qq][1].Kn1 ≈ -0.36
+
+  # IgnoreParams / ignore_params
+  ele = Quadrupole(L=0.5, Kn1=0.3, x_offset=1e-3)
+  @test isnothing(ele.IgnoreParams)
+  @test isempty(ele.ignore_params)
+  @test ele.IgnoreParams isa IgnoreParams # Created on first access
+  @test !occursin("IgnoreParams", sprint(show, ele)) # Empty IgnoreParams are not shown
+  @test ele ≈ Quadrupole(L=0.5, Kn1=0.3, x_offset=1e-3)
+  push!(Quadrupole(L=0.5).ignore_params, BendParams) # push! works without IgnoreParams
+  ele2 = Quadrupole(L=0.5)
+  push!(ele2.ignore_params, BendParams)
+  @test ele2.ignore_params == [BendParams]
+  ele = Quadrupole(L=0.5, Kn1=0.3, x_offset=1e-3)
+  @test :ignore_params in propertynames(ele)
+  @test :IgnoreParams in propertynames(ele)
+  ele.ignore_params = [AlignmentParams]
+  @test ele.IgnoreParams isa IgnoreParams
+  @test ele.IgnoreParams.ignore_params === ele.ignore_params
+  @test ele.ignore_params == [AlignmentParams]
+  @test ele.ignore_params isa Vector{Type{<:AbstractParams}}
+  @test isactive(ele.AlignmentParams) # isactive does not check ignore_params
+  push!(ele.ignore_params, BMultipoleParams)
+  @test ele.ignore_params == [AlignmentParams, BMultipoleParams]
+  # Only vectors of parameter group types are allowed, and parametric types
+  ele.ignore_params = [ApertureParams]
+  @test_throws MethodError ele.ignore_params = BendParams
+  @test_throws MethodError ele.ignore_params = (BendParams,)
+  @test ele.ignore_params == [ApertureParams]
+  ele.ignore_params = [BendParams, RFParams, MapParams]
+  @test ele.ignore_params == [BendParams, RFParams, MapParams]
+  ele.ignore_params = ele.ignore_params
+  @test ele.ignore_params == [BendParams, RFParams, MapParams]
+  ele.ignore_params = []
+  @test isempty(ele.ignore_params)
+  @test ele.IgnoreParams isa IgnoreParams
+  # Setting the whole parameter group
+  ele.IgnoreParams = IgnoreParams(ignore_params=[PatchParams])
+  @test ele.ignore_params == [PatchParams]
+  ele.IgnoreParams = nothing
+  @test isnothing(ele.IgnoreParams)
+  # Keyword argument
+  ele = Quadrupole(L=0.5, Kn1=0.3, ignore_params=[BMultipoleParams])
+  @test ele.ignore_params == [BMultipoleParams]
+  # Entries that are not parameter group types throw and leave the list unchanged
+  @test_throws MethodError ele.ignore_params = [:BMultipoleParams] # Symbols not allowed
+  @test_throws MethodError ele.ignore_params = "BMultipoleParams"
+  @test_throws MethodError ele.ignore_params = [Int]
+  @test_throws MethodError Quadrupole(ignore_params=[:Foo])
+  @test ele.ignore_params == [BMultipoleParams]
+  # Show
+  @test !occursin("ignore_params", sprint(show, Quadrupole(L=0.5)))
+  ele.ignore_params = [BMultipoleParams, AlignmentParams]
+  @test occursin("ignore_params = [BMultipoleParams, AlignmentParams]", sprint(show, ele))
+  # Elements in a Beamline share the IgnoreParams of the parent element
+  ele.ignore_params = [AlignmentParams]
+  bl = Beamline([ele, Drift(L=1.0), ele], species_ref=Species("electron"), E_ref=1e9)
+  @test bl.line[1].ignore_params === ele.ignore_params
+  @test bl.line[3].ignore_params == [AlignmentParams]
+  bl.line[3].ignore_params = [BMultipoleParams]
+  @test ele.ignore_params == [BMultipoleParams]
+  @test bl.line[1].ignore_params == [BMultipoleParams]
+  @test isnothing(bl.line[2].IgnoreParams)
+  @test isempty(bl.line[2].ignore_params) # Creates IgnoreParams in the parent element
+  @test bl.line[2].IgnoreParams === Beamlines.get_parent(getfield(bl.line[2], :pdict)).IgnoreParams
+  push!(bl.line[2].ignore_params, PatchParams)
+  @test Beamlines.get_parent(getfield(bl.line[2], :pdict)).ignore_params == [PatchParams]
+  empty!(bl.line[2].ignore_params)
+  @test occursin("ignore_params = [BMultipoleParams]", sprint(show, bl.line[1]))
+  # Setting ignore_params on an instance whose parent has no IgnoreParams sets the parent
+  d = bl.line[2]
+  bl.line[2].ignore_params = [PatchParams]
+  @test d.ignore_params == [PatchParams]
+  bl.line[2].ignore_params = []
+  # Copying and comparing
+  ele2 = deepcopy(bl.line[3]) # Flattens InheritParams
+  @test ele2.ignore_params == [BMultipoleParams]
+  @test ele2.ignore_params !== ele.ignore_params
+  @test ele2 ≈ ele
+  ele2.ignore_params = []
+  @test !(ele2 ≈ ele)
+  ele2.ignore_params = [AlignmentParams, BMultipoleParams]
+  ele3 = deepcopy(ele2)
+  ele3.ignore_params = [BMultipoleParams, AlignmentParams]
+  @test ele2 ≈ ele3 # Order does not matter
+  # An empty list is the same as no IgnoreParams
+  @test Quadrupole(L=0.5, Kn1=0.3, ignore_params=[]) ≈ Quadrupole(L=0.5, Kn1=0.3)
+  @test Quadrupole(L=0.5, Kn1=0.3) ≈ Quadrupole(L=0.5, Kn1=0.3, ignore_params=[])
+  @test !(Quadrupole(L=0.5, Kn1=0.3) ≈ Quadrupole(L=0.5, Kn1=0.3, ignore_params=[BendParams]))
+  @test !(Quadrupole(L=0.5, Kn1=0.3, ignore_params=[BendParams]) ≈ Quadrupole(L=0.5, Kn1=0.3))
+  # isapprox_ignoring skips the given parameter groups
+  @test !(Quadrupole(L=0.5, Kn1=0.3, x_offset=1e-3) ≈ Quadrupole(L=0.5, Kn1=0.3))
+  @test Beamlines.isapprox_ignoring(Quadrupole(L=0.5, Kn1=0.3, x_offset=1e-3), Quadrupole(L=0.5, Kn1=0.3), AlignmentParams)
+  @test Beamlines.isapprox_ignoring(Quadrupole(L=0.5, Kn1=0.3, x_offset=1e-3, ignore_params=[BendParams]), 
+                                    Quadrupole(L=0.5, Kn1=0.3), AlignmentParams, IgnoreParams)
+  @test !Beamlines.isapprox_ignoring(Quadrupole(L=0.5, Kn1=0.3, x_offset=1e-3), Quadrupole(L=0.5, Kn1=0.4), AlignmentParams)
+  @test Beamlines.isapprox_ignoring(Quadrupole(L=0.5, Kn1=0.3, ignore_params=[]), Quadrupole(L=0.5, Kn1=0.3))
+  # writebl
+  str = sprint(Beamlines.writebl, bl)
+  @test occursin("ignore_params=[BMultipoleParams]", str)
+  bl2 = eval(Meta.parse(str))
+  @test bl2.line[1].ignore_params == [BMultipoleParams]
+  @test bl2.line[3].ignore_params == [BMultipoleParams]
+  @test isempty(bl2.line[2].ignore_params)
+
+  # Showing a Context must list every variable, sorted by name, and must not
+  # truncate the way the underlying Dict's show does past 10 entries.
+  empty!(GLOBAL_CONTEXTS)
+  cshow = Context(a1 = 1e-10, b2 = 2e-10, c3 = 3e-10, d4 = 4e-10,
+                  ov_1_v1 = DefExpr(c -> c.om_om1^2), ov_1_v2 = 0.0,
+                  ov2_w1 = 1.0, ov2_w2 = 0.0, om_om1 = 0.0,
+                  gg_1_g1 = 2.0, gg_1_g2 = 0.0, hh_h1 = 2.0, hh_h2 = 0.0,
+                  q2_Kn0 = 8e-10)
+  str = repr("text/plain", cshow)
+  @test !occursin("…", str)
+  for var in (:a1, :b2, :c3, :d4, :ov_1_v1, :ov_1_v2, :ov2_w1, :ov2_w2,
+              :om_om1, :gg_1_g1, :gg_1_g2, :hh_h1, :hh_h2, :q2_Kn0)
+    @test occursin(String(var), str)
+  end
+  # Variables are listed in sorted order, one per line after the header.
+  listed = [Symbol(strip(first(split(line, " = ")))) for line in split(strip(str), "\n")[2:end]]
+  @test listed == sort(collect(propertynames(cshow)))
+  @test occursin("14 variables", str)
+  @test occursin("1 variable:", repr("text/plain", Context(a = 1)))
+  @test occursin("0 variables", repr("text/plain", Context()))
+    
+  @testset "Branch and Lattice" begin
     empty!(GLOBAL_CONTEXTS)
-    push!(GLOBAL_CONTEXTS, Context(L = 5))
-    c = Context(L = 6)
-    ele = Drift(L=DefExpr(c -> c.L))
-    bl = Beamline([ele], E_ref=18e9, species_ref=Species("electron"))
-    @test bl[ele][1].L == 5
-    bl.context = c
-    @test bl[ele][1].L == 6
+    ctxkeys(c) = sort(collect(keys(getfield(c, :d))))
 
-    # Operators must forward the Context to the operands, rather than
-    # evaluating them against NULL_CONTEXT.
-    empty!(GLOBAL_CONTEXTS)
-    ctx = Context(a = -3.0, b = 2.0)
-    d = DefExpr(c -> c.a)
-    e = DefExpr(c -> c.b)
-    @test (-d)(ctx)   == 3.0
-    @test (+d)(ctx)   == -3.0
-    @test (d + 1)(ctx) == -2.0
-    @test (1 + d)(ctx) == -2.0
-    @test (d - 1)(ctx) == -4.0
-    @test (1 - d)(ctx) == 4.0
-    @test (d * 2)(ctx) == -6.0
-    @test (2 * d)(ctx) == -6.0
-    @test (d / 2)(ctx) == -1.5
-    @test (d ^ 2)(ctx) == 9.0
-    @test (d + e)(ctx) == -1.0
-    @test (d - e)(ctx) == -5.0
-    @test (d * e)(ctx) == -6.0
-    @test (d / e)(ctx) == -1.5
-    @test abs(d)(ctx)  == 3.0
-    @test sign(d)(ctx) == -1.0
-    @test sin(d)(ctx)  == sin(-3.0)
-    # Nested/compound expressions too
-    @test (abs(d) + e * 2)(ctx) == 7.0
+    # Type display
+    @test repr(Branch) == "Branch"
+    @test repr(Lattice) == "Lattice"
 
-    # A Beamline's stored context must reach parameters built from operators.
-    qq = Quadrupole(Kn1=-DefExpr(c -> c.k1), L=0.5)
-    blq = Beamline([qq], context=Context(k1 = 0.36))
-    @test blq[qq][1].Kn1 ≈ -0.36
+    # length and indexing across the Beamlines of a Branch
+    d1 = Drift(L=1.0); d2 = Drift(L=2.0); d3 = Drift(L=3.0); d4 = Drift(L=4.0)
+    bl1 = Beamline([d1, d2]; E_ref=1e9, species_ref=Species("electron"))
+    bl2 = Beamline([d3, d4])
+    br = Branch([bl1, bl2])
+    bl1, bl2 = br.beamlines # The Branch holds copies of the Beamlines
+    @test length(bl1) == 2
+    @test length(br) == 4
+    @test length(Branch(Beamline[])) == 0
+    @test br[1] === bl1.line[1]
+    @test br[2] === bl1.line[2]
+    @test br[3] === bl2.line[1]
+    @test br[4] === bl2.line[2]
+    @test br[end] === br[4]
+    @test br[end-1] === br[3]
+    @test br[begin] === br[1]
+    @test bl2[end] === bl2.line[2]
+    @test collect(bl2) == [bl2.line[1], bl2.line[2]]
+    @test eltype(bl2) == LatElement
+    foreach(x -> x.ibs_model = IBSModel.Gaussian, bl2) # Sets the parents d3 and d4
+    @test d3.ibs_model == d4.ibs_model == IBSModel.Gaussian
+    @test bl2[begin] === bl2.line[1]
+    @test_throws BoundsError Branch(Beamline[])[end]
+    @test_throws BoundsError br[5]
+    @test_throws BoundsError br[0]
+    @test_throws BoundsError br[-1]
+    @test_throws BoundsError Branch(Beamline[])[1]
 
-    # IgnoreParams / ignore_params
-    ele = Quadrupole(L=0.5, Kn1=0.3, x_offset=1e-3)
-    @test isnothing(ele.IgnoreParams)
-    @test isempty(ele.ignore_params)
-    @test ele.IgnoreParams isa IgnoreParams # Created on first access
-    @test !occursin("IgnoreParams", sprint(show, ele)) # Empty IgnoreParams are not shown
-    @test ele ≈ Quadrupole(L=0.5, Kn1=0.3, x_offset=1e-3)
-    push!(Quadrupole(L=0.5).ignore_params, BendParams) # push! works without IgnoreParams
-    ele2 = Quadrupole(L=0.5)
-    push!(ele2.ignore_params, BendParams)
-    @test ele2.ignore_params == [BendParams]
-    ele = Quadrupole(L=0.5, Kn1=0.3, x_offset=1e-3)
-    @test :ignore_params in propertynames(ele)
-    @test :IgnoreParams in propertynames(ele)
-    ele.ignore_params = [AlignmentParams]
-    @test ele.IgnoreParams isa IgnoreParams
-    @test ele.IgnoreParams.ignore_params === ele.ignore_params
-    @test ele.ignore_params == [AlignmentParams]
-    @test ele.ignore_params isa Vector{Type{<:AbstractParams}}
-    @test isactive(ele.AlignmentParams) # isactive does not check ignore_params
-    push!(ele.ignore_params, BMultipoleParams)
-    @test ele.ignore_params == [AlignmentParams, BMultipoleParams]
-    # Only vectors of parameter group types are allowed, and parametric types
-    ele.ignore_params = [ApertureParams]
-    @test_throws MethodError ele.ignore_params = BendParams
-    @test_throws MethodError ele.ignore_params = (BendParams,)
-    @test ele.ignore_params == [ApertureParams]
-    ele.ignore_params = [BendParams, RFParams, MapParams]
-    @test ele.ignore_params == [BendParams, RFParams, MapParams]
-    ele.ignore_params = ele.ignore_params
-    @test ele.ignore_params == [BendParams, RFParams, MapParams]
-    ele.ignore_params = []
-    @test isempty(ele.ignore_params)
-    @test ele.IgnoreParams isa IgnoreParams
-    # Setting the whole parameter group
-    ele.IgnoreParams = IgnoreParams(ignore_params=[PatchParams])
-    @test ele.ignore_params == [PatchParams]
-    ele.IgnoreParams = nothing
-    @test isnothing(ele.IgnoreParams)
-    # Keyword argument
-    ele = Quadrupole(L=0.5, Kn1=0.3, ignore_params=[BMultipoleParams])
-    @test ele.ignore_params == [BMultipoleParams]
-    # Entries that are not parameter group types throw and leave the list unchanged
-    @test_throws MethodError ele.ignore_params = [:BMultipoleParams] # Symbols not allowed
-    @test_throws MethodError ele.ignore_params = "BMultipoleParams"
-    @test_throws MethodError ele.ignore_params = [Int]
-    @test_throws MethodError Quadrupole(ignore_params=[:Foo])
-    @test ele.ignore_params == [BMultipoleParams]
-    # Show
-    @test !occursin("ignore_params", sprint(show, Quadrupole(L=0.5)))
-    ele.ignore_params = [BMultipoleParams, AlignmentParams]
-    @test occursin("ignore_params = [BMultipoleParams, AlignmentParams]", sprint(show, ele))
-    # Elements in a Beamline share the IgnoreParams of the parent element
-    ele.ignore_params = [AlignmentParams]
-    bl = Beamline([ele, Drift(L=1.0), ele], species_ref=Species("electron"), E_ref=1e9)
-    @test bl.line[1].ignore_params === ele.ignore_params
-    @test bl.line[3].ignore_params == [AlignmentParams]
-    bl.line[3].ignore_params = [BMultipoleParams]
-    @test ele.ignore_params == [BMultipoleParams]
-    @test bl.line[1].ignore_params == [BMultipoleParams]
-    @test isnothing(bl.line[2].IgnoreParams)
-    @test isempty(bl.line[2].ignore_params) # Creates IgnoreParams in the parent element
-    @test bl.line[2].IgnoreParams === Beamlines.get_parent(getfield(bl.line[2], :pdict)).IgnoreParams
-    push!(bl.line[2].ignore_params, PatchParams)
-    @test Beamlines.get_parent(getfield(bl.line[2], :pdict)).ignore_params == [PatchParams]
-    empty!(bl.line[2].ignore_params)
-    @test occursin("ignore_params = [BMultipoleParams]", sprint(show, bl.line[1]))
-    # Setting ignore_params on an instance whose parent has no IgnoreParams sets the parent
-    d = bl.line[2]
-    bl.line[2].ignore_params = [PatchParams]
-    @test d.ignore_params == [PatchParams]
-    bl.line[2].ignore_params = []
-    # Copying and comparing
-    ele2 = deepcopy(bl.line[3]) # Flattens InheritParams
-    @test ele2.ignore_params == [BMultipoleParams]
-    @test ele2.ignore_params !== ele.ignore_params
-    @test ele2 ≈ ele
-    ele2.ignore_params = []
-    @test !(ele2 ≈ ele)
-    ele2.ignore_params = [AlignmentParams, BMultipoleParams]
-    ele3 = deepcopy(ele2)
-    ele3.ignore_params = [BMultipoleParams, AlignmentParams]
-    @test ele2 ≈ ele3 # Order does not matter
-    # An empty list is the same as no IgnoreParams
-    @test Quadrupole(L=0.5, Kn1=0.3, ignore_params=[]) ≈ Quadrupole(L=0.5, Kn1=0.3)
-    @test Quadrupole(L=0.5, Kn1=0.3) ≈ Quadrupole(L=0.5, Kn1=0.3, ignore_params=[])
-    @test !(Quadrupole(L=0.5, Kn1=0.3) ≈ Quadrupole(L=0.5, Kn1=0.3, ignore_params=[BendParams]))
-    @test !(Quadrupole(L=0.5, Kn1=0.3, ignore_params=[BendParams]) ≈ Quadrupole(L=0.5, Kn1=0.3))
-    # isapprox_ignoring skips the given parameter groups
-    @test !(Quadrupole(L=0.5, Kn1=0.3, x_offset=1e-3) ≈ Quadrupole(L=0.5, Kn1=0.3))
-    @test Beamlines.isapprox_ignoring(Quadrupole(L=0.5, Kn1=0.3, x_offset=1e-3), Quadrupole(L=0.5, Kn1=0.3), AlignmentParams)
-    @test Beamlines.isapprox_ignoring(Quadrupole(L=0.5, Kn1=0.3, x_offset=1e-3, ignore_params=[BendParams]), 
-                                      Quadrupole(L=0.5, Kn1=0.3), AlignmentParams, IgnoreParams)
-    @test !Beamlines.isapprox_ignoring(Quadrupole(L=0.5, Kn1=0.3, x_offset=1e-3), Quadrupole(L=0.5, Kn1=0.4), AlignmentParams)
-    @test Beamlines.isapprox_ignoring(Quadrupole(L=0.5, Kn1=0.3, ignore_params=[]), Quadrupole(L=0.5, Kn1=0.3))
-    # writebl
-    str = sprint(Beamlines.writebl, bl)
-    @test occursin("ignore_params=[BMultipoleParams]", str)
-    bl2 = eval(Meta.parse(str))
-    @test bl2.line[1].ignore_params == [BMultipoleParams]
-    @test bl2.line[3].ignore_params == [BMultipoleParams]
-    @test isempty(bl2.line[2].ignore_params)
+    # s and s_downstream accumulate over the preceding Beamlines in the Branch
+    @test [br[i].s for i in 1:4] == [0, 1, 3, 6]
+    @test [br[i].s_downstream for i in 1:4] == [1, 3, 6, 10]
+    # s at the start of a Beamline is a Float32 zero, which promotes with any L type.
+    # After that, s has the type of the sum of the preceding lengths.
+    @test br[1].s === 0.0f0
+    @test Beamline([Drift(L=1f0)]).line[1].s === 0.0f0
+    @test br[2].s isa Float64
+    @test Beamline([Drift(L=1f0), Drift(L=2f0)]).line[2].s isa Float32
 
-    # Showing a Context must list every variable, sorted by name, and must not
-    # truncate the way the underlying Dict's show does past 10 entries.
-    empty!(GLOBAL_CONTEXTS)
-    cshow = Context(a1 = 1e-10, b2 = 2e-10, c3 = 3e-10, d4 = 4e-10,
-                    ov_1_v1 = DefExpr(c -> c.om_om1^2), ov_1_v2 = 0.0,
-                    ov2_w1 = 1.0, ov2_w2 = 0.0, om_om1 = 0.0,
-                    gg_1_g1 = 2.0, gg_1_g2 = 0.0, hh_h1 = 2.0, hh_h2 = 0.0,
-                    q2_Kn0 = 8e-10)
-    str = repr("text/plain", cshow)
-    @test !occursin("…", str)
-    for var in (:a1, :b2, :c3, :d4, :ov_1_v1, :ov_1_v2, :ov2_w1, :ov2_w2,
-                :om_om1, :gg_1_g1, :gg_1_g2, :hh_h1, :hh_h2, :q2_Kn0)
-      @test occursin(String(var), str)
-    end
-    # Variables are listed in sorted order, one per line after the header.
-    listed = [Symbol(strip(first(split(line, " = ")))) for line in split(strip(str), "\n")[2:end]]
-    @test listed == sort(collect(propertynames(cshow)))
-    @test occursin("14 variables", str)
-    @test occursin("1 variable:", repr("text/plain", Context(a = 1)))
-    @test occursin("0 variables", repr("text/plain", Context()))
-    
-    @testset "Branch and Lattice" begin
-        empty!(GLOBAL_CONTEXTS)
-        ctxkeys(c) = sort(collect(keys(getfield(c, :d))))
+    # s of preceding Beamlines is evaluated with the (shared) context
+    dl = Drift(L=DefExpr(c -> c.len))
+    blc1 = Beamline([dl]; E_ref=1e9, species_ref=Species("electron"), context=Context(len=2.0))
+    blc2 = Beamline([Drift(L=1.0)])
+    brc = Branch([blc1, blc2])
+    blc2 = brc.beamlines[2]
+    @test blc2.line[1].s == 2.0
+    brc.context.len = 3.0
+    @test blc2.line[1].s == 3.0
+    @test blc2.line[1].s_downstream == 4.0
 
-        # Type display
-        @test repr(Branch) == "Branch"
-        @test repr(Lattice) == "Lattice"
+    # Branch properties
+    @test br.name == ""
+    @test Branch([Beamline([Drift()])]; name="named").name == "named"
+    br.name = "X"
+    @test br.name == "X"
+    @test propertynames(br) == (:name, :beamlines, :lattice, :lattice_index, :context)
+    @test_throws ErrorException br.lattice       # not yet in a Lattice
+    @test_throws ErrorException br.lattice_index
+    @test_throws ErrorException br.foo
+    @test_throws ErrorException br.lattice = Beamlines.NULL_LATTICE
+    @test_throws ErrorException br.lattice_index = 1
+    @test_throws ErrorException br.foo = 1
 
-        # length and indexing across the Beamlines of a Branch
-        d1 = Drift(L=1.0); d2 = Drift(L=2.0); d3 = Drift(L=3.0); d4 = Drift(L=4.0)
-        bl1 = Beamline([d1, d2]; E_ref=1e9, species_ref=Species("electron"))
-        bl2 = Beamline([d3, d4])
-        br = Branch([bl1, bl2])
-        bl1, bl2 = br.beamlines # The Branch holds copies of the Beamlines
-        @test length(bl1) == 2
-        @test length(br) == 4
-        @test length(Branch(Beamline[])) == 0
-        @test br[1] === bl1.line[1]
-        @test br[2] === bl1.line[2]
-        @test br[3] === bl2.line[1]
-        @test br[4] === bl2.line[2]
-        @test br[end] === br[4]
-        @test br[end-1] === br[3]
-        @test br[begin] === br[1]
-        @test bl2[end] === bl2.line[2]
-        @test bl2[begin] === bl2.line[1]
-        @test_throws BoundsError Branch(Beamline[])[end]
-        @test_throws BoundsError br[5]
-        @test_throws BoundsError br[0]
-        @test_throws BoundsError br[-1]
-        @test_throws BoundsError Branch(Beamline[])[1]
+    # Lattice from Branches
+    br2 = Branch([Beamline([Drift(L=5.0)])])
+    lat = Lattice([br, br2]; name="LAT")
+    @test lat.name == "LAT"
+    @test length(lat.branches) == 2
+    @test lat.branches[1] !== br  # The Lattice holds copies of the Branches
+    @test lat.branches[2] !== br2
+    @test_throws ErrorException br.lattice # Originals are not in the Lattice
+    @test br2.name == ""                   # and are not renamed
+    br, br2 = lat.branches
+    @test length(lat) == 2
+    @test lat[1] === br && lat[begin] === br
+    @test lat[end] === br2
+    @test br.lattice === lat
+    @test br2.lattice === lat
+    @test br.lattice_index == 1
+    @test br2.lattice_index == 2
+    @test br.name == "X"   # Explicit names are kept
+    @test br2.name == "b2" # Unnamed branches get a default name
+    # A Branch may be used in more than one Lattice, and more than once in a Lattice
+    brS = Branch([Beamline([Drift(L=1.0)])]; name="IR", context=Context(k=1))
+    latS1 = Lattice([brS]; context=Context(a=1))
+    latS2 = Lattice([brS]; context=Context(a=2))
+    latS3 = Lattice([brS, brS])
+    @test latS1.branches[1] !== latS2.branches[1]
+    @test latS3.branches[1] !== latS3.branches[2]
+    @test [b.lattice_index for b in latS3.branches] == [1, 2]
+    @test all(b -> b.name == "IR", [latS1.branches[1], latS3.branches...])
+    @test latS3.branches[1][1] !== latS3.branches[2][1] # Distinct LatElements
+    @test latS1.context.a == 1 && latS2.context.a == 2 && latS1.context.k == 1
+    @test_throws ErrorException brS.lattice # The original is in no Lattice
+    @test ctxkeys(brS.context) == [:k]      # and keeps its own Context
 
-        # s and s_downstream accumulate over the preceding Beamlines in the Branch
-        @test [br[i].s for i in 1:4] == [0, 1, 3, 6]
-        @test [br[i].s_downstream for i in 1:4] == [1, 3, 6, 10]
-        # s at the start of a Beamline is a Float32 zero, which promotes with any L type.
-        # After that, s has the type of the sum of the preceding lengths.
-        @test br[1].s === 0.0f0
-        @test Beamline([Drift(L=1f0)]).line[1].s === 0.0f0
-        @test br[2].s isa Float64
-        @test Beamline([Drift(L=1f0), Drift(L=2f0)]).line[2].s isa Float32
+    lat.name = "LAT2"
+    @test lat.name == "LAT2"
+    lat.name = "LAT"
+    @test_throws ErrorException lat.branches = lat.branches
+    @test_throws ErrorException lat.foo = 1
 
-        # s of preceding Beamlines is evaluated with the (shared) context
-        dl = Drift(L=DefExpr(c -> c.len))
-        blc1 = Beamline([dl]; E_ref=1e9, species_ref=Species("electron"), context=Context(len=2.0))
-        blc2 = Beamline([Drift(L=1.0)])
-        brc = Branch([blc1, blc2])
-        blc2 = brc.beamlines[2]
-        @test blc2.line[1].s == 2.0
-        brc.context.len = 3.0
-        @test blc2.line[1].s == 3.0
-        @test blc2.line[1].s_downstream == 4.0
+    # Lattice from Beamlines puts them all in a single Branch
+    blA = Beamline([Drift(L=1.0)])
+    blB = Beamline([Drift(L=2.0)])
+    latB = Lattice([blA, blB]; name="LB", context=Context(z=9))
+    @test latB.name == "LB"
+    @test length(latB.branches) == 1
+    @test latB.branches[1].beamlines[1] !== blA # Copies
+    @test latB.branches[1].beamlines[2] !== blB
+    @test latB.branches[1].name == "b1"
+    @test latB.branches[1].beamlines[2].context.z == 9
+    @test :z ∉ ctxkeys(blB.context) # Original is untouched
 
-        # Branch properties
-        @test br.name == ""
-        @test Branch([Beamline([Drift()])]; name="named").name == "named"
-        br.name = "X"
-        @test br.name == "X"
-        @test propertynames(br) == (:name, :beamlines, :lattice, :lattice_index, :context)
-        @test_throws ErrorException br.lattice       # not yet in a Lattice
-        @test_throws ErrorException br.lattice_index
-        @test_throws ErrorException br.foo
-        @test_throws ErrorException br.lattice = Beamlines.NULL_LATTICE
-        @test_throws ErrorException br.lattice_index = 1
-        @test_throws ErrorException br.foo = 1
+    # Context merging. Precedence: Lattice > Branch > Beamline, and after construction
+    # the Lattice, its Branches, and their Beamlines all share one Context.
+    q = Quadrupole(L=1.0, Kn1=DefExpr(c -> c.k))
+    blq = Beamline([q], context=Context(k=0.1, x=1))
+    brq = Branch([blq], context=Context(k=0.2, y=2))
+    @test ctxkeys(brq.context) == [:k, :x, :y]
+    @test brq.context.k == 0.2
+    @test blq.context.k == 0.1 # Original is untouched
+    blq = brq.beamlines[1]
+    @test blq.context === brq.context
+    @test blq.line[1].Kn1 == 0.2
+    latq = Lattice([brq], context=Context(k=0.3, w=3))
+    @test ctxkeys(latq.context) == [:k, :w, :x, :y]
+    @test latq.context.k == 0.3
+    @test brq.context.k == 0.2 # Original is untouched
+    brq = latq.branches[1]     # The Lattice holds a copy of the Branch
+    blq = brq.beamlines[1]
+    @test brq.context === latq.context
+    @test blq.context === latq.context
+    @test blq.line[1].Kn1 == 0.3
+    latq.context.k = 0.4
+    @test blq.line[1].Kn1 == 0.4
 
-        # Lattice from Branches
-        br2 = Branch([Beamline([Drift(L=5.0)])])
-        lat = Lattice([br, br2]; name="LAT")
-        @test lat.name == "LAT"
-        @test length(lat.branches) == 2
-        @test lat.branches[1] !== br  # The Lattice holds copies of the Branches
-        @test lat.branches[2] !== br2
-        @test_throws ErrorException br.lattice # Originals are not in the Lattice
-        @test br2.name == ""                   # and are not renamed
-        br, br2 = lat.branches
-        @test length(lat) == 2
-        @test lat[1] === br && lat[begin] === br
-        @test lat[end] === br2
-        @test br.lattice === lat
-        @test br2.lattice === lat
-        @test br.lattice_index == 1
-        @test br2.lattice_index == 2
-        @test br.name == "X"   # Explicit names are kept
-        @test br2.name == "b2" # Unnamed branches get a default name
-        # A Branch may be used in more than one Lattice, and more than once in a Lattice
-        brS = Branch([Beamline([Drift(L=1.0)])]; name="IR", context=Context(k=1))
-        latS1 = Lattice([brS]; context=Context(a=1))
-        latS2 = Lattice([brS]; context=Context(a=2))
-        latS3 = Lattice([brS, brS])
-        @test latS1.branches[1] !== latS2.branches[1]
-        @test latS3.branches[1] !== latS3.branches[2]
-        @test [b.lattice_index for b in latS3.branches] == [1, 2]
-        @test all(b -> b.name == "IR", [latS1.branches[1], latS3.branches...])
-        @test latS3.branches[1][1] !== latS3.branches[2][1] # Distinct LatElements
-        @test latS1.context.a == 1 && latS2.context.a == 2 && latS1.context.k == 1
-        @test_throws ErrorException brS.lattice # The original is in no Lattice
-        @test ctxkeys(brS.context) == [:k]      # and keeps its own Context
+    # Setting the context at any level sets the one shared by the whole tree
+    blq2 = Beamline([Drift()])
+    brq2 = Branch([Beamline([Drift()]), blq2])
+    blq2 = brq2.beamlines[2]
+    brq3 = Branch([Beamline([Drift()])])
+    latq3 = Lattice([Branch([Beamline([Quadrupole(L=1.0, Kn1=DefExpr(c -> c.k))])]), brq3])
+    blq3 = latq3.branches[1].beamlines[1]
+    brq3 = latq3.branches[2] # The Lattice holds a copy of the Branch
+    allctx(lat) = [lat.context; [b.context for b in lat.branches];
+                   [bl.context for b in lat.branches for bl in b.beamlines]]
+    c1 = Context(k=0.5)
+    latq3.context = c1
+    @test all(c -> c === c1, allctx(latq3))
+    @test blq3.line[1].Kn1 == 0.5
+    c2 = Context(k=0.6)
+    brq3.context = c2                        # Branch in a Lattice
+    @test all(c -> c === c2, allctx(latq3))
+    @test blq3.line[1].Kn1 == 0.6
+    c3 = Context(k=0.7)
+    brq3.beamlines[1].context = c3           # Beamline in a Branch in a Lattice
+    @test all(c -> c === c3, allctx(latq3))
+    @test blq3.line[1].Kn1 == 0.7
+    # Branch not in a Lattice
+    c4 = Context(k=0.8)
+    blq2.context = c4
+    @test brq2.context === c4
+    @test all(bl -> bl.context === c4, brq2.beamlines)
+    c5 = Context(k=0.9)
+    brq2.context = c5
+    @test all(bl -> bl.context === c5, brq2.beamlines)
+    # Beamline not in a Branch only sets its own context
+    bls = Beamline([Drift()])
+    c6 = Context(k=1.0)
+    bls.context = c6
+    @test bls.context === c6
 
-        lat.name = "LAT2"
-        @test lat.name == "LAT2"
-        lat.name = "LAT"
-        @test_throws ErrorException lat.branches = lat.branches
-        @test_throws ErrorException lat.foo = 1
-
-        # Lattice from Beamlines puts them all in a single Branch
-        blA = Beamline([Drift(L=1.0)])
-        blB = Beamline([Drift(L=2.0)])
-        latB = Lattice([blA, blB]; name="LB", context=Context(z=9))
-        @test latB.name == "LB"
-        @test length(latB.branches) == 1
-        @test latB.branches[1].beamlines[1] !== blA # Copies
-        @test latB.branches[1].beamlines[2] !== blB
-        @test latB.branches[1].name == "b1"
-        @test latB.branches[1].beamlines[2].context.z == 9
-        @test :z ∉ ctxkeys(blB.context) # Original is untouched
-
-        # Context merging. Precedence: Lattice > Branch > Beamline, and after construction
-        # the Lattice, its Branches, and their Beamlines all share one Context.
-        q = Quadrupole(L=1.0, Kn1=DefExpr(c -> c.k))
-        blq = Beamline([q], context=Context(k=0.1, x=1))
-        brq = Branch([blq], context=Context(k=0.2, y=2))
-        @test ctxkeys(brq.context) == [:k, :x, :y]
-        @test brq.context.k == 0.2
-        @test blq.context.k == 0.1 # Original is untouched
-        blq = brq.beamlines[1]
-        @test blq.context === brq.context
-        @test blq.line[1].Kn1 == 0.2
-        latq = Lattice([brq], context=Context(k=0.3, w=3))
-        @test ctxkeys(latq.context) == [:k, :w, :x, :y]
-        @test latq.context.k == 0.3
-        @test brq.context.k == 0.2 # Original is untouched
-        brq = latq.branches[1]     # The Lattice holds a copy of the Branch
-        blq = brq.beamlines[1]
-        @test brq.context === latq.context
-        @test blq.context === latq.context
-        @test blq.line[1].Kn1 == 0.3
-        latq.context.k = 0.4
-        @test blq.line[1].Kn1 == 0.4
-
-        # Setting the context at any level sets the one shared by the whole tree
-        blq2 = Beamline([Drift()])
-        brq2 = Branch([Beamline([Drift()]), blq2])
-        blq2 = brq2.beamlines[2]
-        brq3 = Branch([Beamline([Drift()])])
-        latq3 = Lattice([Branch([Beamline([Quadrupole(L=1.0, Kn1=DefExpr(c -> c.k))])]), brq3])
-        blq3 = latq3.branches[1].beamlines[1]
-        brq3 = latq3.branches[2] # The Lattice holds a copy of the Branch
-        allctx(lat) = [lat.context; [b.context for b in lat.branches];
-                       [bl.context for b in lat.branches for bl in b.beamlines]]
-        c1 = Context(k=0.5)
-        latq3.context = c1
-        @test all(c -> c === c1, allctx(latq3))
-        @test blq3.line[1].Kn1 == 0.5
-        c2 = Context(k=0.6)
-        brq3.context = c2                        # Branch in a Lattice
-        @test all(c -> c === c2, allctx(latq3))
-        @test blq3.line[1].Kn1 == 0.6
-        c3 = Context(k=0.7)
-        brq3.beamlines[1].context = c3           # Beamline in a Branch in a Lattice
-        @test all(c -> c === c3, allctx(latq3))
-        @test blq3.line[1].Kn1 == 0.7
-        # Branch not in a Lattice
-        c4 = Context(k=0.8)
-        blq2.context = c4
-        @test brq2.context === c4
-        @test all(bl -> bl.context === c4, brq2.beamlines)
-        c5 = Context(k=0.9)
-        brq2.context = c5
-        @test all(bl -> bl.context === c5, brq2.beamlines)
-        # Beamline not in a Branch only sets its own context
-        bls = Beamline([Drift()])
-        c6 = Context(k=1.0)
-        bls.context = c6
-        @test bls.context === c6
-
-        # Context-dependent reference energy of a Beamline in a Branch and Lattice
-        mE = Marker(E_ref=DefExpr(c -> c.E), species_ref=Species("electron"))
-        brE0 = Branch([Beamline([mE, Drift(L=1.0)]), Beamline(LatElement[])], context=Context(E=5e9))
-        blE = brE0.beamlines[1]
-        @test getfield(blE, :context) === Beamlines.NULL_CONTEXT # Stored only in the Branch
-        @test getfield(brE0, :context) === brE0.context
-        @test blE.context === brE0.context
-        @test blE.E_ref == 5e9
-        @test blE.line[2].E_ref == 5e9
-        @test blE.line[1].dE_ref == 5e9 - Beamlines.massof(blE.line[1].species_ref)     # BeamlineParams getter, first element
-        @test blE.line[2].dE_ref == 0        # BeamlineParams getter, other elements
-        @test brE0.beamlines[2].E_ref == 5e9 # Empty Beamline infers from the one before
-        @test_throws ErrorException Beamline(LatElement[]).E_ref
-        latE = Lattice([brE0], context=Context(E=6e9))
-        @test brE0.context.E == 5e9         # Original Branch is untouched
-        @test brE0.beamlines[1].E_ref == 5e9
-        brE0 = latE.branches[1]             # The Lattice holds a copy of the Branch
-        blE = brE0.beamlines[1]
-        @test getfield(blE, :context) === Beamlines.NULL_CONTEXT  # Stored only in the Lattice
-        @test getfield(brE0, :context) === Beamlines.NULL_CONTEXT
-        @test getfield(latE, :context) === latE.context
-        @test blE.context === latE.context && brE0.context === latE.context
-        @test blE.E_ref == 6e9
-        @test brE0.beamlines[2].E_ref == 6e9
-        # Setting the context at any level sets only the Lattice field
-        for (obj, E) in ((blE, 7e9), (brE0, 8e9), (latE, 9e9))
-          cE = Context(E=E)
-          obj.context = cE
-          @test getfield(latE, :context) === cE
-          @test getfield(brE0, :context) === Beamlines.NULL_CONTEXT
-          @test all(bl -> getfield(bl, :context) === Beamlines.NULL_CONTEXT, brE0.beamlines)
-          @test blE.E_ref == E
-        end
-
-        # copy(::Beamline) makes new elements that are children of those of the original
-        qc = Quadrupole(L=1.0, Kn1=0.1)
-        blo = Beamline([qc, Drift(L=2.0)]; E_ref=1e9, species_ref=Species("electron"),
-                       context=Context(k=1))
-        blcp = copy(blo)
-        @test blcp !== blo
-        @test blcp.line !== blo.line
-        @test all(i -> blcp.line[i].parent === blo.line[i], 1:2)
-        @test blcp.line[2].beamline === blcp && blcp.line[2].beamline_index == 2
-        @test getfield(blcp, :branch_index) == -1
-        @test blo.line[1].beamline === blo   # The original is not modified
-        @test blcp.context !== blo.context
-        @test blcp.context.k == 1
-
-        # A Beamline in a Branch is a copy whose elements are children of those of the Beamline 
-        # used to create the Branch. Parameters are shared through inheritance.
-        brA = Branch([blo], context=Context(k=2))
-        blA = brA.beamlines[1]
-        @test blA !== blo
-        @test blA.line[1].parent === blo.line[1]
-        @test blo.line[1].beamline === blo   # The original is not modified
-        @test blA.line[1].beamline === blA
-        @test blA.branch === brA
-        @test getfield(blo, :branch_index) == -1
-        @test blA.context === brA.context
-        @test blo.context.k == 1             # Original context is untouched
-        @test blo.line[1].s == 0.0 && blo.line[2].s == 1.0
-        blA.E_ref = 2e9                      # Reference energy is shared through inheritance
-        @test blo.E_ref == 2e9
-        blA.line[1].Kn1 = 0.3                # So are other parameters
-        @test qc.Kn1 == 0.3 && blo.line[1].Kn1 == 0.3
-        @test length(Branch([blo]).beamlines) == 1 # blo can be used in another Branch
-        @test brA[1].beamline === blA && brA[2].s == 1.0 # which does not affect brA
-
-        # Reusing a Beamline in a second Branch does not affect the first Branch
-        d0r = Drift(L=5.0)
-        blu = Beamline([Drift(L=1.0), Drift(L=2.0)])
-        bru1 = Branch([Beamline([d0r]), blu])
-        bru2 = Branch([blu])
-        @test [bru1[i].s for i in 1:3] == [0, 5, 6]
-        @test [bru2[i].s for i in 1:2] == [0, 1]
-        @test bru1[3].branch === bru1 && bru2[2].branch === bru2
-
-        # findchildren and getindex find elements through a chain of parents
-        qf2 = Quadrupole(L=1.0)
-        blf = Beamline([qf2, Drift(L=1.0), qf2])
-        brf = Branch([blf, blf])
-        @test length(blf[qf2]) == 2
-        @test length(brf.beamlines[1][qf2]) == 2
-        @test length(brf.beamlines[2][qf2]) == 2
-        @test brf.beamlines[2][blf.line[1]] == [brf.beamlines[2].line[1]]
-        @test length(copy(brf).beamlines[1][qf2]) == 2 # Great-grandchildren
-        @test isempty(brf.beamlines[1][Quadrupole()])
-
-        # copy(::Branch) makes new lines whose elements are children of those in the Branch
-        brAc = copy(brA)
-        @test brAc !== brA
-        @test brAc.beamlines[1].line !== brA.beamlines[1].line
-        @test brAc.beamlines[1].line[1].beamline === brAc.beamlines[1]
-        @test brAc.beamlines[1].branch === brAc
-        @test brAc.context !== brA.context
-        @test brAc.context.k == 2
-        @test brAc.beamlines[1].E_ref == 2e9
-        qc.Kn1 = 0.5                         # Parents are shared
-        @test brAc.beamlines[1].line[1].Kn1 == 0.5
-
-        # Branch(elements; context) keeps the context, with or without InitialBeamlineParams
-        brE = Branch([Drift(L=1.0), Drift()]; context=Context(a=1, b=2))
-        @test ctxkeys(brE.context) == [:a, :b]
-        @test brE.beamlines[1].context === brE.context
-        brE2 = Branch([Marker(E_ref=1e9, species_ref=Species("electron")), Drift(),
-                       RFCavity(dE_ref=1e6), Drift()]; context=Context(a=1, b=2))
-        @test length(brE2.beamlines) == 2
-        @test ctxkeys(brE2.context) == [:a, :b]
-        latE = Lattice([Branch([Drift(), Drift()]; context=Context(a=1, b=2)),
-                        Branch([Drift(), Drift()])]; context=Context(c=3, d=4))
-        @test ctxkeys(latE.context) == [:a, :b, :c, :d]
-
-        # show
-        slat = sprint(show, lat)
-        @test occursin("Lattice: LAT", slat)
-        @test occursin(r"1\s+X\s+4\s+10\.0", slat)
-        @test occursin(r"2\s+b2\s+1\s+5\.0", slat)
-        sbr = sprint(show, br)
-        @test startswith(sbr, "Branch:\n")
-        @test occursin("name = X", sbr)
-        @test occursin("s_downstream [m]", sbr)
-        @test occursin("lattice_index = 1", sbr)
-        @test occursin(r"4\s+Drift\s+4\.0\s+6\.0\s+10\.0", sbr)
-
-        # Reference species and energy shown are those at the start of the Branch
-        @test occursin("species_ref = electron", sbr)
-        @test occursin("E_ref = 1.0e9", sbr)
-        @test occursin("species_ref = Inferred", sprint(show, Branch(Beamline[])))
-
-        # Empty Beamlines in a Branch contribute zero length to s
-        brx = Branch([Beamline(LatElement[]), Beamline([Drift(L=1.0)]; E_ref=1e9,
-                      species_ref=Species("electron")), Beamline(LatElement[]),
-                      Beamline([Drift(L=2.0)])])
-        @test brx.beamlines[2].line[1].s == 0
-        @test brx.beamlines[4].line[1].s == 1.0
-        @test brx.beamlines[4].line[1].s_downstream == 3.0
-        brx32 = Branch([Beamline([Drift(L=1f0)]), Beamline(LatElement[]), Beamline(LatElement[]),
-                        Beamline([Drift(L=2f0), Drift(L=3f0)])])
-        @test [brx32[i].s for i in 1:3] == [0, 1, 3]
-        @test all(i -> brx32[i].s isa Float32, 1:3)
-        @test brx32[3].s_downstream == 6
-
-        # Showing a Lattice that contains an empty Branch
-        slat0 = sprint(show, Lattice([Branch(Beamline[]), brx]))
-        @test occursin(r"1\s+b1\s+0\s+0", slat0)
-        @test occursin(r"2\s+b2\s+2\s+3\.0", slat0)
+    # Context-dependent reference energy of a Beamline in a Branch and Lattice
+    mE = Marker(E_ref=DefExpr(c -> c.E), species_ref=Species("electron"))
+    brE0 = Branch([Beamline([mE, Drift(L=1.0)]), Beamline(LatElement[])], context=Context(E=5e9))
+    blE = brE0.beamlines[1]
+    @test getfield(blE, :context) === Beamlines.NULL_CONTEXT # Stored only in the Branch
+    @test getfield(brE0, :context) === brE0.context
+    @test blE.context === brE0.context
+    @test blE.E_ref == 5e9
+    @test blE.line[2].E_ref == 5e9
+    @test blE.line[1].dE_ref == 5e9 - Beamlines.massof(blE.line[1].species_ref)     # BeamlineParams getter, first element
+    @test blE.line[2].dE_ref == 0        # BeamlineParams getter, other elements
+    @test brE0.beamlines[2].E_ref == 5e9 # Empty Beamline infers from the one before
+    @test_throws ErrorException Beamline(LatElement[]).E_ref
+    latE = Lattice([brE0], context=Context(E=6e9))
+    @test brE0.context.E == 5e9         # Original Branch is untouched
+    @test brE0.beamlines[1].E_ref == 5e9
+    brE0 = latE.branches[1]             # The Lattice holds a copy of the Branch
+    blE = brE0.beamlines[1]
+    @test getfield(blE, :context) === Beamlines.NULL_CONTEXT  # Stored only in the Lattice
+    @test getfield(brE0, :context) === Beamlines.NULL_CONTEXT
+    @test getfield(latE, :context) === latE.context
+    @test blE.context === latE.context && brE0.context === latE.context
+    @test blE.E_ref == 6e9
+    @test brE0.beamlines[2].E_ref == 6e9
+    # Setting the context at any level sets only the Lattice field
+    for (obj, E) in ((blE, 7e9), (brE0, 8e9), (latE, 9e9))
+      cE = Context(E=E)
+      obj.context = cE
+      @test getfield(latE, :context) === cE
+      @test getfield(brE0, :context) === Beamlines.NULL_CONTEXT
+      @test all(bl -> getfield(bl, :context) === Beamlines.NULL_CONTEXT, brE0.beamlines)
+      @test blE.E_ref == E
     end
 
-    @testset "Name matching" begin
-        @elements begin
-            m1 = Marker(); q1 = Quadrupole(L=1.0); d = Drift(L=1.0); q2 = Quadrupole(L=1.0)
-            m2 = Marker(); qq = Sextupole(); q10 = Quadrupole(L=1.0)
-        end
-        ring = Branch([m1, q1, d, q2, d, m2, qq, q10]; name="ring")
-        xl = Branch([m1, q1, d, q1]; name="xline")
-        lat = Lattice([ring, xl]; name="L1")
-        br1, br2 = lat.branches
-        names(v) = [e.name for e in v]
-        where_(v) = [(e.branch.name, e.beamline_index) for e in v] # Branch has a single Beamline
+    # copy(::Beamline) makes new elements that are children of those of the original
+    qc = Quadrupole(L=1.0, Kn1=0.1)
+    blo = Beamline([qc, Drift(L=2.0)]; E_ref=1e9, species_ref=Species("electron"),
+                   context=Context(k=1))
+    blcp = copy(blo)
+    @test blcp !== blo
+    @test blcp.line !== blo.line
+    @test all(i -> blcp.line[i].parent === blo.line[i], 1:2)
+    @test blcp.line[2].beamline === blcp && blcp.line[2].beamline_index == 2
+    @test getfield(blcp, :branch_index) == -1
+    @test blo.line[1].beamline === blo   # The original is not modified
+    @test blcp.context !== blo.context
+    @test blcp.context.k == 1
 
-        # Wild cards
-        @test names(findelements(lat, "q*")) == ["q1", "q2", "qq", "q10", "q1", "q1"]
-        @test names(findelements(lat, "q%")) == ["q1", "q2", "qq", "q1", "q1"]
-        @test names(findelements(lat, "q%0")) == ["q10"]
-        @test names(findelements(lat, "q?")) == names(findelements(lat, "q%"))  # "?" is the same as "%"
-        @test names(findelements(lat, "q?0")) == ["q10"]
-        @test names(findelements(lat, "?%")) == ["m1", "q1", "q2", "m2", "qq", "m1", "q1", "q1"]
-        @test names(findelements(lat, "*")) == names([br1.beamlines[1].line; br2.beamlines[1].line])
-        @test isempty(findelements(lat, "Q1"))     # Case sensitive
-        @test isempty(findelements(lat, "q"))      # Whole name match
-        @test isempty(findelements(lat, "q."))     # "." is not special in a String
-        # Regex
-        @test names(findelements(lat, r"q.*")) == names(findelements(lat, "q*"))
-        @test names(findelements(lat, r"q.")) == names(findelements(lat, "q%"))
-        @test isempty(findelements(lat, r"q"))     # Whole name match
-        @test isempty(findelements(lat, r"Q"i))
-        @test names(findelements(lat, r"Q1"i)) == ["q1", "q1", "q1"]  # Flags are kept
-        @test names(findelements(lat, r"q2|m1")) == ["m1", "q2", "m1"]  # Anchoring covers alternation
-        @test names(findelements(lat, r"(q|m)[0-9]{1,2}")) == ["m1", "q1", "q2", "m2", "q10", "m1", "q1", "q1"]
-        @test names(findelements(lat, r"[q,m]1")) == ["m1", "q1", "m1", "q1", "q1"]
-        @test names(findelements(lat, r"(?:q)2")) == ["q2"]
-        @test names(findelements(lat, r"[[:alpha:]]2")) == ["q2", "m2"]
-        @test names(findelements(lat, r"\Qq1\E")) == ["q1", "q1", "q1"]
-        # Kind
-        @test names(findelements(lat, "Quadrupole::q*")) == ["q1", "q2", "q10", "q1", "q1"]
-        @test names(findelements(lat, r"Sextupole::q.")) == ["qq"]
-        @test isempty(findelements(lat, "quadrupole::q*"))
-        # Branch qualifier
-        @test where_(findelements(lat, "xline>>q1")) == [("xline", 2), ("xline", 4)]
-        @test where_(findelements(lat, "x*>>q1")) == [("xline", 2), ("xline", 4)]
-        @test where_(findelements(lat, r"x.*>>q1")) == [("xline", 2), ("xline", 4)]
-        @test length(findelements(br1, "ring>>q1")) == 1
-        @test isempty(findelements(br1, "xline>>q1"))
-        # Index and N-th instance
-        @test where_(findelements(lat, "ring>>2")) == [("ring", 2)]
-        @test where_(findelements(lat, "2")) == [("ring", 2), ("xline", 2)]
-        @test where_(findelements(lat, "Quadrupole::3")) == []
-        @test isempty(findelements(lat, "ring>>99"))
-        @test where_(findelements(lat, "q1#2")) == [("xline", 4)]
-        @test where_(findelements(lat, "Quadrupole::*#2")) == [("ring", 4), ("xline", 4)]
-        @test isempty(findelements(lat, "q1#3"))
-        # Ranges
-        @test where_(findelements(lat, "m1:m2")) == [("ring", i) for i in 1:6]
-        @test where_(findelements(lat, "m2:q1")) == [("ring", i) for i in [1, 2, 6, 7, 8]] # Wraps
-        @test where_(findelements(lat, "ring>>2:4")) == [("ring", i) for i in 2:4]
-        @test where_(findelements(lat, "xline>>m1:3")) == [("xline", i) for i in 1:3]
-        @test_throws ErrorException findelements(lat, "m1:d")   # Multiple "d" in ring
-        @test_throws ErrorException findelements(lat, "m1:m2:q1")
-        # Union and intersection
-        @test names(findelements(lat, "q1, q2")) == ["q1", "q2", "q1", "q1"]
-        @test names(findelements(lat, "q2, q1,q2")) == ["q1", "q2", "q1", "q1"] # No duplicates
-        @test names(findelements(lat, "Marker::* & m1:m2")) == ["m1", "m2"]
-        @test names(findelements(lat, "q1, m2 & ring>>*")) == ["q1", "m2"]
-        @test names(findelements(lat, r"q\d+ & Quadrupole::q1, xline>>q2")) == ["q1", "q1", "q1"]
-        # Beamline search
-        bl = br2.beamlines[1]
-        @test where_(findelements(bl, "q1")) == [("xline", 2), ("xline", 4)]
-        @test isempty(findelements(bl, "ring>>q1"))
-        blx = Beamline([m1, q1, d])
-        @test findelements(blx, "q1") == [blx.line[2]]
-        @test findelements(blx, "3") == [blx.line[3]]
-        @test isempty(findelements(blx, "*>>q1"))   # Not in a Branch
-        # Errors
-        @test_throws ErrorException findelements(lat, "")
-        @test_throws ErrorException findelements(lat, "q1, ")
-        @test_throws ErrorException findelements(lat, "Quadrupole::ring>>q1")
-        @test_throws ErrorException findelements(lat, "::q1")
-        @test_throws ErrorException findelements(lat, "q1#x")
-        @test_throws ErrorException findelements(lat, "q1#0")
-        @test_throws ErrorException findelements(lat, "q1>L")
-        @test_throws "Invalid regular expression \"*\"" findelements(lat, r"Quadrupole::*")
-        @test_throws "Invalid regular expression \"+q\"" findelements(lat, r"ring>>+q")
+    # A Beamline in a Branch is a copy whose elements are children of those of the Beamline 
+    # used to create the Branch. Parameters are shared through inheritance.
+    brA = Branch([blo], context=Context(k=2))
+    blA = brA.beamlines[1]
+    @test blA !== blo
+    @test blA.line[1].parent === blo.line[1]
+    @test blo.line[1].beamline === blo   # The original is not modified
+    @test blA.line[1].beamline === blA
+    @test blA.branch === brA
+    @test getfield(blo, :branch_index) == -1
+    @test blA.context === brA.context
+    @test blo.context.k == 1             # Original context is untouched
+    @test blo.line[1].s == 0.0 && blo.line[2].s == 1.0
+    blA.E_ref = 2e9                      # Reference energy is shared through inheritance
+    @test blo.E_ref == 2e9
+    blA.line[1].Kn1 = 0.3                # So are other parameters
+    @test qc.Kn1 == 0.3 && blo.line[1].Kn1 == 0.3
+    @test length(Branch([blo]).beamlines) == 1 # blo can be used in another Branch
+    @test brA[1].beamline === blA && brA[2].s == 1.0 # which does not affect brA
 
-        # Branches
-        bnames(v) = [b.name for b in v]
-        @test findbranches(lat, "ring") == [br1]
-        @test bnames(findbranches(lat, "*")) == ["ring", "xline"]
-        @test bnames(findbranches(lat, "x*, 1")) == ["ring", "xline"]
-        @test bnames(findbranches(lat, r"RING"i)) == ["ring"]
-        @test bnames(findbranches(lat, "* & %line")) == ["xline"]
-        @test bnames(findbranches(lat, "?line")) == ["xline"]
+    # Reusing a Beamline in a second Branch does not affect the first Branch
+    d0r = Drift(L=5.0)
+    blu = Beamline([Drift(L=1.0), Drift(L=2.0)])
+    bru1 = Branch([Beamline([d0r]), blu])
+    bru2 = Branch([blu])
+    @test [bru1[i].s for i in 1:3] == [0, 5, 6]
+    @test [bru2[i].s for i in 1:2] == [0, 1]
+    @test bru1[3].branch === bru1 && bru2[2].branch === bru2
 
-        # getindex
-        @test br1["Quadrupole::q*"] == findelements(br1, "Quadrupole::q*")
-        @test isempty(br1["xline>>q1"])
-        @test br2.beamlines[1]["q1"] == findelements(br2.beamlines[1], "q1")
-        @test br2.beamlines[1]["3"] == [br2[3]]
-        blg = Beamline([Drift(L=1.0, name="dd"), Marker(name="mm")])
-        @test blg["m*"] == [blg.line[2]]
-        @test lat["ring"] == [br1]
-        @test lat["2"] == [br2]
-        @test lat["*line, ring"] == [br1, br2]
-        @test isempty(lat["q1"])                    # Only branches are searched
-        @test_throws "lat[:, \"ring>>2\"]" lat["ring>>2"]  # Element match
-        @test lat[:, "q1"] == findelements(lat, "q1")
-        @test lat[:, "ring>>2"] == [br1[2]]
-        @test lat[:, "Marker::* & m1:m2"] == findelements(lat, "Marker::* & m1:m2")
-        @test lat["ring", "q1"] == [br1[2]]
-        @test lat["*", "q1"] == findelements(lat, "q1")
-        @test lat["xline", "ring>>q1"] == []        # Branch qualifier still applies
-        @test lat[2, "q1"] == [br2[2], br2[4]]
-        @test lat[2, "3"] == [br2[3]]
-        @test_throws BoundsError lat[3, "q1"]
-        @test isempty(lat["nothing_here", "q1"])
-        @test lat[:, "q1"] isa Vector{LatElement} && lat["q1"] isa Vector{Branch}
-        @test br1[r"q\d+"] == findelements(br1, r"q\d+")
-        @test blg[r"M."i] == [blg.line[2]]
-        @test lat[r"RING"i] == [br1]
-        @test isempty(lat[r"q\d"])
-        @test lat[:, r"q\d"] == findelements(lat, r"q\d")
-        @test lat[:, r"x.*>>q1"] == findelements(lat, "xline>>q1")
-        @test lat[r"x.*", r"q\d"] == [br2[2], br2[4]]
-        @test_throws ErrorException lat[r"x.*>>q1"]
-        @test lat[r"[,x]line"] == [br2]             # "," inside [...] is not an operator
-        @test isempty(findbranches(lat, "2 & ring"))
-        @test isempty(findbranches(lat, "r"))
-        @test findbranches(lat, "2") == [br2]
-        @test_throws ErrorException findelements(lat, "L1>>>q1")   # No Lattice qualifier
-        @test_throws ErrorException findbranches(lat, "L1>>>ring")
-        @test_throws ErrorException findbranches(lat, "ring>>q1")
-        @test_throws ErrorException findbranches(lat, "Marker::ring")
+    # findchildren and getindex find elements through a chain of parents
+    qf2 = Quadrupole(L=1.0)
+    blf = Beamline([qf2, Drift(L=1.0), qf2])
+    brf = Branch([blf, blf])
+    @test length(blf[qf2]) == 2
+    @test length(brf.beamlines[1][qf2]) == 2
+    @test length(brf.beamlines[2][qf2]) == 2
+    @test brf.beamlines[2][blf.line[1]] == [brf.beamlines[2].line[1]]
+    @test length(copy(brf).beamlines[1][qf2]) == 2 # Great-grandchildren
+    @test isempty(brf.beamlines[1][Quadrupole()])
+
+    # copy(::Branch) makes new lines whose elements are children of those in the Branch
+    brAc = copy(brA)
+    @test brAc !== brA
+    @test brAc.beamlines[1].line !== brA.beamlines[1].line
+    @test brAc.beamlines[1].line[1].beamline === brAc.beamlines[1]
+    @test brAc.beamlines[1].branch === brAc
+    @test brAc.context !== brA.context
+    @test brAc.context.k == 2
+    @test brAc.beamlines[1].E_ref == 2e9
+    qc.Kn1 = 0.5                         # Parents are shared
+    @test brAc.beamlines[1].line[1].Kn1 == 0.5
+
+    # Branch(elements; context) keeps the context, with or without InitialBeamlineParams
+    brE = Branch([Drift(L=1.0), Drift()]; context=Context(a=1, b=2))
+    @test ctxkeys(brE.context) == [:a, :b]
+    @test brE.beamlines[1].context === brE.context
+    brE2 = Branch([Marker(E_ref=1e9, species_ref=Species("electron")), Drift(),
+                   RFCavity(dE_ref=1e6), Drift()]; context=Context(a=1, b=2))
+    @test length(brE2.beamlines) == 2
+    @test ctxkeys(brE2.context) == [:a, :b]
+    latE = Lattice([Branch([Drift(), Drift()]; context=Context(a=1, b=2)),
+                    Branch([Drift(), Drift()])]; context=Context(c=3, d=4))
+    @test ctxkeys(latE.context) == [:a, :b, :c, :d]
+
+    # show
+    slat = sprint(show, lat)
+    @test occursin("Lattice: LAT", slat)
+    @test occursin(r"1\s+X\s+4\s+10\.0", slat)
+    @test occursin(r"2\s+b2\s+1\s+5\.0", slat)
+    sbr = sprint(show, br)
+    @test startswith(sbr, "Branch:\n")
+    @test occursin("name = X", sbr)
+    @test occursin("s_downstream [m]", sbr)
+    @test occursin("lattice_index = 1", sbr)
+    @test occursin(r"4\s+Drift\s+4\.0\s+6\.0\s+10\.0", sbr)
+
+    # Reference species and energy shown are those at the start of the Branch
+    @test occursin("species_ref = electron", sbr)
+    @test occursin("E_ref = 1.0e9", sbr)
+    @test occursin("species_ref = Inferred", sprint(show, Branch(Beamline[])))
+
+    # Empty Beamlines in a Branch contribute zero length to s
+    brx = Branch([Beamline(LatElement[]), Beamline([Drift(L=1.0)]; E_ref=1e9,
+                  species_ref=Species("electron")), Beamline(LatElement[]),
+                  Beamline([Drift(L=2.0)])])
+    @test brx.beamlines[2].line[1].s == 0
+    @test brx.beamlines[4].line[1].s == 1.0
+    @test brx.beamlines[4].line[1].s_downstream == 3.0
+    brx32 = Branch([Beamline([Drift(L=1f0)]), Beamline(LatElement[]), Beamline(LatElement[]),
+                    Beamline([Drift(L=2f0), Drift(L=3f0)])])
+    @test [brx32[i].s for i in 1:3] == [0, 1, 3]
+    @test all(i -> brx32[i].s isa Float32, 1:3)
+    @test brx32[3].s_downstream == 6
+
+    # Showing a Lattice that contains an empty Branch
+    slat0 = sprint(show, Lattice([Branch(Beamline[]), brx]))
+    @test occursin(r"1\s+b1\s+0\s+0", slat0)
+    @test occursin(r"2\s+b2\s+2\s+3\.0", slat0)
+  end
+
+  @testset "Name matching" begin
+    @elements begin
+      m1 = Marker(); q1 = Quadrupole(L=1.0); d = Drift(L=1.0); q2 = Quadrupole(L=1.0)
+      m2 = Marker(); qq = Sextupole(); q10 = Quadrupole(L=1.0)
     end
+    ring = Branch([m1, q1, d, q2, d, m2, qq, q10]; name="ring")
+    xl = Branch([m1, q1, d, q1]; name="xline")
+    lat = Lattice([ring, xl]; name="L1")
+    br1, br2 = lat.branches
+    names(v) = [e.name for e in v]
+    where_(v) = [(e.branch.name, e.beamline_index) for e in v] # Branch has a single Beamline
+
+    # Wild cards
+    @test names(findelements(lat, "q*")) == ["q1", "q2", "qq", "q10", "q1", "q1"]
+    @test names(findelements(lat, "q%")) == ["q1", "q2", "qq", "q1", "q1"]
+    @test names(findelements(lat, "q%0")) == ["q10"]
+    @test names(findelements(lat, "q?")) == names(findelements(lat, "q%"))  # "?" is the same as "%"
+    @test names(findelements(lat, "q?0")) == ["q10"]
+    @test names(findelements(lat, "?%")) == ["m1", "q1", "q2", "m2", "qq", "m1", "q1", "q1"]
+    @test names(findelements(lat, "*")) == names([br1.beamlines[1].line; br2.beamlines[1].line])
+    @test isempty(findelements(lat, "Q1"))     # Case sensitive
+    @test isempty(findelements(lat, "q"))      # Whole name match
+    @test isempty(findelements(lat, "q."))     # "." is not special in a String
+    # Regex
+    @test names(findelements(lat, r"q.*")) == names(findelements(lat, "q*"))
+    @test names(findelements(lat, r"q.")) == names(findelements(lat, "q%"))
+    @test isempty(findelements(lat, r"q"))     # Whole name match
+    @test isempty(findelements(lat, r"Q"i))
+    @test names(findelements(lat, r"Q1"i)) == ["q1", "q1", "q1"]  # Flags are kept
+    @test names(findelements(lat, r"q2|m1")) == ["m1", "q2", "m1"]  # Anchoring covers alternation
+    @test names(findelements(lat, r"(q|m)[0-9]{1,2}")) == ["m1", "q1", "q2", "m2", "q10", "m1", "q1", "q1"]
+    @test names(findelements(lat, r"[q,m]1")) == ["m1", "q1", "m1", "q1", "q1"]
+    @test names(findelements(lat, r"(?:q)2")) == ["q2"]
+    @test names(findelements(lat, r"[[:alpha:]]2")) == ["q2", "m2"]
+    @test names(findelements(lat, r"\Qq1\E")) == ["q1", "q1", "q1"]
+    # Kind
+    @test names(findelements(lat, "Quadrupole::q*")) == ["q1", "q2", "q10", "q1", "q1"]
+    @test names(findelements(lat, r"Sextupole::q.")) == ["qq"]
+    @test isempty(findelements(lat, "quadrupole::q*"))
+    # Branch qualifier
+    @test where_(findelements(lat, "xline>>q1")) == [("xline", 2), ("xline", 4)]
+    @test where_(findelements(lat, "x*>>q1")) == [("xline", 2), ("xline", 4)]
+    @test where_(findelements(lat, r"x.*>>q1")) == [("xline", 2), ("xline", 4)]
+    @test length(findelements(br1, "ring>>q1")) == 1
+    @test isempty(findelements(br1, "xline>>q1"))
+    # Index and N-th instance
+    @test where_(findelements(lat, "ring>>2")) == [("ring", 2)]
+    @test where_(findelements(lat, "2")) == [("ring", 2), ("xline", 2)]
+    @test where_(findelements(lat, "Quadrupole::3")) == []
+    @test isempty(findelements(lat, "ring>>99"))
+    @test where_(findelements(lat, "q1#2")) == [("xline", 4)]
+    @test where_(findelements(lat, "Quadrupole::*#2")) == [("ring", 4), ("xline", 4)]
+    @test isempty(findelements(lat, "q1#3"))
+    # Ranges
+    @test where_(findelements(lat, "m1:m2")) == [("ring", i) for i in 1:6]
+    @test where_(findelements(lat, "m2:q1")) == [("ring", i) for i in [1, 2, 6, 7, 8]] # Wraps
+    @test where_(findelements(lat, "ring>>2:4")) == [("ring", i) for i in 2:4]
+    @test where_(findelements(lat, "xline>>m1:3")) == [("xline", i) for i in 1:3]
+    @test_throws ErrorException findelements(lat, "m1:d")   # Multiple "d" in ring
+    @test_throws ErrorException findelements(lat, "m1:m2:q1")
+    # Union and intersection
+    @test names(findelements(lat, "q1, q2")) == ["q1", "q2", "q1", "q1"]
+    @test names(findelements(lat, "q2, q1,q2")) == ["q1", "q2", "q1", "q1"] # No duplicates
+    @test names(findelements(lat, "Marker::* & m1:m2")) == ["m1", "m2"]
+    @test names(findelements(lat, "q1, m2 & ring>>*")) == ["q1", "m2"]
+    @test names(findelements(lat, r"q\d+ & Quadrupole::q1, xline>>q2")) == ["q1", "q1", "q1"]
+    # Beamline search
+    bl = br2.beamlines[1]
+    @test where_(findelements(bl, "q1")) == [("xline", 2), ("xline", 4)]
+    @test isempty(findelements(bl, "ring>>q1"))
+    blx = Beamline([m1, q1, d])
+    @test findelements(blx, "q1") == [blx.line[2]]
+    @test findelements(blx, "3") == [blx.line[3]]
+    @test isempty(findelements(blx, "*>>q1"))   # Not in a Branch
+    # Errors
+    @test_throws ErrorException findelements(lat, "")
+    @test_throws ErrorException findelements(lat, "q1, ")
+    @test_throws ErrorException findelements(lat, "Quadrupole::ring>>q1")
+    @test_throws ErrorException findelements(lat, "::q1")
+    @test_throws ErrorException findelements(lat, "q1#x")
+    @test_throws ErrorException findelements(lat, "q1#0")
+    @test_throws ErrorException findelements(lat, "q1>L")
+    @test_throws "Invalid regular expression \"*\"" findelements(lat, r"Quadrupole::*")
+    @test_throws "Invalid regular expression \"+q\"" findelements(lat, r"ring>>+q")
+
+    # Branches
+    bnames(v) = [b.name for b in v]
+    @test findbranches(lat, "ring") == [br1]
+    @test bnames(findbranches(lat, "*")) == ["ring", "xline"]
+    @test bnames(findbranches(lat, "x*, 1")) == ["ring", "xline"]
+    @test bnames(findbranches(lat, r"RING"i)) == ["ring"]
+    @test bnames(findbranches(lat, "* & %line")) == ["xline"]
+    @test bnames(findbranches(lat, "?line")) == ["xline"]
+
+    # getindex
+    @test br1["Quadrupole::q*"] == findelements(br1, "Quadrupole::q*")
+    @test isempty(br1["xline>>q1"])
+    @test br2.beamlines[1]["q1"] == findelements(br2.beamlines[1], "q1")
+    @test br2.beamlines[1]["3"] == [br2[3]]
+    blg = Beamline([Drift(L=1.0, name="dd"), Marker(name="mm")])
+    @test blg["m*"] == [blg.line[2]]
+    @test lat["ring"] == [br1]
+    @test lat["2"] == [br2]
+    @test lat["*line, ring"] == [br1, br2]
+    @test isempty(lat["q1"])                    # Only branches are searched
+    @test_throws "lat[:, \"ring>>2\"]" lat["ring>>2"]  # Element match
+    @test lat[:, "q1"] == findelements(lat, "q1")
+    @test lat[:, "ring>>2"] == [br1[2]]
+    @test lat[:, "Marker::* & m1:m2"] == findelements(lat, "Marker::* & m1:m2")
+    @test lat["ring", "q1"] == [br1[2]]
+    @test lat["*", "q1"] == findelements(lat, "q1")
+    @test lat["xline", "ring>>q1"] == []        # Branch qualifier still applies
+    @test lat[2, "q1"] == [br2[2], br2[4]]
+    @test lat[2, "3"] == [br2[3]]
+    @test_throws BoundsError lat[3, "q1"]
+    @test isempty(lat["nothing_here", "q1"])
+    @test lat[:, "q1"] isa Vector{LatElement} && lat["q1"] isa Vector{Branch}
+    @test br1[r"q\d+"] == findelements(br1, r"q\d+")
+    @test blg[r"M."i] == [blg.line[2]]
+    @test lat[r"RING"i] == [br1]
+    @test isempty(lat[r"q\d"])
+    @test lat[:, r"q\d"] == findelements(lat, r"q\d")
+    @test lat[:, r"x.*>>q1"] == findelements(lat, "xline>>q1")
+    @test lat[r"x.*", r"q\d"] == [br2[2], br2[4]]
+    @test_throws ErrorException lat[r"x.*>>q1"]
+    @test lat[r"[,x]line"] == [br2]             # "," inside [...] is not an operator
+    @test isempty(findbranches(lat, "2 & ring"))
+    @test isempty(findbranches(lat, "r"))
+    @test findbranches(lat, "2") == [br2]
+    @test_throws ErrorException findelements(lat, "L1>>>q1")   # No Lattice qualifier
+    @test_throws ErrorException findbranches(lat, "L1>>>ring")
+    @test_throws ErrorException findbranches(lat, "ring>>q1")
+    @test_throws ErrorException findbranches(lat, "Marker::ring")
+  end
 end
 
 include("energy_test.jl")
@@ -3575,4 +3556,112 @@ end
       @test_throws ErrorException getproperty(b2, k)
     end
   end
+end
+@testset "rawget" begin
+  e = Species("electron")
+  a = 0.36
+  L = 0.5
+  R = -10.0
+  kL = DefExpr(()->L)
+  k1 = DefExpr(c -> c.k1)
+  kR = DefExpr(()->R)
+  q = Quadrupole(L=kL, Kn1=k1, Ks2L=0.1, Bs3=DefExpr(()->a), tilt1=0.2, x_offset=1e-3, ds_step=0.1)
+  cav = RFCavity(L=0.3, voltage=1e6, harmon=DefExpr(()->100))
+  m = Multipole(En1L=0.1)
+  bl = Beamline([Drift(L=1.0), q, cav, m]; p_over_q_ref=kR, species_ref=e, context=Context(k1=0.3))
+  ctx = bl.context
+  c = bl.line[2]
+
+  # Stored properties are returned as stored, on the parent and the children
+  for ele in (q, c)
+    @test rawget(ele, :L) === kL
+    @test rawget(ele, :Kn1) === k1
+    # The parameter group stores all strengths and tilts as DefExprs once one of them is
+    @test deval(rawget(ele, :Ks2L)) === 0.1
+    @test deval(rawget(ele, :tilt1)) === 0.2
+    @test rawget(ele, :x_offset) === 1e-3
+    @test rawget(ele, :ds_step) === 0.1
+  end
+  @test rawget(cav, :harmon) === getfield(cav.RFParams, :rate)
+  @test rawget(m, :En1L) === 0.1
+  for ele in bl.line
+    @test rawget(ele, :p_over_q_ref) === kR
+    @test rawget(ele, :species_ref) == e
+  end
+  @test rawget(bl.line[1], :Kn1) === getproperty(bl.line[1], :Kn1) # Default
+  @test rawget(c, :BMultipoleParams) === c.BMultipoleParams
+
+  # Also on the parameter groups
+  @test rawget(q.UniversalParams, :L) === kL
+  @test rawget(q.UniversalParams, :ds_step) === 0.1
+  @test rawget(q.BMultipoleParams, :Kn1) === k1
+  @test rawget(q.AlignmentParams, :x_offset) === 1e-3
+  @test rawget(cav.RFParams, :harmon) === getfield(cav.RFParams, :rate)
+  @test rawget(bl.line[1].InitialBeamlineParams, :p_over_q_ref) === kR
+  @test_throws ErrorException rawget(q.BMultipoleParams, :Kn1L)
+  @test_throws ErrorException rawget(c.BeamlineParams, :s)
+
+  # Evaluated in the Context, they are getproperty, also after the variables change
+  for (Lv, Rv, k1v) in ((0.5, -10.0, 0.3), (0.6, -20.0, 0.4))
+    L = Lv
+    R = Rv
+    ctx.k1 = k1v
+    for k in (:L, :Kn1, :Ks2L, :Bs3, :ds_step, :p_over_q_ref)
+      @test isequal(deval(rawget(c, k), ctx), getproperty(c, k))
+    end
+    @test isequal(deval(rawget(bl.line[3], :harmon), ctx), bl.line[3].harmon)
+  end
+
+  # Computed properties cannot be gotten raw
+  for (ele, k, stored) in ((c, :Kn1L, "Kn1"), (c, :Bn1, "Kn1"), (c, :Ks2, "Ks2L"), (c, :Bs3L, "Bs3"),
+                           (c, :n_steps, "ds_step"), (bl.line[3], :rf_frequency, "harmon"), (m, :En1, "En1L"))
+    err = try rawget(ele, k); nothing catch err; err end
+    @test err isa ErrorException && occursin("is a dependent variable, computed from the independent variable $stored.", err.msg)
+  end
+  for k in (:E_ref, :pc_ref, :s, :s_downstream, :field_master, :BM_independent, :parent)
+    @test_throws ErrorException rawget(c, k)
+  end
+
+  # A changed reference is seen through the stored strength, not a raw Bn1
+  bl.p_over_q_ref = -20.0
+  @test deval(rawget(c, :Kn1), ctx)*bl.p_over_q_ref == c.Bn1
+
+  # Setting a property from its raw value keeps the dependence
+  q.Kn1 = 2*rawget(q, :Kn1)
+  ctx.k1 = 0.25
+  @test c.Kn1 == 0.5
+
+  # Reference of a Branch: stored in the first element of each Beamline, else inherited (computed)
+  bl1 = Beamline([Marker(), Drift(L=1.0)]; E_ref=DefExpr(()->10e9), species_ref=e)
+  bl2 = Beamline([Marker()]; dE_ref=-3e9)
+  bl3 = Beamline([Marker()])
+  br = Branch([bl1, bl2, bl3])
+  b1, b2, b3 = br.beamlines
+  @test rawget(b1.line[2], :E_ref) === rawget(b1.line[1], :E_ref)
+  @test_throws ErrorException rawget(b1.line[1], :dE_ref) # Computed from the stored E_ref
+  @test rawget(b2.line[1], :dE_ref) === -3e9
+  @test rawget(b1.line[2], :dE_ref) === 0
+  @test_throws ErrorException rawget(b2.line[1], :E_ref)
+  @test_throws ErrorException rawget(b3.line[1], :E_ref)
+
+  # Error messages of computed strengths name the property
+  for (ele, k) in ((Multipole(Kn2L=0.1), :Kn2), (Multipole(En1L=0.1), :En1))
+    err = try getproperty(ele, k); nothing catch err; err end
+    @test err isa ErrorException && occursin("Unable to get $k of LatElement", err.msg)
+  end
+end
+
+@testset "Tilt of a different number type than the strengths" begin
+  # Setting an existing (e)tilt to a value that needs a wider number type replaces the group with
+  # a promoted one (it used to put the value itself in the element)
+  q = Quadrupole(L=1.0, Kn1=1, tilt1=0.1)
+  @test q.Kn1 == 1 && q.tilt1 == 0.1 && eltype(q.BMultipoleParams) == Float64
+  q = Quadrupole(L=1.0, Kn1=0.3f0)
+  q.tilt1 = 0.1
+  @test q.Kn1 == 0.3f0 && q.tilt1 == 0.1 && eltype(q.BMultipoleParams) == Float64
+  q = Quadrupole(L=1.0, Kn1=0.3, tilt1=ForwardDiff.Dual(0.1, 1.0))
+  @test q.Kn1 == 0.3 && q.tilt1 == ForwardDiff.Dual(0.1, 1.0)
+  e = LatElement(L=1.0, En1=1)
+  e.etilt1 = 0.1
+  @test e.En1 == 1 && e.etilt1 == 0.1 && eltype(e.EMultipoleParams) == Float64
 end

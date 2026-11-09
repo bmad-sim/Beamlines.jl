@@ -107,6 +107,15 @@ function Base.getproperty(up::UniversalParams, key::Symbol)
   end
 end
 
+function rawget(up::UniversalParams, key::Symbol)
+  if key in (:n_steps, :ds_step)
+    stored = getfield(up, :step_meaning) == StepMeaning.NSteps ? :n_steps : :ds_step
+    key == stored || error("Unable to rawget $key: $key is a dependent variable, computed from the independent variable $stored. Use rawget with :$stored instead")
+    return getfield(up, :step)
+  end
+  return invoke(rawget, Tuple{AbstractParams,Symbol}, up, key)
+end
+
 PROPS(::Type{UniversalParams}) = OrderedDict{String,String}(
   "kind" => "String specifing the \"kind\", of an element, e.g. \"Quadrupole\"",
   "name" => "The name of an element as a string",

@@ -648,6 +648,22 @@ function Base.getproperty(ibp::InitialBeamlineParams, key::Symbol)
   return prop
 end
 
+function rawget(ibp::InitialBeamlineParams, key::Symbol)
+  if key == :species_ref
+    species_ref = getfield(ibp, :species_ref)
+    isnullspecies(species_ref) && error("Unable to rawget species_ref: species_ref is not an independent variable of this Beamline (it may be inherited from an upstream Beamline)")
+    return species_ref
+  elseif key in (:E_ref, :pc_ref, :p_over_q_ref, :dE_ref, :dpc_ref, :dp_over_q_ref)
+    stored = refmeaning_to_sym(getfield(ibp, :ref_meaning))
+    if isnothing(getfield(ibp, :ref))
+      error("Unable to rawget $key: $key is not an independent variable of this Beamline (it may be inherited from an upstream Beamline)")
+    end
+    key == stored || error("Unable to rawget $key: $key is a dependent variable, computed from the independent variable $stored. Use rawget with :$stored instead")
+    return getfield(ibp, :ref)
+  end
+  return invoke(rawget, Tuple{AbstractParams,Symbol}, ibp, key)
+end
+
 #---------------------------------------------------------------------------------------------------
 
 function trygetproperty(ibp::InitialBeamlineParams, key::Symbol)

@@ -18,7 +18,7 @@ for name in (:DriftKick, :MatrixKick, :BendKick, :SolenoidKick)
   end
   $name(; order=4, opt_scheme=true) = $name(order, opt_scheme)
   Base.getproperty(tm::$name{O,S}, key::Symbol) where {O,S} = key === :order ? O : key === :opt_scheme ? S : getfield(tm, key)
-  Base.show(io::IO, tm::$name) = print(io, $(string(name)), "(", tm.order, ", ", tm.opt_scheme, ")")
+  Base.show(io::IO, tm::$name) = print(io, $(string(name)), "(order=", tm.order, ", opt_scheme=", tm.opt_scheme, ")")
 end
 end
 
@@ -91,7 +91,7 @@ struct Implicit{O,S,N} <: AbstractSymplectic
 end
 Implicit(; order=4, opt_scheme=true, use_newton=false) = Implicit(order, opt_scheme, use_newton)
 Base.getproperty(tm::Implicit{O,S,N}, key::Symbol) where {O,S,N} = key === :order ? O : key === :opt_scheme ? S : key === :use_newton ? N : getfield(tm, key)
-Base.show(io::IO, tm::Implicit) = print(io, "Implicit(", tm.order, ", ", tm.opt_scheme, ", ", tm.use_newton, ")")
+Base.show(io::IO, tm::Implicit) = print(io, "Implicit(order=", tm.order, ", opt_scheme=", tm.opt_scheme, ", use_newton=", tm.use_newton, ")")
 
 
 # ========== Exact ===========================
@@ -121,6 +121,7 @@ Base.@kwdef struct SaganCavity
   n_cells::Int      = -1    # Negative => Use approx half wavelength between cells, Zero => single kick.
   L_active::Float64 = -1.0  # Negative => Use L as the active length.
 end
+Base.show(io::IO, tm::SaganCavity) = print(io, "SaganCavity(n_cells=", tm.n_cells, ", L_active=", tm.L_active, ")")
 
 # ========== Explicit RK4 Tracking ==========
 """
