@@ -9,6 +9,7 @@ export AbstractParams,
        InitialBeamlineParams,
        AlignmentParams,
        PatchParams,
+       ForkParams,
        BendParams,
        InheritParams,
        ApertureParams,
@@ -48,6 +49,7 @@ export AbstractParams,
        Beamline,
        Context,
        Controller,
+       Fork,
        set!,
        Branch,
        Lattice,
@@ -122,6 +124,7 @@ include("virtual.jl")
 include("control.jl")
 include("alignment.jl")
 include("patch.jl")
+include("fork.jl")
 include("aperture.jl")
 include("ibs.jl")
 include("misc.jl")

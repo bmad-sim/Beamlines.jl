@@ -23,7 +23,7 @@ for (kind, tm) in ((:Solenoid, :SolenoidKick), (:SBend, :BendKick), (:Quadrupole
   end
 end
 
-for kind in (:Marker, :BPM, :Patch, :Map)
+for kind in (:Marker, :BPM, :Patch, :Map, :Fork)
   @eval begin
     """
         $($kind)(; L=0f0, kwargs...)

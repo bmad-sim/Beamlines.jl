@@ -286,6 +286,10 @@ end
 
 function Base.setproperty!(ele::LatElement, key::Symbol, value)
   pdict = getfield(ele, :pdict)
+  # Fork connections in a Lattice are fixed when the Lattice is constructed (see fork.jl)
+  if key === :ForkParams || key === :fork_connect_element || key === :fork_propagate_reference
+    _check_fork_settable(ele, key)
+  end
   context = haskey(pdict, BeamlineParams) ? ((pdict[BeamlineParams]::BeamlineParams).beamline.context) : (NULL_CONTEXT)
   if haskey(PARAMS_MAP, key) # Setting whole parameter struct
     if is_protected(pdict, key)

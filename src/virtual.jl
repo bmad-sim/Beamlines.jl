@@ -660,12 +660,8 @@ function inherit_from_upstream(beamline, key)
   if key in (:dE_ref, :dpc_ref, :dp_over_q_ref) # No change for deltas if inheriting
     return 0
   else
-    branch_index = getfield(beamline, :branch_index)
-    if branch_index == -1 || branch_index == 1
-      return GetError("Unable to get $key: $key is not set nor inferrable")
-    else
-      return trygetproperty(getfield(beamline, :branch).beamlines[branch_index-1], key)
-    end
+    # Previous Beamline, or for the first Beamline in a Branch, that propagated by a fork
+    return _try_get_upstream_ref(beamline, key)
   end
 end
 
@@ -683,11 +679,14 @@ function try_get_species_for(ele::LatElement, key::Symbol, ref_meaning::Symbol, 
 end
  
 # Absolute value of var_abs at the START of this Beamline (the end of the upstream Beamline).
-# If this is the first Beamline in a Branch, the particle is assumed to start at rest 
-# (out of thin air): pc = 0, p_over_q = 0, E = massof(species_ref).
+# If this is the first Beamline in a Branch, it is the value propagated by a fork to the 
+# beginning of the Branch if any (see `_try_get_fork_ref`), else the particle is assumed to 
+# start at rest (out of thin air): pc = 0, p_over_q = 0, E = massof(species_ref).
 # Returns a GetError if the upstream value is not inferrable.
 function upstream_ref(beamline, branch_index, var_abs, species_ref)
   if branch_index == 1
+    fork_ref = _try_get_fork_ref(getfield(beamline, :branch), var_abs)
+    isnothing(fork_ref) || return fork_ref
     if var_abs == :E_ref
       return massof(species_ref)
     else
