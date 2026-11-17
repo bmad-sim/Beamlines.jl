@@ -1,4 +1,6 @@
-@kwdef mutable struct ForkParams <: AbstractParams
+# Immutable so that the fork connections of an element in a Lattice cannot be changed by 
+# mutating its ForkParams (see `_check_fork_settable`)
+@kwdef struct ForkParams <: AbstractParams
   fork_connect_element::Union{LatElement,Nothing} = nothing
   fork_propagate_reference::Bool                   = true
 end
@@ -40,6 +42,12 @@ Particles travel from a `Fork` element to the element it is connected to, but no
 unless that element is also a `Fork` element. A bi-directional link is two `Fork` elements 
 connected to each other.
 
+The fork connections of the elements in a `Lattice` are fixed when the `Lattice` is 
+constructed, like the `Branch`es it contains: setting `ForkParams`, `fork_connect_element`, or 
+`fork_propagate_reference` of an element in a `Lattice` is an error. Changing the elements the 
+`Lattice` was constructed from does not change the `Lattice`: construct a new `Lattice` to 
+change its forks.
+
 `fork_connect_element` is stored by reference: copying a `ForkParams` (including via 
 `deepcopy`) does not copy the connected element.
 
@@ -47,6 +55,10 @@ connected to each other.
 $(PROPSDOC(ForkParams))
 """
 ForkParams
+
+# ForkParams is immutable, so setting a property of an element replaces its ForkParams
+_setproperty!(pdict::ParamDict, p::ForkParams, key::Symbol, value) = 
+  pdict[ForkParams] = param_replace(p, key, value)
 
 # The connected element is a reference, not owned by the element, so it is never copied.
 function Base.deepcopy_internal(fp::ForkParams, stackdict::IdDict)
@@ -152,4 +164,24 @@ function _try_get_fork_ref(branch::Branch, key::Symbol)
   finally
     delete!(visiting, branch)
   end
+end
+
+#---------------------------------------------------------------------------------------------------
+
+# Error if `ele` is in a Lattice: its fork connections were set by the Lattice constructor, 
+# which also checked them (zero length, a Fork in each pair, one pair per element) and pointed 
+# each connected element back to its fork element. Changing one element of a pair would leave 
+# the Lattice inconsistent, and for an element inheriting its ForkParams, would write through 
+# to the element the Lattice was constructed from.
+function _check_fork_settable(ele::LatElement, key::Symbol)
+  pdict = getfield(ele, :pdict)
+  haskey(pdict, BeamlineParams) || return
+  bl = (pdict[BeamlineParams]::BeamlineParams).beamline
+  getfield(bl, :branch_index) == -1 && return
+  getfield(getfield(bl, :branch), :lattice_index) == -1 && return
+  error("""
+    Unable to set $key of $(_ele_location_repr(ele)): the fork connections of elements in a 
+    Lattice are fixed when the Lattice is constructed. Change the elements the Lattice was 
+    constructed from and construct a new Lattice.
+  """)
 end

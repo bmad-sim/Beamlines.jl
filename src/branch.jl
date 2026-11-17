@@ -459,6 +459,11 @@ the fork's own `Branch` connects within that `Branch`, even if the `Branch` appe
 than once in `branches`. Otherwise, it is an error if the destination `Branch` appears more
 than once.
 
+The fork connections are fixed when the `Lattice` is constructed: setting `ForkParams`, 
+`fork_connect_element`, or `fork_propagate_reference` of an element in the `Lattice` is an 
+error. Changes to the elements the `Lattice` was constructed from are not seen by the 
+`Lattice`; construct a new `Lattice` instead.
+
 ## Example
 ```julia
 bl1 = Beamline([Marker(E_ref=10e9, species_ref=Species("electron")), Drift(L=1)])

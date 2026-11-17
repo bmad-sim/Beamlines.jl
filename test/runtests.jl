@@ -3872,6 +3872,36 @@ end
   @test lat.branches[1][2].fork_connect_element === lat.branches[2][1]
   @test_throws ErrorException lat.branches[2][2].E_ref
 
+  # Fork connections in a Lattice are read-only
+  ro_ext = Branch([Marker(name="ro_m"), Marker(name="ro_m2")]; name="ro_ext")
+  ro_fork = Fork(name="ro_fork", fork_connect_element=ro_ext[1])
+  ro_br = Branch([ro_fork, Drift(name="ro_d", L=1)]; name="ro_br")
+  lat = Lattice([ro_br])
+  lf, lm, lm2, ld = lat.branches[1][1], lat.branches[2][1], lat.branches[2][2], lat.branches[1][2]
+  @test_throws "fixed when the Lattice is constructed" (lf.fork_connect_element = lm2)
+  @test_throws "fixed when the Lattice is constructed" (lf.fork_propagate_reference = false)
+  @test_throws "fixed when the Lattice is constructed" (lm.fork_connect_element = nothing)
+  @test_throws "fixed when the Lattice is constructed" (lf.ForkParams = nothing)
+  @test_throws "fixed when the Lattice is constructed" (lf.ForkParams = ForkParams(lm2, true))
+  @test_throws ErrorException (lf.ForkParams.fork_connect_element = lm2)  # ForkParams is immutable
+  # Also for elements without a fork, which would otherwise write through to the original
+  @test_throws "fixed when the Lattice is constructed" (lm2.fork_connect_element = lf)
+  @test_throws "fixed when the Lattice is constructed" (ld.fork_propagate_reference = false)
+  @test isnothing(ro_br[2].ForkParams)
+  # The connections are unchanged
+  @test lf.fork_connect_element === lm && lm.fork_connect_element === lf
+  # Other properties can still be set, and elements outside a Lattice are unaffected
+  ld.L = 2.0
+  @test ld.L == 2.0
+  ro_fork.fork_connect_element = ro_ext[2]
+  ro_fork.fork_propagate_reference = false
+  @test ro_fork.fork_connect_element === ro_ext[2] && !ro_fork.fork_propagate_reference
+  @test lf.fork_connect_element === lm && lf.fork_propagate_reference  # Lattice not changed
+  @test ro_br[1].fork_connect_element === ro_ext[2]  # Branch (not in a Lattice) element follows
+  # A new Lattice picks up the change
+  lat = Lattice([ro_br])
+  @test lat.branches[1][1].fork_connect_element === lat.branches[2][2]
+
   # writebl round trip of forks
   function writebl_roundtrip(lat)
     m = Module()
