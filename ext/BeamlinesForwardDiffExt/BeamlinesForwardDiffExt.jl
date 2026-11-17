@@ -3,6 +3,6 @@ using ForwardDiff
 import Beamlines: scalarize
 
 # Scalarize
-scalarize(t::ForwardDiff.Dual) = ForwardDiff.value(t)
+scalarize(t::ForwardDiff.Dual) = scalarize(ForwardDiff.value(t))
 
 end
