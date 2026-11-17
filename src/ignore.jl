@@ -9,7 +9,7 @@ PROPS(::Type{IgnoreParams}) = OrderedDict{String,String}(
 """
     IgnoreParams
 
-Holds a list of parameter groups of a `LineElement` to be ignored, which allows parameter
+Holds a list of parameter groups of a `LatElement` to be ignored, which allows parameter
 groups to be switched off without removing them from the element. Beamlines itself only
 stores the list: what ignoring a parameter group means is up to downstream code, such as
 tracking.

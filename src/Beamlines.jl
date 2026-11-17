@@ -1,7 +1,6 @@
 module Beamlines
 export AbstractParams, 
-       LineElement, 
-       Bunch, 
+       LatElement, 
        ParamDict, 
        UniversalParams, 
        BMultipoleParams, 
@@ -19,6 +18,7 @@ export AbstractParams,
        EMFieldParams,
        MetaParams,
        IgnoreParams,
+       IBSParams,
        ApertureAt,
        ApertureShape,
        PhaseRef,
@@ -27,6 +27,8 @@ export AbstractParams,
        BMultipole,
        EMultipole,
        DefExpr,
+       deval,
+       rawget,
        Drift,
        Solenoid,
        Quadrupole,
@@ -40,19 +42,19 @@ export AbstractParams,
        VKicker,
        RFCavity,
        CrabCavity,
+       BeamBeam,
        BPM,
+       Map,
+       Patch,
        Beamline,
        Context,
        Controller,
-       Patch,
        Fork,
        set!,
        Branch,
        Lattice,
 
        deepcopy_no_beamline,
-
-       SciBmadStandard,
        
        @elements, 
        elements,
@@ -64,7 +66,14 @@ export AbstractParams,
        findelements,
        findbranches,
 
-       GLOBAL_CONTEXTS
+       GLOBAL_CONTEXTS,
+
+       Fringe,
+       IBSModel,
+
+       DriftKick, MatrixKick, BendKick, SolenoidKick, Implicit, Exact, 
+        SaganCavity, RK4
+
 
 using Accessors, 
       AtomicAndPhysicalConstants,
@@ -81,14 +90,14 @@ export Species
 
 using FunctionWrappers: FunctionWrapper
 
-# Note that LineElement and parameter structs have three things:
-# 1) Fields: These are actual fields within a struct, e.g. pdict in LineElement
+# Note that LatElement and parameter structs have three things:
+# 1) Fields: These are actual fields within a struct, e.g. pdict in LatElement
 # 2) Properties: These are "fields" within a struct that aren't actual fields, but can 
 #                be get/set using the dot syntax and/or getproperty/setproperty!. 
 #                E.g., the default fallback for getproperty is getfield
 # 3) Virtual properties: These are values that only exist for parameter structs within 
-#                        a LineElement type, and can be calculated using different 
-#                        parameter structs within the LineElement. E.g. the normalized 
+#                        a LatElement type, and can be calculated using different 
+#                        parameter structs within the LatElement. E.g. the normalized 
 #                        field strengths requires BMultipoleParams and BeamlineParams.
 
 # Often, quantities can be get/set as properties, and NOT virtual properties.
@@ -96,9 +105,14 @@ using FunctionWrappers: FunctionWrapper
 # struct as one can sum the lengths of each preceding element in the Beamline.
 
 include("utils.jl")
+include("energy.jl")
+include("tracking_methods.jl")
 include("context.jl")
 include("defexpr.jl")
+include("abstractparams.jl")
+include("universal.jl")
 include("element.jl")
+include("element_kinds.jl")
 include("beamline.jl")
 include("branch.jl")
 include("scalarize.jl")
@@ -112,13 +126,14 @@ include("alignment.jl")
 include("patch.jl")
 include("fork.jl")
 include("aperture.jl")
+include("ibs.jl")
 include("misc.jl")
 include("ignore.jl")
 include("keymaps.jl")
-include("element-name-handling.jl")
+include("element_name_handling.jl")
 include("search.jl")
-include("name-matching.jl")
-include("element-doc.jl")
+include("name_matching.jl")
+include("element_doc.jl")
 include("io.jl")
 
 # BitsBeamline is no longer supported

@@ -18,7 +18,8 @@ end
 
 const WRITEBL_PARAMS = [:UniversalParams, :InitialBeamlineParams, :AlignmentParams, :BendParams, 
                         :BMultipoleParams, :PatchParams, :ApertureParams, :MapParams, :RFParams, 
-                        :FourPotentialParams, :EMultipoleParams, :IgnoreParams, :ForkParams]
+                        :FourPotentialParams, :EMultipoleParams, :IgnoreParams, :IBSParams, 
+                        :ForkParams]
 
 writebl(io::IO, bl::Beamline) = _writebl(io, bl, "", ele -> true)
 
@@ -27,7 +28,7 @@ function _writebl(io::IO, bl::Beamline, indent::String, write_fork)
   c = bl.context
   println(io, indent, "Beamline([")
   for ele in bl.line
-    print(io, indent, " LineElement(")
+    print(io, indent, " LatElement(")
     for pgsym in WRITEBL_PARAMS
       pg = deval(getproperty(ele, pgsym), c)
       if isnothing(pg) || (pg isa ForkParams && !write_fork(ele))
@@ -47,7 +48,7 @@ function writebl(io::IO, lat::Lattice)
   # other with the same fork_propagate_reference, only one connection 
   # is written (from the Fork element if only one is a Fork): when the Lattice is 
   # reconstructed, the other element is pointed back by the Lattice constructor.
-  connections = Tuple{LineElement,LineElement}[]
+  connections = Tuple{LatElement,LatElement}[]
   for br in lat.branches, bl in br.beamlines, ele in bl.line
     fp = ele.ForkParams
     (isnothing(fp) || isnothing(fp.fork_connect_element)) && continue
@@ -67,7 +68,7 @@ function writebl(io::IO, lat::Lattice)
     end
     push!(connections, (ele, target))
   end
-  written = Base.IdSet{LineElement}(first.(connections))
+  written = Base.IdSet{LatElement}(first.(connections))
 
   for (i, br) in enumerate(lat.branches)
     println(io, "b$i = Branch(Beamline[")
@@ -102,14 +103,21 @@ end
 function writeparam(io::IO, a::UniversalParams)
   fields = fieldnames(typeof(a))
   for field in fields
-    if field == :tracking_method
+    if field == :step || field == :step_meaning
+      continue
+    elseif field == :tracking_method
       tm = getproperty(a, field)
-      print(io, String(field), "=", typeof(tm), "(")
+      print(io, String(field), "=", Base.typename(typeof(tm)).wrapper, "(")
       subfields = fieldnames(typeof(tm))
       for subfield in subfields
         print(io, String(subfield), "=", param_repr(getproperty(tm, subfield)), ",")
       end
       print(io, "),")
+      if a.step_meaning == StepMeaning.NSteps
+        print(io, "n_steps", "=", param_repr(a.n_steps), ",")
+      elseif a.step_meaning == StepMeaning.DSStep
+        print(io, "ds_step", "=", param_repr(a.ds_step), ",")
+      end
     else
       print(io, String(field), "=", param_repr(getproperty(a, field)), ",")
     end

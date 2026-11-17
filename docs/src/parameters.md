@@ -40,6 +40,11 @@ ForkParams
 FourPotentialParams 
 ```
 
+## IBSParams
+```@docs; canonical=false
+IBSParams
+```
+
 ## IgnoreParams
 ```@docs; canonical=false
 IgnoreParams

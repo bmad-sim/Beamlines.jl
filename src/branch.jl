@@ -1,24 +1,6 @@
 #---------------------------------------------------------------------------------------------------
 
-"""
-    Branch
-
-Structure containing a vector of `Beamline`s, where currently each follows in-order, 
-one after the other. 
-
-## Properties
-- `name`: Name of the `Branch`. Default is `""` if not in a lattice and if in a lattice,
-  the default is `"bN"` where `N` is the index of the branch in `lattice.branches`
-- `beamlines`: Vector of the beamlines in the `Branch`
-- `lattice`: `Lattice` that the branch is placed in, if any
-- `lattice_index`: Index of the branch in the `Lattice`, if in a `Lattice`
-- `context`: `Context` shared by the `Branch` and all of its `Beamline`s, and by the whole
-    `Lattice` if the `Branch` is in one. Setting the `context` of any of them sets it for
-    all of them.
-"""
 const Branch = _Branch{Beamline}
-
-#---------------------------------------------------------------------------------------------------
 
 """
     Lattice
@@ -64,7 +46,7 @@ Each element may be in only one connected pair: it is an error for an element to
 connected to more than one other element. The elements the `Lattice` was constructed from are not modified.
 """
 function _connect_forks!(branches::AbstractVector{B}, sources::AbstractVector{B}) where {B<:_AbstractBranch}
-  forks = Tuple{LineElement,LineElement}[]  # (fork element, connected element) in the Lattice
+  forks = Tuple{LatElement,LatElement}[]  # (fork element, connected element) in the Lattice
   i = 1
   while i <= length(branches)  # `branches` may grow as forks add new Branches
     for bl in branches[i].beamlines, ele in bl.line
@@ -113,7 +95,7 @@ function _connect_forks!(branches::AbstractVector{B}, sources::AbstractVector{B}
 
   # Each element may be in only one connected pair. Two elements pointing at each other are 
   # the same pair.
-  partner = IdDict{LineElement,LineElement}()
+  partner = IdDict{LatElement,LatElement}()
   for (ele, target) in forks, (a, b) in ((ele, target), (target, ele))
     if haskey(partner, a) && partner[a] !== b
       error("""
@@ -127,7 +109,7 @@ function _connect_forks!(branches::AbstractVector{B}, sources::AbstractVector{B}
 
   # Point each connected element back to its fork element. A connected element that is itself 
   # a fork element already points back, so keeps its own ForkParams.
-  fork_eles = Base.IdSet{LineElement}(first.(forks))
+  fork_eles = Base.IdSet{LatElement}(first.(forks))
   for (ele, target) in forks
     target in fork_eles && continue
     fp = getfield(ele, :pdict)[ForkParams]::ForkParams
@@ -243,7 +225,7 @@ end
     Base.copy(branch::Branch)
 
 Copy of `branch` that is not in any `Lattice`. The `Beamline`s are copied as with 
-`copy(::Beamline)`, so the `LineElement`s of the copy are children of those in `branch`. The 
+`copy(::Beamline)`, so the `LatElement`s of the copy are children of those in `branch`. The 
 `Context` is copied.
 """
 Base.copy(branch::Branch) = Branch(collect(branch.beamlines); name = branch.name, 
@@ -252,10 +234,27 @@ Base.copy(branch::Branch) = Branch(collect(branch.beamlines); name = branch.name
 #---------------------------------------------------------------------------------------------------
 
 """
+    Branch
+
+Structure containing a vector of `Beamline`s, where currently each follows in-order, 
+one after the other. 
+
+## Properties
+- `name`: Name of the `Branch`. Default is `""` if not in a lattice and if in a lattice,
+  the default is `"bN"` where `N` is the index of the branch in `lattice.branches`
+- `beamlines`: Vector of the beamlines in the `Branch`
+- `lattice`: `Lattice` that the branch is placed in, if any
+- `lattice_index`: Index of the branch in the `Lattice`, if in a `Lattice`
+- `context`: `Context` shared by the `Branch` and all of its `Beamline`s, and by the whole
+    `Lattice` if the `Branch` is in one. Setting the `context` of any of them sets it for
+    all of them.
+
+---
+
     Branch(beamlines; name = "", context = Context())
 
 Constructs a `Branch` given the vector of beamlines `beamlines`. The `Branch` holds copies 
-(see `copy(::Beamline)`) of the `Beamline`s, whose `LineElement`s are children of those of the 
+(see `copy(::Beamline)`) of the `Beamline`s, whose `LatElement`s are children of those of the 
 corresponding `Beamline` in `beamlines`. The `Beamline`s in `beamlines` are not modified, so 
 a `Beamline` may appear more than once and may also be used in other `Branch`es. The contexts 
 of the `Beamline`s and `context` are merged into a single `Context` shared by the `Branch` and all of its `Beamline`s. 
@@ -263,7 +262,7 @@ Variables in `context` take precedence over those in the `Beamline`s.
 
 ## Example
 ```julia
-ele = LineElement()
+ele = LatElement()
 bl1 = Beamline([ele], E_ref=2e9, species_ref=Species("electron"))
 bl2 = Beamline([ele], dE_ref=1e9)
 
@@ -275,27 +274,27 @@ branch = Branch([bl1, bl2])
     Branch(elements; species_ref0 = Species(), E_ref0 = nothing, pc_ref0 = nothing, 
            p_over_q_ref0 = nothing, name = "", context = Context())
 
-Constructs a `Branch` given the vector `elements`, which may contain `LineElement`s, 
+Constructs a `Branch` given the vector `elements`, which may contain `LatElement`s, 
 `Beamline`s, and `Branch`es, in any combination:
 
-- Consecutive `LineElement`s are made into `Beamline`s. A new `Beamline` is started at each 
-  `LineElement` that sets a reference species or energy (has an `InitialBeamlineParams`), so 
+- Consecutive `LatElement`s are made into `Beamline`s. A new `Beamline` is started at each 
+  `LatElement` that sets a reference species or energy (has an `InitialBeamlineParams`), so 
   each `Beamline` has a uniform reference species and energy.
-- A `Beamline` is included as a copy (see `Branch(beamlines)`) whose `LineElement`s are 
+- A `Beamline` is included as a copy (see `Branch(beamlines)`) whose `LatElement`s are 
   children of those of the `Beamline`. The same `Beamline` may appear more than once.
-- For a `Branch`, each of its `Beamline`s is included as a copy whose `LineElement`s are 
+- For a `Branch`, each of its `Beamline`s is included as a copy whose `LatElement`s are 
   children of those in the `Branch` (as with `copy(::Branch)`). The same `Branch` may appear
   more than once.
 
 The reference species and energy of the first `Beamline` can be set with `species_ref0` and 
 one of `E_ref0`, `pc_ref0`, or `p_over_q_ref0`. These are only allowed if `elements` starts 
-with a `LineElement`.
+with a `LatElement`.
 
 ## Example
 ```julia
 beginning = Marker(E_ref=10e9, species_ref=Species("electron"))
 rf0 = RFCavity(dE_ref=1e9)
-next = LineElement()
+next = LatElement()
 
 branch = Branch([beginning, rf0, next]) # Partitioned into 2 `Beamline`s
 
@@ -304,8 +303,8 @@ cell = Branch([Quadrupole(L=0.5), Drift(L=1.0)])
 branch2 = Branch([beginning, arc, cell, cell, Marker()]) # 5 `Beamline`s
 ```
 """
-# Defined for `_Branch{T}` rather than `Branch` so the inner constructor 
-# `_Branch{T}(::Vector{T})` is more specific and `Branch(::Vector{Beamline})` is not ambiguous.
+Branch
+
 function _Branch{T}(
   elements::AbstractVector;
   species_ref0::Species=Species(),
@@ -315,6 +314,8 @@ function _Branch{T}(
   name::String = "",
   context = Context(),
 ) where {T<:_AbstractBeamline}
+  # Defined for `_Branch{T}` rather than `Branch` so the inner constructor 
+  # `_Branch{T}(::Vector{T})` is more specific and `Branch(::Vector{Beamline})` is not ambiguous.
   kwargs = (p_over_q_ref0, E_ref0, pc_ref0)
   kwarg_syms = (:p_over_q_ref, :E_ref, :pc_ref)
   c = count(t->!isnothing(t), kwargs)
@@ -325,23 +326,23 @@ function _Branch{T}(
   kwarg_val = isnothing(kwarg_idx) ? nothing : kwargs[kwarg_idx]
   kwarg_sym = isnothing(kwarg_idx) ? :p_over_q_ref : kwarg_syms[kwarg_idx] 
 
-  if (c == 1 || !isnullspecies(species_ref0)) && (isempty(elements) || !(first(elements) isa LineElement))
-    error("species_ref0, E_ref0, pc_ref0, and p_over_q_ref0 can only be used if the first entry of elements is a LineElement")
+  if (c == 1 || !isnullspecies(species_ref0)) && (isempty(elements) || !(first(elements) isa LatElement))
+    error("species_ref0, E_ref0, pc_ref0, and p_over_q_ref0 can only be used if the first entry of elements is a LatElement")
   end
 
-  has_ibp(ele) = ele isa LineElement && haskey(getfield(ele, :pdict), InitialBeamlineParams)
+  has_ibp(ele) = ele isa LatElement && haskey(getfield(ele, :pdict), InitialBeamlineParams)
 
   beamlines = Beamline[]
   i = firstindex(elements)
   while i <= lastindex(elements)
     item = elements[i]
-    if item isa LineElement
-      # Run of LineElements up to the next entry that is not a LineElement or that starts a new Beamline
+    if item isa LatElement
+      # Run of LatElements up to the next entry that is not a LatElement or that starts a new Beamline
       j = i
-      while j < lastindex(elements) && elements[j+1] isa LineElement && !has_ibp(elements[j+1])
+      while j < lastindex(elements) && elements[j+1] isa LatElement && !has_ibp(elements[j+1])
         j += 1
       end
-      line = LineElement[elements[k] for k in i:j]
+      line = LatElement[elements[k] for k in i:j]
       if isempty(beamlines)
         push!(beamlines, Beamline(line; species_ref=species_ref0, kwarg_sym=>kwarg_val, context = context))
       else
@@ -355,7 +356,7 @@ function _Branch{T}(
       append!(beamlines, (copy(bl) for bl in item.beamlines))
       i += 1
     else
-      error("Unable to construct Branch: entry $i of elements is a $(typeof(item)). Entries must be LineElements, Beamlines, or Branches.")
+      error("Unable to construct Branch: entry $i of elements is a $(typeof(item)). Entries must be LatElements, Beamlines, or Branches.")
     end
   end
 
@@ -434,7 +435,7 @@ end
     Lattice(branches::Vector{Branch}; name = "", context = Context())
 
 Constructs a `Lattice` given the vector of branches `branches`. The `Lattice` holds copies 
-(see `copy(::Branch)`) of the `Branch`es, whose `LineElement`s are children of those of the 
+(see `copy(::Branch)`) of the `Branch`es, whose `LatElement`s are children of those of the 
 corresponding `Branch` in `branches`. The `Branch`es in `branches` are not modified, so a 
 `Branch` may appear more than once and may also be used in other `Lattice`s. Branches without 
 a name are named `"b<i>"`, where `<i>` is the index of the branch. The contexts of the 

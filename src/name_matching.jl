@@ -50,13 +50,13 @@ name is `nothing` if the elements are not in a `Branch`.
 """
 struct _SearchLine
   branch_name::Union{String,Nothing}
-  eles::Vector{LineElement}
+  eles::Vector{LatElement}
 end
 
 # `getfield` is used since the properties of a `Branch` and `Beamline` are not inferred, which would
 # make collecting the elements slow.
 _search_line(br::Branch) = _SearchLine(getfield(br, :name),
-                    LineElement[ele for bl in getfield(br, :beamlines) for ele in getfield(bl, :line)])
+                    LatElement[ele for bl in getfield(br, :beamlines) for ele in getfield(bl, :line)])
 
 function _search_line(bl::Beamline)
   if getfield(bl, :branch_index) == -1
@@ -411,9 +411,9 @@ end
 #---------------------------------------------------------------------------------------------------
 
 """
-    findelements(where::Union{Lattice,Branch,Beamline}, pattern::Union{AbstractString,Regex}) -> Vector{LineElement}
+    findelements(where::Union{Lattice,Branch,Beamline}, pattern::Union{AbstractString,Regex}) -> Vector{LatElement}
 
-Returns all the `LineElement`s in `where` that match `pattern`. `where` may be a `Lattice`, a
+Returns all the `LatElement`s in `where` that match `pattern`. `where` may be a `Lattice`, a
 `Branch`, or a `Beamline`. The returned elements are ordered by the order of the branches
 followed by their order in the branch, and each element appears at most once. No match is not an error, and an empty vector is returned.
 
@@ -488,7 +488,7 @@ function findelements(where::Union{Lattice,Branch,Beamline},
     error("Malformed range with more than one \":\". Match string: $(nm.str)")
   end
 
-  return LineElement[lines[il].eles[ix] for (il, ix) in _eval_match_str(atom_ids, nm, texts, ops)]
+  return LatElement[lines[il].eles[ix] for (il, ix) in _eval_match_str(atom_ids, nm, texts, ops)]
 end
 
 #---------------------------------------------------------------------------------------------------
@@ -532,14 +532,14 @@ end
 #---------------------------------------------------------------------------------------------------
 
 """
-    Base.getindex(bl::Beamline, pattern::Union{AbstractString,Regex}) -> Vector{LineElement}
+    Base.getindex(bl::Beamline, pattern::Union{AbstractString,Regex}) -> Vector{LatElement}
 
 Same as `findelements(bl, pattern)`. Example: `bl["Quadrupole::q*"]` or `bl[r"q\\d+"]`.
 """
 Base.getindex(bl::Beamline, pattern::Union{AbstractString,Regex}) = findelements(bl, pattern)
 
 """
-    Base.getindex(branch::Branch, pattern::Union{AbstractString,Regex}) -> Vector{LineElement}
+    Base.getindex(branch::Branch, pattern::Union{AbstractString,Regex}) -> Vector{LatElement}
 
 Same as `findelements(branch, pattern)`. Example: `branch["Quadrupole::q*"]` or `branch[r"q\\d+"]`.
 """
@@ -547,7 +547,7 @@ Base.getindex(branch::Branch, pattern::Union{AbstractString,Regex}) = findelemen
 
 """
     Base.getindex(lat::Lattice, pattern::Union{AbstractString,Regex}) -> Vector{Branch}
-    Base.getindex(lat::Lattice, branches, pattern::Union{AbstractString,Regex}) -> Vector{LineElement}
+    Base.getindex(lat::Lattice, branches, pattern::Union{AbstractString,Regex}) -> Vector{LatElement}
 
 With one index, returns the branches of `lat` that match `pattern`, the same as
 `findbranches(lat, pattern)`.
@@ -587,5 +587,5 @@ Base.getindex(lat::Lattice, ix::Integer, pattern::Union{AbstractString,Regex}) =
 
 function Base.getindex(lat::Lattice, branches::Union{AbstractString,Regex},
                        pattern::Union{AbstractString,Regex})
-  return LineElement[ele for br in findbranches(lat, branches) for ele in findelements(br, pattern)]
+  return LatElement[ele for br in findbranches(lat, branches) for ele in findelements(br, pattern)]
 end

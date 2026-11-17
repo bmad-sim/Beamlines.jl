@@ -1,7 +1,7 @@
 """
     Controller
 
-An *eagerly*-evaluated controller of `LineElement` properties or other `Controller`
+An *eagerly*-evaluated controller of `LatElement` properties or other `Controller`
 properties. Similar to classical Bmad's "Overlay" or "Group".
 
 Also see `set!`.
@@ -46,7 +46,7 @@ c3 = Controller(
 
 """
 mutable struct Controller
-  fcns::Dict{Tuple{Union{Controller,LineElement},Symbol},Function}
+  fcns::Dict{Tuple{Union{Controller,LatElement},Symbol},Function}
   vars::NamedTuple
   function Controller(pairs...; vars=(; x=0.0,))
     fcns = Dict(pairs...)
@@ -75,7 +75,7 @@ end
 """
     set!(controller)
 
-Resets all controlled `LineElement`s and `Controllers` in `controller` to the most recently 
+Resets all controlled `LatElement`s and `Controllers` in `controller` to the most recently 
 set values of that `controller`.
 """
 function set!(c::Controller; kwargs...)

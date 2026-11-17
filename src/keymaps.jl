@@ -48,6 +48,13 @@ const PROPERTIES_MAP = Dict{Symbol,Type{<:AbstractParams}}(
 
   :L => UniversalParams,
   :tracking_method => UniversalParams,
+  :n_slices => UniversalParams,
+  :n_steps => UniversalParams,
+  :ds_step => UniversalParams,
+  :fringe_at => UniversalParams,
+  :rad_damping => UniversalParams,
+  :rad_fluctuations => UniversalParams,
+
   :kind => UniversalParams,
   :name => UniversalParams,
 
@@ -115,6 +122,7 @@ const PROPERTIES_MAP = Dict{Symbol,Type{<:AbstractParams}}(
   :description => MetaParams,
 
   :ignore_params => IgnoreParams,
+  :ibs_model => IBSParams,
 )
 
 const PARAMS_MAP = Dict{Symbol,Type{<:AbstractParams}}(
@@ -133,5 +141,6 @@ const PARAMS_MAP = Dict{Symbol,Type{<:AbstractParams}}(
   :EMFieldParams => EMFieldParams,
   :MetaParams => MetaParams,
   :IgnoreParams => IgnoreParams,
-  :InitialBeamlineParams => InitialBeamlineParams
+  :InitialBeamlineParams => InitialBeamlineParams,
+  :IBSParams => IBSParams,
 )

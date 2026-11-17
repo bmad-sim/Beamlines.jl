@@ -1,10 +1,10 @@
 @kwdef mutable struct ForkParams <: AbstractParams
-  fork_connect_element::Union{LineElement,Nothing} = nothing
+  fork_connect_element::Union{LatElement,Nothing} = nothing
   fork_propagate_reference::Bool                   = true
 end
 
 PROPS(::Type{ForkParams}) = OrderedDict{String,String}(
-  "fork_connect_element"     => "For a fork element, the connected `LineElement` in a `Branch` that is forked to. For a connected element in a `Lattice`, the fork element that connects to it. Default is `nothing`",
+  "fork_connect_element"     => "For a fork element, the connected `LatElement` in a `Branch` that is forked to. For a connected element in a `Lattice`, the fork element that connects to it. Default is `nothing`",
   "fork_propagate_reference" => "`true` if the reference species and energy are propagated from the fork element to the connected element when it is the beginning element of its `Branch`. Default is `true`",
 )
 
@@ -70,7 +70,7 @@ end
 
 # `(branch, index)` of `ele` in the `Branch` it is in (as in `branch[index]`), or `nothing` if 
 # `ele` is not in a `Branch`.
-function _branch_and_index(ele::LineElement)
+function _branch_and_index(ele::LatElement)
   pdict = getfield(ele, :pdict)
   haskey(pdict, BeamlineParams) || return nothing
   bp = pdict[BeamlineParams]::BeamlineParams
@@ -85,7 +85,7 @@ end
 # Short description of an element: kind (if set), name, and location. E.g. `Quadrupole "q7" (branch "b2", index 1)`.
 # The index is the index of the element in the Branch (as in `branch[index]`) if the element 
 # is in a Branch, else the index in its Beamline.
-function _ele_location_repr(ele::LineElement)
+function _ele_location_repr(ele::LatElement)
   kind = ele.kind
   str = kind == "" ? repr(ele.name) : "$kind $(repr(ele.name))"
   loc = _branch_and_index(ele)
@@ -121,7 +121,7 @@ end
 # other and the Fork element has `fork_propagate_reference` set. In a `Lattice`, the two 
 # elements of a connected pair point at each other (see `_connect_forks!`), and since an 
 # element is in at most one pair, the partner is unique. `ele` may itself be a Fork element.
-function _propagating_fork(ele::LineElement)
+function _propagating_fork(ele::LatElement)
   fp = ele.ForkParams
   (isnothing(fp) || isnothing(fp.fork_connect_element)) && return nothing
   fork = fp.fork_connect_element

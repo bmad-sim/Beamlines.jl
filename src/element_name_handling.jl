@@ -4,7 +4,7 @@
       ...
     end
 
-Can be applied before the definition of any `LineElement`(s) in order to make 
+Can be applied before the definition of any `LatElement`(s) in order to make 
 set the element `name` equal to the variable symbol automatically.
 
 ## Examples
@@ -54,7 +54,7 @@ function add_name(expr)
   end
 end
 
-function setname(ele::LineElement, name::String)
+function setname(ele::LatElement, name::String)
   ele.name = name
   return ele
 end

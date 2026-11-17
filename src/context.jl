@@ -41,7 +41,7 @@ julia> d()
 ```
 
 `Beamline`s also store a context, which is passed to all `DefExpr`s when getting parameters 
-from `LineElement`s that are in a beamline:
+from `LatElement`s that are in a beamline:
 ```jldoctest
 julia> c3 = Context(Kn1=0.36);
 
