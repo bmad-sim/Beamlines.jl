@@ -199,7 +199,8 @@ param_replace(p::AbstractParams, key::Symbol, value) = set(p, opcompose(Property
 
 function Base.getproperty(ele::LatElement, key::Symbol)
   pdict = getfield(ele, :pdict)
-  context = haskey(pdict, BeamlineParams) ? ((pdict[BeamlineParams]::BeamlineParams).beamline.context) : (NULL_CONTEXT)
+  context = haskey(pdict, BeamlineParams) ?
+    ((pdict[BeamlineParams]::BeamlineParams).beamline.context) : (DEFAULT_CONTEXT)
   return @inline _getproperty(ele, key, context)
 end
 
@@ -286,7 +287,8 @@ end
 
 function Base.setproperty!(ele::LatElement, key::Symbol, value)
   pdict = getfield(ele, :pdict)
-  context = haskey(pdict, BeamlineParams) ? ((pdict[BeamlineParams]::BeamlineParams).beamline.context) : (NULL_CONTEXT)
+  context = haskey(pdict, BeamlineParams) ?
+    ((pdict[BeamlineParams]::BeamlineParams).beamline.context) : (DEFAULT_CONTEXT)
   if haskey(PARAMS_MAP, key) # Setting whole parameter struct
     if is_protected(pdict, key)
       error("Cannot set $(PARAMS_MAP[key]): parameter group is protected by ProtectParams. This can be unsafely-overridden using `unsafe_getparams`")

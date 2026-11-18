@@ -68,7 +68,7 @@ end
 
 # === THIS BLOCK WAS PARTIALLY WRITTEN BY CLAUDE ===
 # Generated function for arbitrary-length tuples
-@generated function deval(mp::MapParams{F,P}, c::Context=NULL_CONTEXT) where {F,P<:Tuple}
+@generated function deval(mp::MapParams{F,P}, c::Context=DEFAULT_CONTEXT) where {F,P<:Tuple}
     N = length(P.parameters)
     # Use getfield with literal integer arguments
     exprs = [:(deval(Base.getfield(mp.transport_map_params, $i), c)) for i in 1:N]
@@ -117,7 +117,8 @@ $(PROPSDOC(FourPotentialParams))
 """
 FourPotentialParams
 
-@generated function deval(mp::FourPotentialParams{F,P}, c::Context=NULL_CONTEXT) where {F,P<:Tuple}
+@generated function deval(mp::FourPotentialParams{F,P},
+                          c::Context=DEFAULT_CONTEXT) where {F,P<:Tuple}
     N = length(P.parameters)
     # Use getfield with literal integer arguments
     exprs = [:(deval(Base.getfield(mp.four_potential_params, $i), c)) for i in 1:N]
@@ -168,7 +169,7 @@ $(PROPSDOC(EMFieldParams))
 """
 EMFieldParams
 
-@generated function deval(mp::EMFieldParams{F,P}, c::Context=NULL_CONTEXT) where {F,P<:Tuple}
+@generated function deval(mp::EMFieldParams{F,P}, c::Context=DEFAULT_CONTEXT) where {F,P<:Tuple}
     N = length(P.parameters)
     # Use getfield with literal integer arguments
     exprs = [:(deval(Base.getfield(mp.em_field_params, $i), c)) for i in 1:N]

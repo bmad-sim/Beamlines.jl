@@ -1830,59 +1830,40 @@ using ForwardDiff, GTPSA, ReverseDiff
   c1.b = 2
   @test c1.a == 1
   @test c1.b == 2
-  push!(GLOBAL_CONTEXTS, c1)
-  c2 = Context()
-  @test c2.a == 1
-  @test c2.b == 2
-  c1.a = 3
-  c1.b = 4
-  @test c2.a == 3
-  @test c2.b == 4
+  @test sort(propertynames(c1)) == [:a, :b]
+  @test_throws ErrorException Context().a # (only its own variables: no global fallback)
 
-  c2.b = 5
-  @test c1.b == 4
-  @test c2.b == 5
-  @test c2.a == 3
-    
-  push!(GLOBAL_CONTEXTS, c2)
+  # push!/pop!: set values and restore them, nested, a new variable is removed again
+  push!(c1; a = 10, z = 0)
+  @test (c1.a, c1.b, c1.z) == (10, 2, 0)
+  push!(c1; a = 20, b = 30)
+  @test (c1.a, c1.b) == (20, 30)
+  @test pop!(c1) === c1
+  @test (c1.a, c1.b, c1.z) == (10, 2, 0)
+  pop!(c1)
+  @test (c1.a, c1.b) == (1, 2) && !(:z in propertynames(c1))
+  @test_throws ErrorException pop!(c1) # (nothing pushed)
+  # withvalues: restored after, also when f throws and when f pushed without popping
+  @test withvalues(() -> c1.a + c1.b, c1; a = 5) == 7
+  @test c1.a == 1
+  @test_throws ErrorException withvalues(() -> error("f failed"), c1; a = 5)
+  @test c1.a == 1
+  withvalues(c1; b = 6) do
+    push!(c1; a = 7)
+  end
+  @test (c1.a, c1.b) == (1, 2)
+  # A typed Context checks all values before setting any
+  ctyp = Context{Float64}(a = 1)
+  @test_throws InexactError push!(ctyp; a = 2.0, b = im)
+  @test ctyp.a === 1.0 && !(:b in propertynames(ctyp)) && isempty(getfield(ctyp, :saved))
 
-  c3 = Context()
-  @test c3.a == 3
-  @test c3.b == 5
-
-  c3.a = 6
-  push!(GLOBAL_CONTEXTS, c3)
-  @test c3.a == 6
-  @test c3.b == 5
-  @test c2.a == 6
-  @test c2.b == 5
-  @test c1.b == 4
-
-  c4 = Context()
-  @test c4.a == 6
-  @test c4.b == 5
-
-  @test c3 === pop!(GLOBAL_CONTEXTS)
-  @test c4.a == 3
-  @test c4.b == 5
-
-  @test c2 === pop!(GLOBAL_CONTEXTS)
-  @test c4.a == 3
-  @test c4.b == 4
-    
   # Typed Context tests
-  # Note c1 is still on GLOBAL_CONTEXTS w/ a = 3 and b = 4
   @test_throws InexactError Context{Float64}(a = im)
   ct1::Context{Float64} = Context{Float64}(c = 1)
   @test typeof(DefExpr(()->ct1.c)) == DefExpr{Float64}
   @test Base.promote_op(getproperty, Context{Float64}, Symbol) == Float64
-  @test typeof(DefExpr(()->ct1.a)) == DefExpr{Float64}
-  @test ct1.a isa Float64
-  @test ct1.b isa Float64
-  c1.c = im
-  @test ct1.c == 1
-  c1.d = im
-  @test_throws InexactError ct1.d
+  @test ct1.c isa Float64
+  @test_throws InexactError (ct1.d = im)
 
   # Context merge tests
   cm1 = Context(e = 1, f = 2)
@@ -1894,7 +1875,9 @@ using ForwardDiff, GTPSA, ReverseDiff
   @test cm3 !== cm1 && cm3 !== cm2
   cm3.e = 10
   @test cm1.e == 1 # merge copies, so inputs are not aliased
-  @test !haskey(getfield(cm3, :d), :a) # GLOBAL_CONTEXTS variables are not pulled in
+  push!(cm1; e = 9)
+  @test isempty(getfield(merge(cm1), :saved)) # (what push! saved is not carried over)
+  pop!(cm1)
   @test getfield(merge(cm1), :d) == getfield(cm1, :d)
   @test merge(cm1, Context(f = 5), Context(f = 6)).f == 6 # last one wins
   cmt = merge(Context{Int}(e = 1), Context{Float64}(f = 2.0))
@@ -1910,27 +1893,34 @@ using ForwardDiff, GTPSA, ReverseDiff
   @test cmr isa Context{Real}
   @test cmr.e === 1
 
-  # Beamline context test
+  # Beamline context test: an element outside a Beamline uses DEFAULT_CONTEXT, one in a
+  # Beamline only the Beamline's context
   qf = Quadrupole(Kn1=DefExpr(c->c.a), L=DefExpr(c -> c.b))
+  push!(DEFAULT_CONTEXT; a = 3, b = 4)
   @test qf.Kn1 == 3
+  @test DefExpr(c -> c.a)() == 3 # (a DefExpr called without a Context)
   bl = Beamline([qf], context=Context(a=7))
   @test qf.Kn1 == 3
   @test qf.L == 4
   @test bl[qf][1].Kn1 == 7
+  @test_throws ErrorException bl[qf][1].L # (b is not in the Beamline's context)
+  bl.context.b = 4
   @test bl[qf][1].L == 4
-    
-  empty!(GLOBAL_CONTEXTS)
-  push!(GLOBAL_CONTEXTS, Context(L = 5))
-  c = Context(L = 6)
+  withvalues(bl.context; a = 8) do
+    @test bl[qf][1].Kn1 == 8 && qf.Kn1 == 3
+  end
+  @test bl[qf][1].Kn1 == 7
+  pop!(DEFAULT_CONTEXT)
+  @test_throws ErrorException qf.Kn1
+
   ele = Drift(L=DefExpr(c -> c.L))
   bl = Beamline([ele], E_ref=18e9, species_ref=Species("electron"))
-  @test bl[ele][1].L == 5
-  bl.context = c
+  @test_throws ErrorException bl[ele][1].L
+  bl.context = Context(L = 6)
   @test bl[ele][1].L == 6
 
   # Operators must forward the Context to the operands, rather than
   # evaluating them against NULL_CONTEXT.
-  empty!(GLOBAL_CONTEXTS)
   ctx = Context(a = -3.0, b = 2.0)
   d = DefExpr(c -> c.a)
   e = DefExpr(c -> c.b)
@@ -2064,7 +2054,6 @@ using ForwardDiff, GTPSA, ReverseDiff
 
   # Showing a Context must list every variable, sorted by name, and must not
   # truncate the way the underlying Dict's show does past 10 entries.
-  empty!(GLOBAL_CONTEXTS)
   cshow = Context(a1 = 1e-10, b2 = 2e-10, c3 = 3e-10, d4 = 4e-10,
                   ov_1_v1 = DefExpr(c -> c.om_om1^2), ov_1_v2 = 0.0,
                   ov2_w1 = 1.0, ov2_w2 = 0.0, om_om1 = 0.0,
@@ -2084,7 +2073,6 @@ using ForwardDiff, GTPSA, ReverseDiff
   @test occursin("0 variables", repr("text/plain", Context()))
     
   @testset "Branch and Lattice" begin
-    empty!(GLOBAL_CONTEXTS)
     ctxkeys(c) = sort(collect(keys(getfield(c, :d))))
 
     # Type display

@@ -46,7 +46,7 @@ function rawget(p::AbstractParams, key::Symbol)
   return getfield(p, key)
 end
 
-@generated function deval(a::AbstractParams, c::Context=NULL_CONTEXT)
+@generated function deval(a::AbstractParams, c::Context=DEFAULT_CONTEXT)
   apply = [
     begin
       # This is so deval never allocates another array unless is a DefExpr to deval

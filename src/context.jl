@@ -3,72 +3,49 @@
 
 A "scope" of variables that can be used when evaluating `DefExpr`s. Contexts serve as a
 single structure that stores all (control) variables associated with beamline parameters.
-Contexts essentially act as structures with arbitrary field names. The type parameter `T` 
-can be specified as the variables' return type, or `Union` of return types, to improve 
+Contexts essentially act as structures with arbitrary field names. The type parameter `T`
+can be specified as the variables' return type, or `Union` of return types, to improve
 performance.
 
-If a "get" is made of a variable not included in a given `Context`, then the "get" will 
-fall-back to the global stack of contexts `GLOBAL_CONTEXTS`. The first instance from the 
-top of the `GLOBAL_CONTEXTS` stack of the variable will be used as the variable value. This 
-makes it easy to "push" and "pop" parameter settings one may be testing in an interactive 
-environment.
+A `Beamline` stores a context, which is passed to all `DefExpr`s when getting parameters from
+the `LatElement`s in it (a `Branch` or `Lattice` shares one context with all its `Beamline`s).
+Elements that are not in a `Beamline` use `DEFAULT_CONTEXT`.
+
+Values can be tried temporarily: `push!(c; name=value, ...)` sets the variables and remembers
+their previous values, and `pop!(c)` restores them (a variable that `push!` added is removed
+again). `withvalues(f, c; name=value, ...)` does the same around `f()`, also if it throws.
 
 ## Examples
 ```jldoctest
-julia> c1 = Context(a = 1, b = 2, c = 3);
+julia> qf = Quadrupole(Kn1=DefExpr(c -> c.k1), L=0.5);
 
-julia> push!(GLOBAL_CONTEXTS, c1);
+julia> bl = Beamline([qf], context=Context(k1 = 0.36));
 
-julia> c2 = Context(a = 4);
-
-julia> d = DefExpr(c -> c.a + c.b);
-
-julia> d() # Uses c1.a and c1.b from the GLOBAL_CONTEXTS
-3
-
-julia> d(c2) # Uses c2.a, but falls-back to c1.b from GLOBAL_CONTEXTS
-6
-
-julia> push!(GLOBAL_CONTEXTS, c2);
-
-julia> d() # Now uses c2.a and c1.b both from GLOBAL_CONTEXTS
-6
-
-julia> pop!(GLOBAL_CONTEXTS);
-
-julia> d() 
-3
-```
-
-`Beamline`s also store a context, which is passed to all `DefExpr`s when getting parameters 
-from `LatElement`s that are in a beamline:
-```jldoctest
-julia> c3 = Context(Kn1=0.36);
-
-julia> qf = Quadrupole(Kn1=DefExpr(c -> c.Kn1), L=0.5);
-
-julia> bl = Beamline([qf], context=c3);
-
-julia> bl[qf][1].Kn1
+julia> bl.line[1].Kn1
 0.36
-```
-Notice that trying to access the value of `Kn1` directly from `qf` does not work since `c3`
-is not stored where it can be found:
-```
-julia> qf.Kn1
-ERROR: Variable Kn1 is not defined in the local Context nor in GLOBAL_CONTEXTS
 
-julia> push!(GLOBAL_CONTEXTS, c3)    # Make c3 available globally
+julia> push!(bl.context; k1 = 0.4);
 
-julia> qf.Kn1                        # Now this works
+julia> bl.line[1].Kn1
+0.4
+
+julia> pop!(bl.context);
+
+julia> bl.line[1].Kn1
 0.36
+
+julia> withvalues(bl.context; k1 = 0.5) do
+         bl.line[1].Kn1
+       end
+0.5
 ```
 """
 mutable struct Context{T}
   d::Dict{Symbol,T}
-  Context(; args...) = new{Any}(Dict{Symbol,Any}(args))
-  Context{T}(; args...) where {T} = new{T}(Dict{Symbol,T}(args))
-  Context{T}(d::Dict{Symbol,T}) where {T} = new{T}(d)
+  saved::Vector{Vector{Pair{Symbol,Any}}} # the values replaced by each push!, restored by pop!
+  Context(; args...) = new{Any}(Dict{Symbol,Any}(args), Vector{Pair{Symbol,Any}}[])
+  Context{T}(; args...) where {T} = new{T}(Dict{Symbol,T}(args), Vector{Pair{Symbol,Any}}[])
+  Context{T}(d::Dict{Symbol,T}) where {T} = new{T}(d, Vector{Pair{Symbol,Any}}[])
 end
 
 uniontypes(T::Type)  = (T,)
@@ -87,25 +64,79 @@ Base.setproperty!(c::Context{T}, name::Symbol, value) where {T} = (getfield(c, :
 
 function Base.getproperty(c::Context{T}, name::Symbol) where {T}
   d = getfield(c, :d)
-  if haskey(d, name)
-    return d[name]::T
-  end
-  for gc in GLOBAL_CONTEXTS
-    gd = getfield(gc, :d)
-    haskey(gd, name) && return coerce(T, gd[name])::T
-  end
-  error("Variable $name is not defined in the local Context nor in GLOBAL_CONTEXTS")
+  haskey(d, name) && return d[name]::T
+  error("Variable $name is not defined in this Context",
+        c === DEFAULT_CONTEXT ? " (DEFAULT_CONTEXT, used for elements that are not in a " *
+                                "Beamline)" : "")
 end
 
-function Base.propertynames(c::Context)
-  vars = collect(keys(getfield(c, :d)))
-  for gc in GLOBAL_CONTEXTS
-    if gc === c
-      continue
-    end
-    vars = vcat(vars, collect(keys(getfield(gc, :d))))
+Base.propertynames(c::Context) = collect(keys(getfield(c, :d)))
+
+# (the previous value of a variable that push! added)
+struct _Undefined end
+
+"""
+    push!(c::Context; name=value, ...)
+
+Sets the variables of `c`, remembering their previous values, which `pop!(c)` restores.
+"""
+function Base.push!(c::Context{T}; kwargs...) where {T}
+  values = Pair{Symbol,Any}[k => coerce(T, v) for (k, v) in kwargs] # (all checked first)
+  d = getfield(c, :d)
+  push!(getfield(c, :saved), Pair{Symbol,Any}[k => (haskey(d, k) ? d[k] : _Undefined())
+                                              for (k, _) in values])
+  for (k, v) in values
+    d[k] = v
   end
-  return unique(vars)
+  return c
+end
+
+"""
+    pop!(c::Context)
+
+Restores the variables that the last `push!` on `c` set: their previous values, or, for a
+variable it added, removes it.
+"""
+function Base.pop!(c::Context)
+  saved = getfield(c, :saved)
+  isempty(saved) && error("Nothing to pop: no push! on this Context")
+  d = getfield(c, :d)
+  for (k, v) in Iterators.reverse(pop!(saved))
+    v isa _Undefined ? delete!(d, k) : (d[k] = v)
+  end
+  return c
+end
+
+"""
+    withvalues(f, c::Context; name=value, ...)
+
+Calls `f()` with the variables of `c` set to the given values, and restores them afterwards, also
+if `f` throws (as `push!` and `pop!`). Returns what `f` returns.
+
+## Examples
+```julia
+withvalues(ring.context; vrf = 0.0) do
+  twiss(ring)
+end
+```
+"""
+function withvalues(f, c::Context; kwargs...)
+  n = length(getfield(c, :saved))
+  push!(c; kwargs...)
+  try
+    return f()
+  finally
+    _pop_to!(c, n)
+  end
+end
+
+# Pops until n saved sets are left (also what f pushed and did not pop). A function of its own:
+# Julia 1.13.3 crashes (segmentation fault) on a while loop in a finally block when the try block
+# throws
+function _pop_to!(c::Context, n)
+  while length(getfield(c, :saved)) > n
+    pop!(c)
+  end
 end
 
 function Base.show(io::IO, c::Context{T}) where {T}
@@ -129,8 +160,8 @@ Construct a new `Context` containing the variables of all of the given `Context`
 variable is defined in more than one of the `Context`s, the value from the last one is
 used. The type parameter of the returned `Context` is the `promote_type` of the type
 parameters of the inputs, and each value is converted to it using `coerce`. For example, 
-merging a `Context{Float32}` with a `Context{Float64}` gives a `Context{Float64}`. Only the 
-variables stored in the given `Context`s are included; variables from `GLOBAL_CONTEXTS` are not.
+merging a `Context{Float32}` with a `Context{Float64}` gives a `Context{Float64}`. The values
+saved by `push!` are not carried over: the new `Context` has nothing to `pop!`.
 
 ## Examples
 ```jldoctest
@@ -162,6 +193,24 @@ function Base.merge(c::Context, cs::Context...)
   return Context{T}(d)
 end
 
+# (the empty Context stored by the Beamlines of a Branch, and the Branches of a Lattice, whose
+# Context is that of the Branch or Lattice)
 const NULL_CONTEXT = Context()
-const GLOBAL_CONTEXTS = Stack{Context}()
+
+"""
+    DEFAULT_CONTEXT
+
+The `Context` used for `LatElement`s that are not in a `Beamline` (and for a `DefExpr` called
+without a `Context`), e.g.
+```julia
+qf = Quadrupole(Kn1=DefExpr(c -> c.k1), L=0.5)
+DEFAULT_CONTEXT.k1 = 0.36
+qf.Kn1                        # 0.36
+withvalues(DEFAULT_CONTEXT; k1 = 0.4) do
+  qf.Kn1                      # 0.4
+end
+```
+Elements in a `Beamline` use only the `Beamline`'s context.
+"""
+const DEFAULT_CONTEXT = Context()
 
