@@ -210,32 +210,6 @@ c1.a = 3; # Can mutate the state of the variables
 d(c1)
 ```
 
-Contexts can be pushed on/popped from a global stack of contexts `GLOBAL_CONTEXTS`. In this case, when referencing a variable from a context, if it does not exist in that given context, then the first instance of that variable from the top of the `GLOBAL_CONTEXTS` stack will be used:
-
-```@repl context2
-using Beamlines # hide
-c1 = Context(a = 1);
-push!(GLOBAL_CONTEXTS, c1);
-c2 = Context(b = 2);
-c2.a # `a` does not in exist in `c2`, get from `GLOBAL_CONTEXTS`
-push!(GLOBAL_CONTEXTS, c2); 
-c3 = Context();
-c3.a
-c3.b
-```
-
-If the variable does not exist anywhere, then an error will be thrown.
-
-For `DefExpr`s with a context input argument, a context must be provided in order to evaluate the deferred expression, or else an error will be thrown. For general, interactive use, contexts can be pushed on/popped from a global stack of contexts `GLOBAL_CONTEXTS`, which will be used if no context is provided:
-
-```@repl context3
-using Beamlines # hide
-c1 = Context(a = 1);
-d = DefExpr(c -> c.a); # one-argument lambda function
-push!(GLOBAL_CONTEXTS, c1)
-d() # Finds `a` from the `GLOBAL_CONTEXTS` stack
-```
-
 All `Beamline`s have a `context` property to store a context, which all containing `LatElement` parameters defined use when getting properties at the element-level:
 
 ```@repl context4
@@ -244,6 +218,26 @@ c1 = Context(Kn1=0.36);
 qf = Quadrupole(Kn1=DefExpr(c -> c.Kn1), L=0.5);
 bl = Beamline([qf], context=c1);
 bl[qf][1].Kn1 # Index the beamline with the `qf` to get all child `qf`s
+```
+To try a value for a while, `push!` it onto the context and `pop!` it off again: the previous value is used again (and a variable that `push!` added is removed). `withvalues` does the same around a block of code, and restores the values even if the code throws an error:
+
+```@repl context4
+push!(c1; Kn1=0.4);
+bl[qf][1].Kn1
+pop!(c1);
+bl[qf][1].Kn1
+withvalues(c1; Kn1=0.5) do
+  bl[qf][1].Kn1
+end
+```
+
+Elements that are not in a `Beamline` use the context `DEFAULT_CONTEXT` (as does a `DefExpr` called without a context). If a variable does not exist in the context used, an error is thrown:
+
+```@repl context5
+using Beamlines # hide
+qd = Quadrupole(Kn1=DefExpr(c -> c.kd), L=0.5);
+DEFAULT_CONTEXT.kd = -0.36;
+qd.Kn1
 ```
 ```@docs; canonical=false
 Context

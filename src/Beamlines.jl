@@ -64,7 +64,8 @@ export AbstractParams,
        findelements,
        findbranches,
 
-       GLOBAL_CONTEXTS,
+       DEFAULT_CONTEXT,
+       withvalues,
 
        Fringe,
        IBSModel,
@@ -82,7 +83,6 @@ using Accessors,
       ReadOnlyArrays,
       PrettyTables
       
-using DataStructures: Stack
 
 export Species
 

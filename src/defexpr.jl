@@ -87,7 +87,7 @@ end
 defconvert(::Type{T}, f) where {T} = f::T
 
 # Calling DefExpr
-(d::DefExpr{T})(c=NULL_CONTEXT) where {T} = defconvert(T, d.f(c))
+(d::DefExpr{T})(c=DEFAULT_CONTEXT) where {T} = defconvert(T, d.f(c))
 
 # Construct for Function -> DefExpr{FunctionWrapper}
 #
@@ -127,7 +127,7 @@ function DefExpr(f)
 end
 
 """
-    deval(d, c::Context=NULL_CONTEXT)
+    deval(d, c::Context=DEFAULT_CONTEXT)
 
 Evaluates `d` in the `Context` `c` if it is a `DefExpr`, else returns `d`. E.g.
 `deval(rawget(ele, :Kn1), c)` for an element in a `Beamline` with `Context` `c` is `ele.Kn1`.
@@ -135,8 +135,8 @@ Evaluates `d` in the `Context` `c` if it is a `DefExpr`, else returns `d`. E.g.
 For a parameter group, returns a new parameter group with every `DefExpr` evaluated, or the
 parameter group itself if it contains no `DefExpr`.
 """
-deval(d::DefExpr, c::Context=NULL_CONTEXT) = d(c)
-deval(d, c=NULL_CONTEXT) = d
+deval(d::DefExpr, c::Context=DEFAULT_CONTEXT) = d(c)
+deval(d, c=DEFAULT_CONTEXT) = d
 
 Base.:+(da::DefExpr) = da
 Base.:-(da::DefExpr) = DefExpr((c=NULL_CONTEXT)->-da(c))
