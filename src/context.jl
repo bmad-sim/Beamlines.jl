@@ -42,7 +42,7 @@ julia> withvalues(bl.context; k1 = 0.5) do
 """
 mutable struct Context{T}
   d::Dict{Symbol,T}
-  saved::Vector{Vector{Pair{Symbol,Any}}} # the values replaced by each push!, restored by pop!
+  saved::Vector{Vector{Pair{Symbol,Any}}} # the values replaced by each push!, restored by pop! (Any because may be _Undefined)
   Context(; args...) = new{Any}(Dict{Symbol,Any}(args), Vector{Pair{Symbol,Any}}[])
   Context{T}(; args...) where {T} = new{T}(Dict{Symbol,T}(args), Vector{Pair{Symbol,Any}}[])
   Context{T}(d::Dict{Symbol,T}) where {T} = new{T}(d, Vector{Pair{Symbol,Any}}[])
@@ -66,8 +66,7 @@ function Base.getproperty(c::Context{T}, name::Symbol) where {T}
   d = getfield(c, :d)
   haskey(d, name) && return d[name]::T
   error("Variable $name is not defined in this Context",
-        c === DEFAULT_CONTEXT ? " (DEFAULT_CONTEXT, used for elements that are not in a " *
-                                "Beamline)" : "")
+        c === DEFAULT_CONTEXT ? " (DEFAULT_CONTEXT, used for elements that are not in a Beamline)" : "")
 end
 
 Base.propertynames(c::Context) = collect(keys(getfield(c, :d)))
@@ -83,8 +82,7 @@ Sets the variables of `c`, remembering their previous values, which `pop!(c)` re
 function Base.push!(c::Context{T}; kwargs...) where {T}
   values = Pair{Symbol,Any}[k => coerce(T, v) for (k, v) in kwargs] # (all checked first)
   d = getfield(c, :d)
-  push!(getfield(c, :saved), Pair{Symbol,Any}[k => (haskey(d, k) ? d[k] : _Undefined())
-                                              for (k, _) in values])
+  push!(getfield(c, :saved), Pair{Symbol,Any}[k => (haskey(d, k) ? d[k] : _Undefined()) for (k, _) in values])
   for (k, v) in values
     d[k] = v
   end

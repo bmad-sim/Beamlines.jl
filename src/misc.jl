@@ -117,8 +117,7 @@ $(PROPSDOC(FourPotentialParams))
 """
 FourPotentialParams
 
-@generated function deval(mp::FourPotentialParams{F,P},
-                          c::Context=DEFAULT_CONTEXT) where {F,P<:Tuple}
+@generated function deval(mp::FourPotentialParams{F,P}, c::Context=DEFAULT_CONTEXT) where {F,P<:Tuple}
     N = length(P.parameters)
     # Use getfield with literal integer arguments
     exprs = [:(deval(Base.getfield(mp.four_potential_params, $i), c)) for i in 1:N]
