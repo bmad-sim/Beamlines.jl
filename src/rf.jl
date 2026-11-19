@@ -1,12 +1,13 @@
 """
-    @enumx PhaseRef::UInt8 Accelerating BelowTransition AboveTransition
+    @enumx PhaseRef::UInt8 Accelerating BelowTransition AboveTransition Absolute
 
 Sets what zero `phi0` RF phase means
 - `Accelerating`:      Zero phase is the maximum accelerating phase.
 - `BelowTransition`:   Zero phase is at the stable zero crossing for particles below transition.
 - `AboveTransition`:   Zero phase is at the stable zero crossing for particles above transition.
+- `Absolute`:          Zero phase is the bunch reference time `::Bunch.t_ref`.
 """
-@enumx PhaseRef::UInt8 Accelerating BelowTransition AboveTransition
+@enumx PhaseRef::UInt8 Accelerating BelowTransition AboveTransition Absolute
 
 """
     @enumx RateMeaning::Int8 RFFrequency=false Harmon=true Indeterminate=-1 
