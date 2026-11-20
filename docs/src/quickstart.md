@@ -107,11 +107,11 @@ using Beamlines # hide
 fodo.line[2].parent
 ```
 
-Sometimes it can be a pain to find exactly where in a beamline are the corresponding child elements. As such, one can index the `Beamline` directly with a `LatElement` to obtain a vector of all child elements:
+Sometimes it can be a pain to find exactly where in a beamline are the corresponding child elements. As such, one can index the `Beamline` directly with a vector of `LatElement`s to obtain a vector of all child elements:
 
 ```@example second
 using Beamlines # hide
-children = fodo[d];
+children = fodo[[d]];
 ```
 
 Finally, elements in a beamline allow one to "get" parameters that may only be defined when said element is in a beamline. We showed the `s` and `s_downstream`, but another example would be the unnormalized magnetic field, if the normalied magnetic field is stored as an independent variable:
@@ -217,17 +217,17 @@ using Beamlines # hide
 c1 = Context(Kn1=0.36);
 qf = Quadrupole(Kn1=DefExpr(c -> c.Kn1), L=0.5);
 bl = Beamline([qf], context=c1);
-bl[qf][1].Kn1 # Index the beamline with the `qf` to get all child `qf`s
+bl[qf].Kn1 # Index the beamline with the `qf` to get the one child `qf`
 ```
 To try a value for a while, `push!` it onto the context and `pop!` it off again: the previous value is used again (and a variable that `push!` added is removed). `withvalues` does the same around a block of code, and restores the values even if the code throws an error:
 
 ```@repl context4
 push!(c1; Kn1=0.4);
-bl[qf][1].Kn1
+bl[qf].Kn1
 pop!(c1);
-bl[qf][1].Kn1
+bl[qf].Kn1
 withvalues(c1; Kn1=0.5) do
-  bl[qf][1].Kn1
+  bl[qf].Kn1
 end
 ```
 
