@@ -107,11 +107,11 @@ using Beamlines # hide
 fodo.line[2].parent
 ```
 
-Sometimes it can be a pain to find exactly where in a beamline are the corresponding child elements. As such, one can index the `Beamline` directly with a `LatElement` to obtain a vector of all child elements:
+Sometimes it can be a pain to find exactly where in a beamline are the corresponding child elements. As such, one can index the `Beamline` directly with a vector of `LatElement`s to obtain a vector of all child elements:
 
 ```@example second
 using Beamlines # hide
-children = fodo[d];
+children = fodo[[d]];
 ```
 
 Finally, elements in a beamline allow one to "get" parameters that may only be defined when said element is in a beamline. We showed the `s` and `s_downstream`, but another example would be the unnormalized magnetic field, if the normalied magnetic field is stored as an independent variable:

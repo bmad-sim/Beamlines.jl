@@ -48,8 +48,11 @@ function Base.getindex(bl::Beamline, ele::LatElement)
     children = findchildren(ele, bl)
     if length(children) == 1
       return children[1]
-    else
+    elseif length(children) == 0
       error("LatElement $(ele.name) not found in beamline")
+    else
+      error("LatElement $(repr(ele.name)) is placed $(length(children)) times in the Beamline: ",
+        "index with `[[ele]]` for all of them, or with one beamline index")
     end
   end
 end
