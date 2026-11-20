@@ -28,11 +28,29 @@ function _inherits_from(x::LatElement, ele::LatElement)
   return false
 end
 
+Base.getindex(bl::Beamline, eles::AbstractVector{LatElement}) = collect(Iterators.flatten(findchildren(ele, bl) for ele in eles))
+Base.getindex(bl::Beamline, idxs::AbstractVector{<:Integer}) = [bl[i] for i in idxs]
+Base.getindex(bl::Beamline, eles_or_idxs::AbstractVector) = collect(Iterators.flatten(_resolve_index(bl, ele_or_idx) for ele_or_idx in eles_or_idxs))
+function _resolve_index(bl::Beamline, ele_or_idx)
+  if ele_or_idx isa LatElement
+    return bl[[ele_or_idx]]
+  elseif ele_or_idx isa Integer
+    return [bl[ele_or_idx]]
+  else
+    return bl[ele_or_idx]
+  end
+end
+
 function Base.getindex(bl::Beamline, ele::LatElement)
   if ele in bl
-    return [ele]
+    return ele
   else
-    return findchildren(ele, bl)
+    children = findchildren(ele, bl)
+    if length(children) == 1
+      return children[1]
+    else
+      error("")
+    end
   end
 end
 

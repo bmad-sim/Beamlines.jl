@@ -65,8 +65,9 @@ Base.setproperty!(c::Context{T}, name::Symbol, value) where {T} = (getfield(c, :
 function Base.getproperty(c::Context{T}, name::Symbol) where {T}
   d = getfield(c, :d)
   haskey(d, name) && return d[name]::T
-  error("Variable $name is not defined in this Context",
-        c === DEFAULT_CONTEXT ? " (DEFAULT_CONTEXT, used for elements that are not in a Beamline)" : "")
+  default = (c === DEFAULT_CONTEXT)
+  !default && haskey(getfield(DEFAULT_CONTEXT, :d), name) && return getfield(DEFAULT_CONTEXT, :d)[name]
+  error("Variable $name is not defined in ", default ? " DEFAULT_CONTEXT" : "this Context nor the DEFAULT_CONTEXT")
 end
 
 Base.propertynames(c::Context) = collect(keys(getfield(c, :d)))
