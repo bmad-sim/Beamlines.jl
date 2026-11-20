@@ -66,7 +66,13 @@ function Base.getproperty(c::Context{T}, name::Symbol) where {T}
   d = getfield(c, :d)
   haskey(d, name) && return d[name]::T
   default = (c === DEFAULT_CONTEXT)
-  !default && haskey(getfield(DEFAULT_CONTEXT, :d), name) && return getfield(DEFAULT_CONTEXT, :d)[name]
+  
+  if !default
+    dd = getfield(DEFAULT_CONTEXT, :d)
+    if haskey(dd, name)
+      return coerce(T, dd[name])::T
+    end
+  end
   error("Variable $name is not defined in ", default ? " DEFAULT_CONTEXT" : "this Context nor the DEFAULT_CONTEXT")
 end
 

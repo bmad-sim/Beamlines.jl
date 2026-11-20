@@ -28,14 +28,14 @@ function _inherits_from(x::LatElement, ele::LatElement)
   return false
 end
 
-Base.getindex(bl::Beamline, eles::AbstractVector{LatElement}) = collect(Iterators.flatten(findchildren(ele, bl) for ele in eles))
-Base.getindex(bl::Beamline, idxs::AbstractVector{<:Integer}) = [bl[i] for i in idxs]
-Base.getindex(bl::Beamline, eles_or_idxs::AbstractVector) = collect(Iterators.flatten(_resolve_index(bl, ele_or_idx) for ele_or_idx in eles_or_idxs))
+Base.getindex(bl::Beamline, eles::AbstractVector{LatElement}) = collect(LatElement, Iterators.flatten(findchildren(ele, bl) for ele in eles))
+Base.getindex(bl::Beamline, idxs::AbstractVector{<:Integer}) = LatElement[bl[i] for i in idxs]
+Base.getindex(bl::Beamline, eles_or_idxs::AbstractVector) = collect(LatElement, Iterators.flatten(_resolve_index(bl, ele_or_idx) for ele_or_idx in eles_or_idxs))
 function _resolve_index(bl::Beamline, ele_or_idx)
   if ele_or_idx isa LatElement
     return bl[[ele_or_idx]]
   elseif ele_or_idx isa Integer
-    return [bl[ele_or_idx]]
+    return LineElement[bl[ele_or_idx]]
   else
     return bl[ele_or_idx]
   end
@@ -49,7 +49,7 @@ function Base.getindex(bl::Beamline, ele::LatElement)
     if length(children) == 1
       return children[1]
     else
-      error("")
+      error("LatElement $(ele.name) not found in beamline")
     end
   end
 end

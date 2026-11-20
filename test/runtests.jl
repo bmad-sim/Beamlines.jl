@@ -1902,22 +1902,22 @@ using ForwardDiff, GTPSA, ReverseDiff
   bl = Beamline([qf], context=Context(a=7))
   @test qf.Kn1 == 3
   @test qf.L == 4
-  @test bl[qf][1].Kn1 == 7
-  @test_throws ErrorException bl[qf][1].L # (b is not in the Beamline's context)
-  bl.context.b = 4
-  @test bl[qf][1].L == 4
+  @test bl[qf].Kn1 == 7
+  @test bl[qf].L == 4 # (b is not in the Beamline's context)
+  bl.context.b = 5
+  @test bl[qf].L == 5
   withvalues(bl.context; a = 8) do
-    @test bl[qf][1].Kn1 == 8 && qf.Kn1 == 3
+    @test bl[qf].Kn1 == 8 && qf.Kn1 == 3
   end
-  @test bl[qf][1].Kn1 == 7
+  @test bl[qf].Kn1 == 7
   pop!(DEFAULT_CONTEXT)
   @test_throws ErrorException qf.Kn1
 
   ele = Drift(L=DefExpr(c -> c.L))
   bl = Beamline([ele], E_ref=18e9, species_ref=Species("electron"))
-  @test_throws ErrorException bl[ele][1].L
+  @test_throws ErrorException bl[ele].L
   bl.context = Context(L = 6)
-  @test bl[ele][1].L == 6
+  @test bl[ele].L == 6
 
   # Operators must forward the Context to the operands, rather than
   # evaluating them against NULL_CONTEXT.
@@ -1947,7 +1947,7 @@ using ForwardDiff, GTPSA, ReverseDiff
   # A Beamline's stored context must reach parameters built from operators.
   qq = Quadrupole(Kn1=-DefExpr(c -> c.k1), L=0.5)
   blq = Beamline([qq], context=Context(k1 = 0.36))
-  @test blq[qq][1].Kn1 ≈ -0.36
+  @test blq[qq].Kn1 ≈ -0.36
 
   # IgnoreParams / ignore_params
   ele = Quadrupole(L=0.5, Kn1=0.3, x_offset=1e-3)
@@ -2332,12 +2332,13 @@ using ForwardDiff, GTPSA, ReverseDiff
     qf2 = Quadrupole(L=1.0)
     blf = Beamline([qf2, Drift(L=1.0), qf2])
     brf = Branch([blf, blf])
-    @test length(blf[qf2]) == 2
-    @test length(brf.beamlines[1][qf2]) == 2
-    @test length(brf.beamlines[2][qf2]) == 2
-    @test brf.beamlines[2][blf.line[1]] == [brf.beamlines[2].line[1]]
-    @test length(copy(brf).beamlines[1][qf2]) == 2 # Great-grandchildren
-    @test isempty(brf.beamlines[1][Quadrupole()])
+    @test_throws ErrorException blf[qf2]
+    @test length(blf[[qf2]]) == 2
+    @test length(brf.beamlines[1][[qf2]]) == 2
+    @test length(brf.beamlines[2][[qf2]]) == 2
+    @test brf.beamlines[2][blf.line[1]] == brf.beamlines[2].line[1]
+    @test length(copy(brf).beamlines[1][[qf2]]) == 2 # Great-grandchildren
+    @test_throws ErrorException brf.beamlines[1][Quadrupole()]
 
     # copy(::Branch) makes new lines whose elements are children of those in the Branch
     brAc = copy(brA)
