@@ -240,11 +240,9 @@ function _getproperty(ele::LatElement, key::Symbol, context::Context)
         setindex!(pdict, p, IgnoreParams)
         return p.ignore_params
       elseif PROPERTIES_MAP[key] == BeamlineParams
-        error("""
-          Unable to get key $key from LatElement: element is not in a Beamline. 
-          If you placed this element in a Beamline, use `findchildren` to find 
-          the child instances of this element in a given Beamline.
-        """)
+        error("Unable to get $key: this LatElement is not in a Beamline. If you placed it in ",
+              "a Beamline `bl`, get it from its placement there: `bl[ele].$key` (placed once), ",
+              "or `bl[[ele]]` for all of its placements")
       end
       return getproperty(PROPERTIES_MAP[key](), key)
     end
