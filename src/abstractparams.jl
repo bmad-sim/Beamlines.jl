@@ -27,17 +27,17 @@ give an error.
 
 ## Examples
 ```jldoctest
-julia> a = 0.36;
+julia> qf = Quadrupole(Kn1=DefExpr(c -> c.kq), L=0.5);
 
-julia> qf = Quadrupole(Kn1=DefExpr(()->a), L=0.5);
+julia> bl = Beamline([qf], context=Context(kq=0.36));
 
 julia> d = rawget(qf, :Kn1);
 
-julia> qf.Kn1 = 2*d; # Twice the stored expression, still dependent on a
+julia> qf.Kn1 = 2*d; # Twice the stored expression, still dependent on kq
 
-julia> a = 0.4;
+julia> bl.context.kq = 0.4;
 
-julia> qf.Kn1
+julia> bl[qf].Kn1
 0.8
 ```
 """
