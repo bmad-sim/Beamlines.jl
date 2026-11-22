@@ -2339,6 +2339,12 @@ using ForwardDiff, GTPSA, ReverseDiff
     @test brf.beamlines[2][blf.line[1]] == brf.beamlines[2].line[1]
     @test length(copy(brf).beamlines[1][[qf2]]) == 2 # Great-grandchildren
     @test_throws ErrorException brf.beamlines[1][Quadrupole()]
+    # Vectors: every placement, in order; an element of the line is its own placement
+    @test blf[[blf.line[3]]] == [blf.line[3]] && blf[blf.line[3]] === blf.line[3]
+    @test blf[[qf2, 2]] == [blf.line[1], blf.line[3], blf.line[2]]
+    @test blf[[2, blf.line[1]]] == [blf.line[2], blf.line[1]]
+    @test_throws ErrorException blf[[Quadrupole()]]
+    @test_throws ErrorException blf[[2, Quadrupole()]]
 
     # copy(::Branch) makes new lines whose elements are children of those in the Branch
     brAc = copy(brA)
