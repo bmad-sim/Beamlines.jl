@@ -28,14 +28,16 @@ function _inherits_from(x::LatElement, ele::LatElement)
   return false
 end
 
-Base.getindex(bl::Beamline, eles::AbstractVector{LatElement}) = collect(LatElement, Iterators.flatten(findchildren(ele, bl) for ele in eles))
 Base.getindex(bl::Beamline, idxs::AbstractVector{<:Integer}) = LatElement[bl[i] for i in idxs]
 Base.getindex(bl::Beamline, eles_or_idxs::AbstractVector) = collect(LatElement, Iterators.flatten(_resolve_index(bl, ele_or_idx) for ele_or_idx in eles_or_idxs))
 function _resolve_index(bl::Beamline, ele_or_idx)
   if ele_or_idx isa LatElement
-    return bl[[ele_or_idx]]
+    # Every placement: the element itself if it is in bl, else the elements made from it
+    eles = ele_or_idx in bl ? LatElement[ele_or_idx] : findchildren(ele_or_idx, bl)
+    isempty(eles) && error("LatElement $(ele_or_idx.name) not found in beamline")
+    return eles
   elseif ele_or_idx isa Integer
-    return LineElement[bl[ele_or_idx]]
+    return LatElement[bl[ele_or_idx]]
   else
     return bl[ele_or_idx]
   end
