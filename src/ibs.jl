@@ -10,7 +10,7 @@ Which intra-beam scattering model should be used.
 end
 
 PROPS(::Type{IBSParams}) = OrderedDict{String,String}(
-  "ibs_model" => "A `IBSModel` that specifies which intra-beam scattering model is used",
+  "ibs_model" => "An `IBSModel` that specifies which intra-beam scattering model is used",
 )
 
 """
