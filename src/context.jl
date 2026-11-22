@@ -73,7 +73,7 @@ function Base.getproperty(c::Context{T}, name::Symbol) where {T}
       return coerce(T, dd[name])::T
     end
   end
-  error("Variable $name is not defined in ", default ? " DEFAULT_CONTEXT" : "this Context nor the DEFAULT_CONTEXT")
+  error("Variable $name is not defined in ", default ? "DEFAULT_CONTEXT" : "this Context nor the DEFAULT_CONTEXT")
 end
 
 Base.propertynames(c::Context) = collect(keys(getfield(c, :d)))
