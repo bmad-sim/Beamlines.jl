@@ -2345,6 +2345,11 @@ using ForwardDiff, GTPSA, ReverseDiff
     @test blf[[2, blf.line[1]]] == [blf.line[2], blf.line[1]]
     @test_throws ErrorException blf[[Quadrupole()]]
     @test_throws ErrorException blf[[2, Quadrupole()]]
+    # A beamline-dependent property of the element the placements were made from: the error says
+    # how to get it from a placement
+    err = try qf2.beamline_index; nothing catch e; e end
+    @test err isa ErrorException && occursin("bl[[ele]]", err.msg) &&
+          occursin("bl[ele].beamline_index", err.msg)
 
     # copy(::Branch) makes new lines whose elements are children of those in the Branch
     brAc = copy(brA)
@@ -3644,6 +3649,24 @@ end
     err = try getproperty(ele, k); nothing catch err; err end
     @test err isa ErrorException && occursin("Unable to get $k of LatElement", err.msg)
   end
+end
+
+@testset "DefExpr and rawget docstring examples" begin
+  # (the examples of the docstrings, which are not run as doctests)
+  qfd = Quadrupole(L=0.5, Kn1=DefExpr(c -> c.kq))
+  qdd = Quadrupole(L=0.5, Kn1=DefExpr(c -> -c.kq))
+  bld = Beamline([qfd, Drift(L=1.0), qdd], context=Context(kq=0.36))
+  @test bld[qdd].Kn1 == -0.36
+  bld.context.kq = 0.4
+  @test (bld[qfd].Kn1, bld[qdd].Kn1) == (0.4, -0.4)
+  dsum = DefExpr(c -> c.a + c.b)
+  csum = Context(a=1.0, b=2.0)
+  @test dsum(csum) == 3.0 && deval(2*dsum + 1, csum) == 7.0
+  qr = Quadrupole(Kn1=DefExpr(c -> c.kq), L=0.5)
+  blr = Beamline([qr], context=Context(kq=0.36))
+  qr.Kn1 = 2*rawget(qr, :Kn1)
+  blr.context.kq = 0.4
+  @test blr[qr].Kn1 == 0.8
 end
 
 @testset "Tilt of a different number type than the strengths" begin
